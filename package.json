@@ -1,0 +1,22 @@
+{
+  "name": "playhead",
+  "version": "0.1.0",
+  "description": "Playhead waveforms: a waveform plus one or two feature lines that show intensity, rhythm, structure and event type at a glance, with analysis-driven audio tools.",
+  "license": "Apache-2.0",
+  "author": "Daniel Sandner",
+  "homepage": "https://eigensoundlab.github.io/playhead/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eigensoundlab/playhead.git"
+  },
+  "keywords": ["audio", "waveform", "music-information-retrieval", "psychoacoustics", "game-audio", "sound-design", "visualization", "web-audio"],
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node test/run-tests.js",
+    "build": "node tools/build.js",
+    "start": "node tools/serve.js 8080"
+  }
+}

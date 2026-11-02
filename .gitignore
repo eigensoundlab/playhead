@@ -1,0 +1,13 @@
+_site/
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+# rendered audio from local experiments
+out/
+*.tmp.wav
+paper/*.aux
+paper/*.bbl
+paper/*.blg
+paper/*.out
+paper/*.synctex.gz

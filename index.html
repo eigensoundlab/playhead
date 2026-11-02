@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Playhead</title>
+<meta name="description" content="Playhead: interpretable overview strips and analysis-driven effects for music and game audio, running entirely in the browser.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/playhead.css">
+</head>
+<body>
+<div class="wrap" id="wrap">
+<header>
+  <div class="intro">
+    <h1>Playhead waveform lab</h1>
+    <p>Seven intensity curves, seven sound-effect views, four rhythm views, two structure views and five combined preview designs, drawn on one shared time axis so you can judge which tells you most at a glance, plus a bench of seven effects driven by the same analysis. A kit of 13 game sound effects and three music test signals, all with known structure, are built in. Drop your own WAV, OGG, MP3 or FLAC files to compare them; nothing leaves this tab.</p>
+  </div>
+</header>
+
+<div class="bar" id="bar">
+  <div class="grp">
+    <button id="open" class="primary">Open files</button>
+    <button id="play" disabled>Play</button>
+  </div>
+  <div class="grp">
+    <label class="ctl" for="cls">Asset class
+      <select id="cls">
+        <option value="auto">Auto</option>
+        <option value="rhythmic">Rhythmic music</option>
+        <option value="orchestral">Orchestral / tonal</option>
+        <option value="sfx">One-shot SFX</option>
+        <option value="ambience">Ambience / drone</option>
+      </select>
+    </label>
+    <label class="ctl" for="height">Strip
+      <select id="height">
+        <option value="64">64 px</option>
+        <option value="40">40 px</option>
+        <option value="24">24 px</option>
+        <option value="14">14 px</option>
+      </select>
+    </label>
+    <label class="ctl" for="shape">Shape
+      <select id="shape">
+        <option value="mirror">Mirrored</option>
+        <option value="base">From baseline</option>
+        <option value="horizon">Horizon</option>
+      </select>
+    </label>
+    <label class="ctl" for="scale">Secondary scale
+      <select id="scale">
+        <option value="fixed">Library reference</option>
+        <option value="asset">This asset</option>
+      </select>
+    </label>
+    <label class="ctl" for="panel">Panel
+      <select id="panel">
+        <option value="dark">Dark editor</option>
+        <option value="light">Light editor</option>
+      </select>
+    </label>
+    <label class="chk" for="ghost"><input type="checkbox" id="ghost"> Waveform outline</label>
+  </div>
+  <div class="now" id="now"></div>
+</div>
+<div class="status" id="status" role="status" aria-live="polite"></div>
+
+<div id="sheet">
+  <div class="rows" id="rows-ruler"></div>
+  <ol class="seglegend" id="seglegend" hidden></ol>
+
+  <div class="sechead"><h2>Today</h2><p>What the Unity inspector draws now: min and max per channel, linear, left on top.</p></div>
+  <div class="rows" id="rows-ref"></div>
+
+  <div class="sechead"><h2>Single curves</h2><p>Each is one candidate line.</p></div>
+  <p class="readme"><b>Reading the badge.</b> The number is how closely the curve's ups and downs follow loudness's, from 0 (unrelated) to 1 (moving in lockstep). Technically: the correlation between the two curves' column-to-column changes, over 400 columns with silence left out. <span class="badge new">moves on its own</span> under 0.3, <span class="badge mid">partly follows loudness</span> 0.3 to 0.6, <span class="badge dep">follows loudness</span> 0.6 and above. A low number only says the curve is different, not that it is useful: random noise would also score near 0. The times next to it are where the curve sits furthest above loudness; click one and listen to judge whether that difference is real.</p>
+  <div class="rows" id="rows-single"></div>
+
+  <div class="sechead"><h2>Short sound effects</h2><p>What a 0.5 to 5 s sound is made of. Clips under 6 s are analysed every 2.9 ms instead of 11.6 ms, so a 5 ms click keeps its shape.</p></div>
+  <div class="rows" id="rows-sfx"></div>
+
+  <div class="sechead"><h2>Rhythm and events</h2><p>Where things happen. On the built-in signals the beat rows are scored against the true beats: F-measure with ±70 ms tolerance, where 1.00 means every beat found and nothing extra.</p></div>
+  <div class="rows" id="rows-rhythm"></div>
+
+  <div class="sechead"><h2>Structure</h2><p>Sections found by comparing every moment with every other moment. A letter repeats when material returns.</p></div>
+  <div class="rows" id="rows-structure"></div>
+
+  <div class="sechead"><h2>Combined playhead waveforms</h2><p>Height carries the main curve and colour a second one, on a ramp that gets lighter as the value rises. These are the candidates for the actual preview.</p></div>
+  <div class="rows" id="rows-design"></div>
+</div>
+
+<div class="sechead"><h2>Effects bench</h2><p>Processing driven by the analysis. Each result joins the library and is analysed like any other file, so every view above can compare it with the original.</p></div>
+<div class="bench" id="bench">
+  <div class="toolpick" id="toolpick" role="group" aria-label="Tool"></div>
+  <p class="tooldesc" id="tooldesc"></p>
+  <div class="params" id="params"></div>
+  <div class="fxrun"><button id="runfx" class="primary" type="button">Render</button><span class="fxnote" id="fxstatus" role="status" aria-live="polite"></span></div>
+  <div class="fxres" id="fxres"></div>
+</div>
+
+<div class="sechead"><h2>Library</h2><p>Every loaded file at thumbnail size on one absolute scale. Click a row to inspect it above.</p>
+  <label class="ctl" for="thumb" style="margin-left:auto">Thumbnail
+    <select id="thumb">
+      <option value="auto">By class: D5 for SFX, D4 otherwise</option>
+      <option value="d5">D5 SFX thumbnail</option>
+      <option value="d4">D4 Structure overlay</option>
+      <option value="d3">D3 Asset thumbnail</option>
+      <option value="d1">D1 Energy</option>
+      <option value="d2">D2 Tension arc</option>
+      <option value="c1">C1 Loudness</option>
+      <option value="unity">Today</option>
+    </select>
+  </label>
+</div>
+<div class="librows" id="library"></div>
+
+<div class="sechead"><h2>How the curves relate</h2><p>Correlation of column-to-column changes for the selected file, 400 columns, silent columns left out. Values near 1 mean two curves move together and one of them is redundant on this material.</p></div>
+<div class="tablewrap"><table class="mx" id="matrix"></table></div>
+
+<div class="sechead"><h2>Curve guide</h2><p>What each curve should reveal and where it is expected to mislead. Formulas and sources are in the research report.</p></div>
+<div class="tablewrap">
+<table class="guide">
+  <thead><tr><th>Curve</th><th>Should reveal</th><th>Expected to mislead on</th></tr></thead>
+  <tbody>
+    <tr><td>C1 Loudness</td><td>Level weighted the way ears weight it, comparable across assets (BS.1770 K-weighting, −60 to 0 LUFS)</td><td>A sustained pad and a drum fill at the same loudness look identical</td></tr>
+    <tr><td>C2 Activity</td><td>Busyness at equal loudness: fills, grooves, bursts, a groove entering under an unchanged level</td><td>Dense rolls buried under a riser can read calm; tremolo and granular textures read busy</td></tr>
+    <tr><td>C3 Arousal</td><td>A single energy estimate: punchy, dynamic passages above compressed, static ones</td><td>Stays close to loudness; its noisiness term rewards hiss, wind and rain</td></tr>
+    <tr><td>C4 Harshness</td><td>Rough, sharp, alarm-like moments raised above smooth sounds of equal loudness</td><td>Bright masters are raised everywhere; hats and hiss add sharpness</td></tr>
+    <tr><td>C5 Tension</td><td>Build-ups, climaxes and releases, including tension rising on a loudness plateau</td><td>Short SFX and static loops give it nothing to integrate; abrupt entries count as builds</td></tr>
+    <tr><td>C6 Harmony</td><td>Clusters, suspensions, modulations and resolutions at constant dynamics</td><td>Meaningless on drums, noise and SFX (gated to zero); the least validated curve</td></tr>
+    <tr><td>C7 Novelty</td><td>Section changes, drops, new layers, a single event inside an ambience</td><td>Repetition reads calm after a few bars; spiky by nature</td></tr>
+  </tbody>
+</table>
+</div>
+
+<div class="notes">
+  <div>
+    <h3>Built-in signals</h3>
+    <p>The SFX kit is 13 synthetic game sounds from 0.5 to 4 s, from a UI click to an explosion with debris, plus one file exported with typical faults. Each has known events and tags, and X5 scores against them. The probe suite holds loudness at −20 LUFS while character changes, so C1 stays flat and every other curve has to earn its movement. The cue arc is a 64 s, 120 BPM track with an intro, groove, build, drop, breakdown and outro; its beats, downbeats and sections are known. The tempo ramp accelerates from 96 to 144 BPM over 32 s, which a single-tempo beat tracker cannot follow.</p>
+    <div class="grp" style="margin-top:8px">
+      <button id="loadKit">Load SFX kit</button>
+      <button id="loadArc">Load cue arc</button>
+      <button id="loadRamp">Load tempo ramp</button>
+      <button id="loadProbe">Load probe suite</button>
+    </div>
+  </div>
+  <div>
+    <h3>Approximations in this prototype</h3>
+    <ul>
+      <li>Sone values use the ISO 532-1 core formula on 24 Bark bands with a Terhardt threshold, not the full standard. Sharpness uses DIN 45692 weighting.</li>
+      <li>Roughness is the 30–150 Hz envelope modulation share in 12 bands, calibrated so a 1 kHz, 60 dB tone with 100% AM at 70 Hz reads 1 asper. Fluctuation is calibrated the same way at 4 Hz.</li>
+      <li>Composite weights, the 25 s tension leak and the library reference ranges are starting values tuned on the built-in signals, not published constants.</li>
+      <li>Curves are not delayed to match listener response lag; that lag belongs to the ratings, not the sound.</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Rhythm and structure methods</h3>
+    <ul>
+      <li>The rhythm onset envelope compresses mel energies with log(1 + 300·E/E<sub>local</sub>), so quiet hats count less than loud kicks, and gives low, mid and high frequencies equal weight.</li>
+      <li>Tempo comes from an 8 s autocorrelation tempogram with a one-octave prior around 120 BPM, as in librosa. R2 uses that one tempo with librosa's tightness of 100, so it cannot follow a tempo change.</li>
+      <li>R3 uses 4.5 s Fourier tempogram windows, limited to ±18% of the local tempo track. Downbeats assume 4/4 and pick the bar phase with the most low-frequency onsets and chord changes.</li>
+      <li>Sections use beat-length units when the pulse is clear, otherwise short blocks. Features are median-filtered over half the kernel, and the kernel spans 4 to 16 units each side.</li>
+      <li>Neural beat trackers (madmom, Beat This!) are more accurate on real music but need trained models. They make a good offline reference rather than something to port to C#.</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Effects methods</h3>
+    <ul>
+      <li>Spectral tools use a short-time Fourier transform with Hann windows at 75% overlap (1024 points for clips under 6 s, 2048 otherwise) and real per-bin gains, so phase is kept.</li>
+      <li>De-harsh suppresses peaks more than 2 dB above a sixth-octave smoothed spectrum, weighted to 0.8–10 kHz, plus a top-end tilt when sharpness exceeds 1.75 acum. A gate driven by the harshness factor switches it on; release is 60 ms.</li>
+      <li>Layer remix applies soft Wiener masks built from the NMF layers, interpolated from 40 mel bands to FFT bins. Attack and body uses median-filter separation (Fitzgerald 2010), 17 frames by 17 bins.</li>
+      <li>Loudness matching uses ITU-R BS.1770 integrated loudness with its standard gates. Every output is lowered if it would clip.</li>
+    </ul>
+  </div>
+  <div>
+    <h3>Sound-effect methods</h3>
+    <ul>
+      <li>Events come from level re-attacks (6 dB within 15 ms) plus spectral onsets for new layers. Runs of three or more similar onsets closer than 0.4 s become one iterative event.</li>
+      <li>Tags follow Schaeffer's typology. N means more than half the loudness is pitched (YIN pitch above 250 Hz), Y means pitch or brightness glides, X means everything else. ′ marks events under 0.2 s and ″ marks grains or 8 to 40 Hz pulsing.</li>
+      <li>Attack, effective duration and temporal centre follow the Timbre Toolbox (simplified: 20% to 90% attack). Dynamic profiles follow Peeters and Deruty.</li>
+      <li>Thresholds were tuned on the built-in kit and score 25 of 25 there. That score is optimistic; real libraries will show where the rules break.</li>
+    </ul>
+  </div>
+</div>
+</div>
+
+<input type="file" id="file" accept="audio/*,.wav,.ogg,.mp3,.flac,.aif,.aiff,.m4a" multiple hidden>
+
+<script>window.PLAYHEAD_ALLOW_SAVE = true;</script>
+<script src="src/analysis.js"></script>
+<script src="src/probes.js"></script>
+<script src="src/effects.js"></script>
+<script src="src/app.js"></script>
+</body>
+</html>

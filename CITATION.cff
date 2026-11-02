@@ -1,0 +1,25 @@
+cff-version: 1.2.0
+message: "If you use Playhead in your work, please cite it as below."
+type: software
+title: "Playhead: overview curves and analysis-driven tools for music and game audio"
+abstract: >-
+  Playhead draws a waveform plus one or two feature lines (intensity, activity,
+  tension, beats, sections, event types) so the content of a music or sound
+  effect asset can be read at a glance, and uses the same analysis to drive
+  editing, mixing and mastering tools. It runs entirely in the browser.
+authors:
+  - family-names: Sandner
+    given-names: Daniel
+version: 0.1.0
+license: Apache-2.0
+repository-code: "https://github.com/eigensoundlab/playhead"
+url: "https://eigensoundlab.github.io/playhead/"
+keywords:
+  - audio visualization
+  - waveform
+  - psychoacoustics
+  - music information retrieval
+  - game audio
+  - sound design
+  - adaptive audio effects
+  - Web Audio

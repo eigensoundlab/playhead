@@ -1,0 +1,1322 @@
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Daniel Sandner
+// Part of Playhead, https://github.com/eigensoundlab/playhead
+
+"use strict";
+(function () {
+const $ = id => document.getElementById(id);
+const store = {
+  get(k, d) { try { const v = localStorage.getItem("pwl." + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem("pwl." + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
+};
+const ALLOW_SAVE = !!window.PLAYHEAD_ALLOW_SAVE;
+// In hosts that sandbox downloads (the claude.ai artifact viewer), saving goes through the host's
+// download permission instead; the GitHub Pages build saves directly.
+let HOST_DL = null;
+if (!ALLOW_SAVE && window.claude && typeof window.claude.use === "function") {
+  window.claude.use("downloads").then(d => { HOST_DL = d || null; if (HOST_DL && typeof renderFxResult === "function") renderFxResult(); }).catch(() => { HOST_DL = null; });
+}
+const S = {
+  fx: store.get("fx", "cleanup"), fxVals: {}, fxLast: null,
+  files: [], sel: null,
+  height: store.get("height", 40), shape: store.get("shape", "mirror"), scale: store.get("scale", "fixed"),
+  ghost: store.get("ghost", false), panel: store.get("panel", "dark"), thumb: store.get("thumb", "auto"),
+  queue: Promise.resolve(), nextId: 1
+};
+
+/* ---------------- panel palettes (editor-coloured, independent of page theme) ---------------- */
+const PANELS = {
+  dark: {
+    bg: "#1C1F22", seg: "rgba(255,255,255,0.07)", band: "rgba(255,255,255,0.035)", mid: "rgba(255,255,255,0.10)",
+    ink: "#B3BEC6", unity: "#E8892E", outline: "rgba(255,255,255,0.42)", tick: "#F4F6F7", off: "#727D85",
+    overlay: "rgba(255,255,255,0.45)", rulerInk: "#A4AFB7",
+    dim: "rgba(179,190,198,0.26)", mark: "#F0A35E", shade: "rgba(0,0,0,0.38)", line: "#FF7AB8", halo: "rgba(10,12,14,0.75)", bar: "rgba(255,255,255,0.22)",
+    cat: ["#5B8DEF", "#E8A33D", "#4FB39A", "#E0677F", "#A285E0", "#8DBF4F", "#E07A4F", "#4FB1D9", "#C9B458", "#B07C9E"],
+    spec6: ["#3F4FA0", "#2C7FA6", "#24A38E", "#63BE5F", "#BFD63C", "#FBE74A"], tail: "rgba(179,190,198,0.45)", bad: "#FF6B6B",
+    ramp: [[59, 82, 139], [44, 114, 142], [33, 145, 140], [40, 174, 128], [94, 201, 98], [173, 220, 48], [253, 231, 37]]
+  },
+  light: {
+    bg: "#EEF1F3", seg: "rgba(0,0,0,0.08)", band: "rgba(0,0,0,0.035)", mid: "rgba(0,0,0,0.12)",
+    ink: "#45525C", unity: "#C2600D", outline: "rgba(0,0,0,0.45)", tick: "#15191C", off: "#808B93",
+    overlay: "rgba(0,0,0,0.38)", rulerInk: "#4E5960",
+    dim: "rgba(69,82,92,0.22)", mark: "#B5541B", shade: "rgba(255,255,255,0.55)", line: "#B4236C", halo: "rgba(255,255,255,0.85)", bar: "rgba(0,0,0,0.20)",
+    cat: ["#3E6FD1", "#C98617", "#2F9378", "#C44A63", "#7E60C4", "#6A9A2E", "#C55C30", "#2E92BA", "#A8932E", "#8F5A7E"],
+    spec6: ["#24307A", "#1F6390", "#178277", "#3C9A3F", "#8EA11B", "#C29A00"], tail: "rgba(69,82,92,0.45)", bad: "#C62828",
+    ramp: [[189, 214, 236], [145, 191, 222], [99, 162, 205], [60, 132, 189], [34, 101, 168], [16, 72, 140], [10, 44, 100]]
+  }
+};
+function rampRGB(P, v) {
+  const s = P.ramp, x = Math.max(0, Math.min(1, v)) * (s.length - 1);
+  const i = Math.min(s.length - 2, Math.floor(x)), f = x - i, a = s[i], b = s[i + 1];
+  return "rgb(" + Math.round(a[0] + (b[0] - a[0]) * f) + "," + Math.round(a[1] + (b[1] - a[1]) * f) + "," + Math.round(a[2] + (b[2] - a[2]) * f) + ")";
+}
+function rampCSS(P) { return "linear-gradient(90deg," + P.ramp.map(c => "rgb(" + c.join(",") + ")").join(",") + ")"; }
+
+/* ---------------- strip definitions ---------------- */
+const SINGLE = [
+  { id: "c1", code: "C1", name: "Loudness", desc: "K-weighted level in LUFS, absolute scale from −60 to 0.", key: "c1", pool: "max" },
+  { id: "c2", code: "C2", name: "Activity", desc: "Rising spectral change plus onsets per second. Independent of level.", key: "c2", pool: "mean" },
+  { id: "c3", code: "C3", name: "Arousal", desc: "Loudness 50%, loudness variation 15%, activity 20%, noisiness 15%.", key: "c3", pool: "mean" },
+  { id: "c4", code: "C4", name: "Harshness-weighted loudness", desc: "Loudness raised by sharpness, roughness and fluctuation (Zwicker annoyance form).", key: "c4", pool: "max" },
+  { id: "c5", code: "C5", name: "Tension", desc: "Integrated trends of loudness, sharpness, roughness and harmony (Farbood model).", key: "c5", pool: "mean", needs: "tension" },
+  { id: "c6", code: "C6", name: "Harmonic tension", desc: "Chroma dissonance, distance from key and chord change (tonal interval vectors).", key: "c6", pool: "mean", needs: "harmony" },
+  { id: "c7", code: "C7", name: "Novelty", desc: "Spectral surprise beyond what loudness explains. Ticks mark the strongest new events.", key: "c7", pool: "max", needs: "surprise", ticks: true }
+];
+const D3MAP = {
+  rhythmic:   { h: "c1", col: "activity", lab: ["calm", "busy"], ticks: true, text: "Rhythmic: height loudness (C1), colour activity (C2), novelty ticks." },
+  orchestral: { h: "c5", col: "harmony", lab: ["consonant", "tense"], ticks: true, text: "Orchestral: height tension (C5), colour harmonic tension (C6), novelty ticks." },
+  sfx:        { h: "c1", col: "harsh", lab: ["smooth", "harsh"], ticks: false, text: "One-shot: height fast loudness (C1), colour harshness factor (C4)." },
+  ambience:   { h: "c1", col: "fluct", lab: ["steady", "fluctuating"], ticks: true, text: "Ambience: height 3 s loudness (C1), colour fluctuation strength, novelty ticks." }
+};
+const RHY = [
+  { id: "r1", code: "R1", name: "Events", desc: "Onsets, where the sound starts, and where it has fallen 30 dB below its peak. Works for any asset.", kind: "events" },
+  { id: "r2", code: "R2", name: "Beat tracker", desc: "Dynamic programming over onsets at one global tempo (Ellis 2007). Thick lines are downbeats, assuming 4/4.", kind: "dp", minDur: 5 },
+  { id: "r3", code: "R3", name: "Local pulse", desc: "Predominant local pulse (Grosche & Müller 2011). Follows tempo changes; peaks are beats, height scaled by clarity.", kind: "plp", minDur: 5 },
+  { id: "r4", code: "R4", name: "Pulse clarity and tempo", desc: "Height: how regular the onsets are over 8 s. Colour: local tempo, grey where there is no clear pulse.", kind: "clarity", minDur: 5 }
+];
+const SFXROWS = [
+  { id: "x1", code: "X1", name: "Spectral silhouette", desc: "Height is loudness. Inside, colour shows where the energy sits: low frequencies at the centre, high at the edges.", kind: "silhouette" },
+  { id: "x2", code: "X2", name: "Layers", desc: "Up to three spectral components found by non-negative matrix factorisation, coloured by centre frequency. A sweep splits into consecutive layers.", kind: "layers" },
+  { id: "x3", code: "X3", name: "Pitch and brightness", desc: "Solid line: pitch where the sound is tonal. Dotted: spectral centroid. Log scale, 50 Hz at the bottom to 10 kHz at the top.", kind: "motion" },
+  { id: "x4", code: "X4", name: "Envelope", desc: "Loudness coloured by phase: attack, body within 12 dB of the peak, tail down to −45 dB. Tick: temporal centre.", kind: "phases" },
+  { id: "x5", code: "X5", name: "Sound objects", desc: "Events tagged with Schaeffer's typology: N tonal, X noisy, Y gliding; ′ impulse, ″ iterative.", kind: "objects" },
+  { id: "x6", code: "X6", name: "Space", desc: "Line: pan, left up and right down. Band: width, how different the two channels are.", kind: "space" },
+  { id: "x7", code: "X7", name: "Asset checks", desc: "Clipping, DC offset, silence at either end, a non-zero first sample, a cut tail, loop seams.", kind: "checks" }
+];
+const STR = [
+  { id: "s1", code: "S1", name: "Structural novelty", desc: "How different the next few seconds are from the last few (Foote 2000, on timbre, chroma, level and activity). Lines are boundaries.", kind: "snov" },
+  { id: "s2", code: "S2", name: "Sections", desc: "Segments between boundaries, lettered by similarity. The same letter means returning material.", kind: "sections" }
+];
+const DESIGNS = [
+  { id: "d1", code: "D1", name: "Energy", desc: "Height arousal (C3), colour activity (C2).", h: "c3", col: "activity", lab: ["calm", "busy"] },
+  { id: "d2", code: "D2", name: "Tension arc", desc: "Height tension (C5), colour harshness factor (C4), novelty ticks.", h: "c5", col: "harsh", lab: ["smooth", "harsh"], ticks: true },
+  { id: "d3", code: "D3", name: "Asset thumbnail", desc: "", auto: true },
+  { id: "d5", code: "D5", name: "SFX thumbnail", desc: "Spectral silhouette (X1) with event ticks (X5) and the pitch line where the sound is tonal (X3).", kind: "d5", lab: ["low", "high"] },
+  { id: "d4", code: "D4", name: "Structure overlay", desc: "Height loudness (C1), colour activity (C2), line harmonic tension (C6), top band sections (S2), bar lines (R2), ticks novelty (C7).", kind: "d4", lab: ["calm", "busy"] }
+];
+const POOLMODE = { c1: "max", c2: "mean", c3: "mean", c4: "max", c5: "mean", c6: "mean", c7: "max", activity: "mean", harsh: "mean", fluct: "mean", harmony: "mean" };
+
+/* ---------------- DOM rows ---------------- */
+const scopes = [];
+function mkRow(container, spec, group) {
+  const lab = document.createElement("div"); lab.className = "lab";
+  const tl = document.createElement("div"); tl.className = "titleline";
+  if (spec.code) { const c = document.createElement("span"); c.className = "code"; c.textContent = spec.code; tl.appendChild(c); }
+  const nm = document.createElement("span"); nm.className = "name"; nm.textContent = spec.name; tl.appendChild(nm);
+  lab.appendChild(tl);
+  const ds = document.createElement("div"); ds.className = "desc"; ds.id = "ds-" + spec.id; ds.textContent = spec.desc || ""; lab.appendChild(ds);
+  const ml = document.createElement("div"); ml.className = "metaline"; ml.id = "ml-" + spec.id; lab.appendChild(ml);
+  const sc = document.createElement("div"); sc.className = "scope";
+  const w = document.createElement("div"); w.className = "cvw";
+  const cv = document.createElement("canvas"); cv.className = "strip"; cv.id = "cv-" + spec.id;
+  cv.setAttribute("role", "img"); cv.setAttribute("aria-label", (spec.code ? spec.code + " " : "") + spec.name + " strip; click to seek");
+  const ph = document.createElement("div"); ph.className = "ph";
+  const hv = document.createElement("div"); hv.className = "hv";
+  w.appendChild(cv); w.appendChild(ph); w.appendChild(hv); sc.appendChild(w);
+  container.appendChild(lab); container.appendChild(sc);
+  scopes.push({ w, cv, ph, hv, spec, group });
+}
+function buildRows() {
+  const rr = $("rows-ruler");
+  const lab = document.createElement("div"); lab.className = "lab";
+  lab.innerHTML = '<div class="rulerlab" id="rulerlab">0:00</div>';
+  const sc = document.createElement("div"); sc.className = "scope";
+  const w = document.createElement("div"); w.className = "cvw";
+  const cv = document.createElement("canvas"); cv.className = "strip"; cv.id = "cv-ruler"; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "Time ruler; click to seek");
+  const ph = document.createElement("div"); ph.className = "ph";
+  const hv = document.createElement("div"); hv.className = "hv";
+  w.appendChild(cv); w.appendChild(ph); w.appendChild(hv); sc.appendChild(w);
+  rr.appendChild(lab); rr.appendChild(sc);
+  scopes.push({ w, cv, ph, hv, spec: { id: "ruler" }, group: "ruler" });
+  mkRow($("rows-ref"), { id: "unity", name: "Peak waveform", desc: "Linear min/max per channel." }, "ref");
+  SINGLE.forEach(s => mkRow($("rows-single"), s, "single"));
+  SFXROWS.forEach(s => mkRow($("rows-sfx"), s, "sfx"));
+  RHY.forEach(s => mkRow($("rows-rhythm"), s, "rhythm"));
+  STR.forEach(s => mkRow($("rows-structure"), s, "structure"));
+  DESIGNS.forEach(s => mkRow($("rows-design"), s, "design"));
+}
+
+/* ---------------- files ---------------- */
+function effClass(f) { return f.cls || (f.F ? f.F.guess : "rhythmic"); }
+function curvesOf(f) {
+  const key = effClass(f) + "|" + S.scale;
+  f.curves = f.curves || {};
+  if (!f.curves[key]) f.curves[key] = WL.computeCurves(f.F, effClass(f), { scale: S.scale });
+  return f.curves[key];
+}
+function peaksOf(f, cols) {
+  f.peaks = f.peaks || {};
+  if (f.peaks[cols]) return f.peaks[cols];
+  const nch = Math.min(2, f.buf.numberOfChannels);
+  const out = { min: [], max: [] };
+  for (let c = 0; c < nch; c++) {
+    const d = f.buf.getChannelData(c), n = d.length;
+    const mn = new Float32Array(cols), mx = new Float32Array(cols);
+    for (let i = 0; i < cols; i++) {
+      const s = Math.floor(i * n / cols), e = Math.max(s + 1, Math.floor((i + 1) * n / cols));
+      let a = 0, b = 0;
+      for (let k = s; k < e && k < n; k++) { const v = d[k]; if (v < a) a = v; if (v > b) b = v; }
+      mn[i] = a; mx[i] = b;
+    }
+    out.min.push(mn); out.max.push(mx);
+  }
+  if (nch === 1) { out.min.push(out.min[0]); out.max.push(out.max[0]); }
+  const keys = Object.keys(f.peaks); if (keys.length > 6) delete f.peaks[keys[0]];
+  f.peaks[cols] = out;
+  return out;
+}
+function viewOf(f, cols) {
+  const cls = effClass(f), key = cls + "|" + S.scale + "|" + cols;
+  f.views = f.views || {};
+  if (f.views[key]) return f.views[key];
+  const cur = curvesOf(f), n = f.F.nF;
+  const v = { cols, cls, cur };
+  for (const k of ["c1", "c2", "c3", "c4", "c5", "c6", "c7"]) v[k] = WL.pool(cur.curves[k], n, cols, POOLMODE[k]);
+  for (const k of ["activity", "harsh", "fluct", "harmony"]) v[k] = WL.pool(cur.colour[k], n, cols, POOLMODE[k]);
+  v.ticks = cur.ticks.map(m => Math.min(cols - 1, Math.floor((m + 0.5) / n * cols)));
+  const R = WL.rhythmOf(f.F), St = WL.structureOf(f.F), E = WL.eventsOf(f.F);
+  v.R = R; v.St = St; v.E = E;
+  if (!f.envScale) {
+    const t = Array.from(R.env).filter(x => x > 0).sort((a, b) => a - b);
+    f.envScale = t.length ? t[Math.floor(0.99 * (t.length - 1))] || 1 : 1;
+    f.plpDisp = new Float32Array(n);
+    for (let m = 0; m < n; m++) f.plpDisp[m] = R.plp[m] * Math.min(1, R.clarity[m] / 0.6);
+    f.tempoN = new Float32Array(n);
+    for (let m = 0; m < n; m++) f.tempoN[m] = R.ltempo[m] > 0 ? Math.max(0, Math.min(1, Math.log2(R.ltempo[m] / 60) / Math.log2(3))) : 0;
+  }
+  v.env = WL.pool(R.env, n, cols, "max").map(x => Math.min(1, x / f.envScale));
+  v.plp = WL.pool(f.plpDisp, n, cols, "max");
+  v.clar = WL.pool(R.clarity, n, cols, "mean");
+  v.tempoN = WL.pool(f.tempoN, n, cols, "mean");
+  v.snov = WL.pool(St.nov, n, cols, "max");
+  const X = f.buf ? WL.sfxOf(f.F, f.buf, f.name) : null;
+  v.X = X;
+  if (X) {
+    const samp = arr => { const o = new Float32Array(cols); for (let c = 0; c < cols; c++) o[c] = arr[Math.min(n - 1, Math.max(0, Math.floor((c + 0.5) / cols * n)))]; return o; };
+    const lo = Math.log2(50), hi = Math.log2(10000), nf = l2 => Math.max(0, Math.min(1, (l2 - lo) / (hi - lo)));
+    v.bands6 = X.bands6.map(a => WL.pool(a, n, cols, "mean"));
+    v.layers = X.layers.map(l => WL.pool(l.act, n, cols, "max"));
+    v.phase = samp(X.phase);
+    const f0c = samp(X.f0), apc = samp(X.aper), cc = samp(X.cent), lv = WL.pool(X.lev, n, cols, "max");
+    v.f0n = new Float32Array(cols); v.centn = new Float32Array(cols);
+    for (let c = 0; c < cols; c++) {
+      v.f0n[c] = apc[c] <= WL.SFX.tonalAper && f0c[c] >= 50 && lv[c] >= X.pk - 35 ? nf(Math.log2(f0c[c])) : NaN;
+      v.centn[c] = lv[c] >= X.pk - 40 && cc[c] > 0 ? nf(cc[c]) : NaN;
+    }
+    v.pan = WL.pool(X.pan, n, cols, "mean"); v.width = WL.pool(X.width, n, cols, "mean");
+    v.lvGate = lv.map(x => x >= X.pk - 45 ? 1 : 0);
+  }
+  const keys = Object.keys(f.views); if (keys.length > 12) delete f.views[keys[0]];
+  f.views[key] = v;
+  return v;
+}
+function diagOf(f) {
+  const key = effClass(f) + "|" + S.scale;
+  f.diag = f.diag || {};
+  if (f.diag[key]) return f.diag[key];
+  const cols = 400, v = viewOf(f, cols), n = f.F.nF;
+  const gate = WL.pool(Float32Array.from(v.cur.gate), n, cols, "mean");
+  const mask = new Uint8Array(cols); for (let i = 0; i < cols; i++) mask[i] = gate[i] >= 0.5 ? 1 : 0;
+  const pk = peaksOf(f, cols), peak = new Float32Array(cols);
+  for (let i = 0; i < cols; i++) peak[i] = Math.max(-pk.min[0][i], pk.max[0][i], -pk.min[1][i], pk.max[1][i]);
+  const series = { peak, c1: v.c1, c2: v.c2, c3: v.c3, c4: v.c4, c5: v.c5, c6: v.c6, c7: v.c7, r4: v.clar, s1: v.snov };
+  const r = {}, dis = {};
+  // leave the first and last 3% out of the listening suggestions: smoother start-up, fades
+  const mDis = Uint8Array.from(mask);
+  const edge = Math.round(cols * 0.03);
+  for (let i = 0; i < cols; i++) if (i < edge || i >= cols - edge) mDis[i] = 0;
+  for (const k of ["c2", "c3", "c4", "c5", "c6", "c7", "r4", "s1"]) {
+    r[k] = WL.diffCorr(series[k], v.c1, mask);
+    dis[k] = WL.disagreements(series[k], v.c1, mDis, 3, 0.06).map(o => (o.i + 0.5) / cols * f.dur);
+  }
+  const names = Object.keys(series);
+  const mx = names.map(a => names.map(b => WL.diffCorr(series[a], series[b], mask)));
+  f.diag[key] = { r, dis, names, mx };
+  return f.diag[key];
+}
+
+/* ---------------- drawing ---------------- */
+function prep(cv, h) {
+  const dpr = window.devicePixelRatio || 1;
+  const w = Math.max(1, Math.floor(cv.clientWidth));
+  cv.style.height = h + "px";
+  const W = Math.round(w * dpr), H = Math.round(h * dpr);
+  if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+  const x = cv.getContext("2d");
+  x.setTransform(dpr, 0, 0, dpr, 0, 0);
+  return { x, w, h };
+}
+function segCols(f, cols) {
+  if (!f.segments) return [];
+  return f.segments.slice(1).map(s => Math.round(s.t0 / f.dur * cols));
+}
+function drawSegLines(x, P, segs, h) {
+  if (!segs.length) return;
+  x.fillStyle = P.seg;
+  for (const c of segs) x.fillRect(c, 0, 1, h);
+}
+function drawOff(x, P, w, h, text) {
+  x.fillStyle = P.bg; x.fillRect(0, 0, w, h);
+  if (h >= 13) {
+    x.fillStyle = P.off; x.font = "11px 'IBM Plex Sans', system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle";
+    x.fillText(text, w / 2, h / 2 + 0.5);
+  }
+}
+function drawValues(x, P, w, h, vals, cols, colours, solid) {
+  const shape = S.shape;
+  const cw = w / cols;
+  const fill = (c, y0, y1, style) => { x.fillStyle = style; x.fillRect(c * cw, y0, Math.max(cw, 1), Math.max(0.5, y1 - y0)); };
+  if (!colours) x.fillStyle = solid;
+  for (let c = 0; c < cols; c++) {
+    const v = Math.max(0, Math.min(1, vals[c]));
+    if (v <= 0.002) continue;
+    const st = colours ? (isNaN(colours[c]) ? solid : rampRGB(P, colours[c])) : solid;
+    if (shape === "mirror") {
+      const half = h / 2, a = v * (half - 0.5);
+      fill(c, half - a, half + a, st);
+    } else if (shape === "base") {
+      fill(c, h - v * (h - 1), h, st);
+    } else {
+      const v1 = Math.min(v, 0.5) * 2, v2 = Math.max(0, v - 0.5) * 2;
+      fill(c, h - v1 * h, h, st);
+      if (v2 > 0) fill(c, h - v2 * h, h, P.overlay);
+    }
+  }
+}
+function drawOutline(x, P, w, h, pk, cols) {
+  x.strokeStyle = P.outline; x.lineWidth = 1;
+  const cw = w / cols;
+  const amp = c => [Math.max(-pk.min[0][c], pk.max[0][c]), Math.max(-pk.min[1][c], pk.max[1][c])];
+  x.beginPath();
+  if (S.shape === "mirror") {
+    const half = h / 2;
+    for (let c = 0; c < cols; c++) { const [l] = amp(c); const y = half - Math.min(1, l) * (half - 0.5); c ? x.lineTo((c + 0.5) * cw, y) : x.moveTo((c + 0.5) * cw, y); }
+    x.stroke(); x.beginPath();
+    for (let c = 0; c < cols; c++) { const [, r] = amp(c); const y = half + Math.min(1, r) * (half - 0.5); c ? x.lineTo((c + 0.5) * cw, y) : x.moveTo((c + 0.5) * cw, y); }
+  } else {
+    for (let c = 0; c < cols; c++) { const [l, r] = amp(c); const y = h - Math.min(1, Math.max(l, r)) * (h - 1); c ? x.lineTo((c + 0.5) * cw, y) : x.moveTo((c + 0.5) * cw, y); }
+  }
+  x.stroke();
+}
+function drawTicks(x, P, w, h, ticks, cols) {
+  if (!ticks || !ticks.length) return;
+  const cw = w / cols;
+  for (const c of ticks) {
+    const px = Math.round((c + 0.5) * cw);
+    x.fillStyle = P.tick; x.globalAlpha = 0.55; x.fillRect(px, 0, 1, h); x.globalAlpha = 1;
+    const s = Math.max(3, Math.min(5, h / 6));
+    x.beginPath(); x.moveTo(px - s + 0.5, 0); x.lineTo(px + s + 0.5, 0); x.lineTo(px + 0.5, s * 1.2); x.closePath(); x.fill();
+  }
+}
+function drawUnity(x, P, w, h, pk, cols) {
+  const cw = w / cols, lane = h / 2;
+  x.fillStyle = P.mid; x.fillRect(0, Math.round(lane / 2), w, 1); x.fillRect(0, Math.round(lane + lane / 2), w, 1);
+  x.fillStyle = P.unity;
+  for (let ch = 0; ch < 2; ch++) {
+    const mid = ch * lane + lane / 2, hh = lane / 2 - 0.5;
+    for (let c = 0; c < cols; c++) {
+      const a = mid - Math.min(1, pk.max[ch][c]) * hh, b = mid - Math.max(-1, pk.min[ch][c]) * hh;
+      x.fillRect(c * cw, a, Math.max(cw, 1), Math.max(1, b - a));
+    }
+  }
+}
+function tx(t, f, w) { return Math.round(t / f.dur * w); }
+function vlines(x, w, h, f, times, style, alpha, width, alphaFn) {
+  x.fillStyle = style;
+  for (const t of times) { x.globalAlpha = alphaFn ? alphaFn(t) : alpha; x.fillRect(tx(t, f, w) - (width > 1 ? 1 : 0), 0, width, h); }
+  x.globalAlpha = 1;
+}
+function drawLine(x, P, w, h, vals, cols) {
+  const cw = w / cols;
+  const path = () => { x.beginPath(); for (let c = 0; c < cols; c++) { const y = h - 1.5 - Math.max(0, Math.min(1, vals[c])) * (h - 3); c ? x.lineTo((c + 0.5) * cw, y) : x.moveTo((c + 0.5) * cw, y); } };
+  x.lineJoin = "round"; x.lineCap = "round";
+  x.strokeStyle = P.halo; x.lineWidth = 3.2; path(); x.stroke();
+  x.strokeStyle = P.line; x.lineWidth = 1.5; path(); x.stroke();
+}
+function textOn(hex) {
+  const c = parseInt(hex.slice(1), 16), r = (c >> 16) & 255, g = (c >> 8) & 255, b = c & 255;
+  return (0.2126 * r + 0.7152 * g + 0.0722 * b) > 140 ? "#121517" : "#F6F8F9";
+}
+function drawSections(x, P, w, h, f, St) {
+  St.segs.forEach((sg, i) => {
+    const a = tx(sg.t0, f, w), b = tx(sg.t1, f, w);
+    const col = P.cat[sg.cls % P.cat.length];
+    x.fillStyle = col; x.fillRect(a, 0, Math.max(1, b - a - (i < St.segs.length - 1 ? 1 : 0)), h);
+    if (b - a >= 12 && h >= 10) {
+      x.fillStyle = textOn(col); x.font = "600 " + Math.min(12, Math.max(9, h - 4)) + "px 'IBM Plex Sans', system-ui, sans-serif";
+      x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(sg.label, (a + b) / 2, h / 2 + 0.5);
+    }
+  });
+}
+function specColor(P, hz) {
+  const t = Math.max(0, Math.min(1, (Math.log2(Math.max(20, hz)) - Math.log2(100)) / (Math.log2(8000) - Math.log2(100))));
+  return P.spec6[Math.min(5, Math.round(t * 5))];
+}
+function drawSilhouette(x, P, w, h, v, cols) {
+  const cw = w / cols, mir = S.shape === "mirror";
+  for (let c = 0; c < cols; c++) {
+    const val = Math.max(0, Math.min(1, v.c1[c]));
+    if (val <= 0.002) continue;
+    let tot = 0; for (let k = 0; k < 6; k++) tot += v.bands6[k][c];
+    if (tot <= 1e-6) { x.fillStyle = P.dim; const a = val * (mir ? h / 2 - 0.5 : h - 1); x.fillRect(c * cw, mir ? h / 2 - a : h - a, Math.max(cw, 1), mir ? 2 * a : a); continue; }
+    const A = val * (mir ? h / 2 - 0.5 : h - 1);
+    let cum = 0;
+    for (let k = 0; k < 6; k++) {
+      const sh = v.bands6[k][c] / tot; if (sh <= 0) continue;
+      const y0 = cum * A, y1 = (cum + sh) * A; cum += sh;
+      x.fillStyle = P.spec6[k];
+      if (mir) { x.fillRect(c * cw, h / 2 - y1, Math.max(cw, 1), y1 - y0 + 0.4); x.fillRect(c * cw, h / 2 + y0 - 0.4, Math.max(cw, 1), y1 - y0 + 0.4); }
+      else x.fillRect(c * cw, h - y1, Math.max(cw, 1), y1 - y0 + 0.4);
+    }
+  }
+}
+function drawNanLine(x, w, h, vals, cols, style, width, dash, halo) {
+  const cw = w / cols;
+  const path = () => {
+    x.beginPath(); let on = false;
+    for (let c = 0; c < cols; c++) {
+      const v = vals[c]; if (isNaN(v)) { on = false; continue; }
+      const px = (c + 0.5) * cw, py = h - 1.5 - v * (h - 3);
+      if (on) x.lineTo(px, py); else { x.moveTo(px, py); on = true; }
+    }
+  };
+  x.lineJoin = "round"; x.lineCap = "round";
+  if (halo) { x.setLineDash([]); x.strokeStyle = halo; x.lineWidth = width + 2; path(); x.stroke(); }
+  x.setLineDash(dash || []); x.strokeStyle = style; x.lineWidth = width; path(); x.stroke(); x.setLineDash([]);
+}
+function drawKind(x, P, w, h, spec, f, v, C, cols, opts) {
+  const R = v.R, St = v.St, E = v.E, X = v.X;
+  if (spec.minDur && f.dur < spec.minDur) { drawOff(x, P, w, h, "Off for clips under " + spec.minDur + " s"); return; }
+  const k = spec.kind;
+  if (k === "events") {
+    drawValues(x, P, w, h, v.c1, cols, null, P.dim);
+    const sx = tx(E.start, f, w), ex = tx(E.end30, f, w);
+    x.fillStyle = P.shade; if (sx > 0) x.fillRect(0, 0, sx, h); if (ex < w) x.fillRect(ex, 0, w - ex, h);
+    const n = f.F.nF;
+    vlines(x, w, h, f, R.onsetTimes, P.tick, 0.7, 1, t => { const m = Math.min(n - 1, Math.round(t / f.F.dt)); return 0.25 + 0.75 * Math.min(1, R.env[m] / f.envScale + 0.15); });
+    vlines(x, w, h, f, [E.start, E.end30].filter(t => t > 0.001 && t < f.dur - 0.001), P.mark, 1, 2);
+    return;
+  }
+  if (k === "dp") {
+    drawValues(x, P, w, h, v.c1, cols, null, P.dim);
+    if (!R.beatTimes.length) { drawOff(x, P, w, h, "No steady beat found"); return; }
+    const beatPx = (60 / Math.max(1, R.tempo)) / f.dur * w;
+    const n = f.F.nF, cl = t => R.clarity[Math.min(n - 1, Math.round(t / f.F.dt))];
+    const aFn = t => cl(t) >= WL.RHYTHM.clarityMin ? 0.65 : 0.22;
+    if (beatPx >= 3) vlines(x, w, h, f, R.beatTimes, P.tick, 0.6, 1, aFn);
+    const dts = beatPx * 4 >= 3 ? R.downTimes : R.downTimes.filter((_, i) => i % 4 === 0);
+    vlines(x, w, h, f, dts, P.tick, 1, 2, t => cl(t) >= WL.RHYTHM.clarityMin ? 1 : 0.35);
+    return;
+  }
+  if (k === "plp") {
+    drawValues(x, P, w, h, v.plp, cols, null, P.ink);
+    const n = f.F.nF;
+    const beatPx = (60 / Math.max(1, R.tempo || 120)) / f.dur * w;
+    if (beatPx >= 3) vlines(x, w, h, f, R.plpTimes, P.tick, 0.5, 1, t => R.clarity[Math.min(n - 1, Math.round(t / f.F.dt))] >= WL.RHYTHM.clarityMin ? 0.55 : 0.18);
+    return;
+  }
+  if (k === "clarity") {
+    const tc = v.tempoN.map((t, i) => v.clar[i] >= WL.RHYTHM.clarityMin ? t : NaN);
+    drawValues(x, P, w, h, v.clar, cols, tc, P.off);
+    return;
+  }
+  if (k === "snov") {
+    if (St.tooShort) { drawOff(x, P, w, h, "Too short for sections"); return; }
+    drawValues(x, P, w, h, v.snov, cols, null, P.ink);
+    vlines(x, w, h, f, St.bounds, P.mark, 1, 2);
+    return;
+  }
+  if (k === "sections") {
+    if (St.tooShort) { drawOff(x, P, w, h, "Too short for sections"); return; }
+    drawSections(x, P, w, h, f, St);
+    return;
+  }
+  if (["silhouette", "layers", "motion", "phases", "objects", "space", "checks", "d5"].includes(k) && !X) { drawOff(x, P, w, h, "Needs the decoded audio"); return; }
+  if (k === "silhouette") { drawSilhouette(x, P, w, h, v, cols); return; }
+  if (k === "layers") {
+    if (!X.layers.length) { drawOff(x, P, w, h, "No layers found"); return; }
+    const order = X.layers.map((l, i) => i).sort((a, b) => X.layers[b].share - X.layers[a].share);
+    const cw = w / cols;
+    for (const i of order) {
+      const col = specColor(P, X.layers[i].hz), act = v.layers[i];
+      x.globalAlpha = 0.5; x.fillStyle = col;
+      x.beginPath(); x.moveTo(0, h);
+      for (let c = 0; c < cols; c++) x.lineTo((c + 0.5) * cw, h - Math.max(0, Math.min(1, act[c])) * (h - 2));
+      x.lineTo(w, h); x.closePath(); x.fill();
+      x.globalAlpha = 1; x.strokeStyle = col; x.lineWidth = 1.2;
+      x.beginPath(); for (let c = 0; c < cols; c++) { const py = h - Math.max(0, Math.min(1, act[c])) * (h - 2); c ? x.lineTo((c + 0.5) * cw, py) : x.moveTo((c + 0.5) * cw, py); } x.stroke();
+    }
+    return;
+  }
+  if (k === "motion") {
+    drawValues(x, P, w, h, v.c1, cols, null, P.dim);
+    const lo = Math.log2(50), hi = Math.log2(10000);
+    x.font = "10px 'IBM Plex Mono', ui-monospace, monospace"; x.textBaseline = "middle"; x.textAlign = "left";
+    for (const [fq, lab] of [[100, "100"], [1000, "1k"], [10000, "10k"]]) {
+      const y = Math.round(h - 1.5 - (Math.log2(fq) - lo) / (hi - lo) * (h - 3)) + 0.5;
+      x.fillStyle = P.mid; x.fillRect(0, y, w, 1);
+      if (h >= 36 && y > 6 && y < h - 4) { x.fillStyle = P.off; x.fillText(lab, 3, y - 6); }
+    }
+    drawNanLine(x, w, h, v.centn, cols, P.ink, 1.2, [2, 3], null);
+    drawNanLine(x, w, h, v.f0n, cols, P.line, 1.8, null, P.halo);
+    return;
+  }
+  if (k === "phases") {
+    const cw = w / cols, mir = S.shape === "mirror";
+    const colr = [null, P.mark, P.ink, P.tail];
+    for (let c = 0; c < cols; c++) {
+      const ph = v.phase[c], val = Math.max(0, Math.min(1, v.c1[c]));
+      if (!ph || val <= 0.002) continue;
+      x.fillStyle = colr[ph];
+      const A = val * (mir ? h / 2 - 0.5 : h - 1);
+      if (mir) x.fillRect(c * cw, h / 2 - A, Math.max(cw, 1), 2 * A); else x.fillRect(c * cw, h - A, Math.max(cw, 1), A);
+    }
+    const tc = tx(X.tcent, f, w), s3 = Math.max(3, Math.min(5, h / 7));
+    x.fillStyle = P.tick; x.beginPath(); x.moveTo(tc - s3, h); x.lineTo(tc + s3, h); x.lineTo(tc, h - s3 * 1.3); x.closePath(); x.fill();
+    return;
+  }
+  if (k === "objects") {
+    drawValues(x, P, w, h, v.c1, cols, null, P.dim);
+    const mc = { N: P.cat[0], X: P.cat[1], Y: P.cat[3] };
+    X.events.forEach(e => {
+      const a = tx(e.t0, f, w), b = Math.max(a + 2, tx(e.tEnd, f, w));
+      x.globalAlpha = 0.3; x.fillStyle = mc[e.mass]; x.fillRect(a, 0, b - a, h);
+      x.globalAlpha = 1; x.fillRect(a, 0, 2, h);
+      if (e.grains.length > 1) { x.globalAlpha = 0.85; for (const g of e.grains) x.fillRect(tx(g, f, w), h - Math.max(3, h * 0.22), 1, Math.max(3, h * 0.22)); x.globalAlpha = 1; }
+      if (b - a >= 18 && h >= 14) {
+        x.fillStyle = P.tick; x.font = "600 " + Math.min(12, Math.max(10, h * 0.3)) + "px 'IBM Plex Sans', system-ui, sans-serif";
+        x.textAlign = "left"; x.textBaseline = "top"; x.fillText(e.tag, a + 4, 2);
+      }
+    });
+    return;
+  }
+  if (k === "space") {
+    drawValues(x, P, w, h, v.c1, cols, null, P.dim);
+    if (!X.stereo || X.identical) { if (h >= 13) { x.fillStyle = P.off; x.font = "11px 'IBM Plex Sans', system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(X.stereo ? "Identical channels" : "Mono", w / 2, h / 2 + 0.5); } return; }
+    const cw = w / cols, half = h / 2 - 2;
+    x.fillStyle = P.mid; x.fillRect(0, Math.round(h / 2), w, 1);
+    for (let c = 0; c < cols; c++) {
+      if (!v.lvGate[c]) continue;
+      const y = h / 2 + v.pan[c] * half, wd = Math.min(1, v.width[c]) * half;
+      x.globalAlpha = 0.3; x.fillStyle = P.line; x.fillRect(c * cw, y - wd, Math.max(cw, 1), 2 * wd + 1); x.globalAlpha = 1;
+    }
+    const pv = Array.from(v.pan, (p, c) => v.lvGate[c] ? 0.5 - p * half / (h - 3) : NaN);
+    drawNanLine(x, w, h, pv, cols, P.line, 1.8, null, P.halo);
+    if (h >= 24) { x.fillStyle = P.off; x.font = "10px 'IBM Plex Mono', ui-monospace, monospace"; x.textAlign = "left"; x.textBaseline = "top"; x.fillText("L", 3, 2); x.textBaseline = "bottom"; x.fillText("R", 3, h - 1); }
+    return;
+  }
+  if (k === "checks") {
+    const pk = peaksOf(f, cols), cw = w / cols, mid = h / 2;
+    x.fillStyle = P.dim;
+    for (let c = 0; c < cols; c++) { const mx = Math.min(1, Math.max(pk.max[0][c], pk.max[1][c])), mn = Math.max(-1, Math.min(pk.min[0][c], pk.min[1][c])); x.fillRect(c * cw, mid - mx * (mid - 1), Math.max(cw, 1), Math.max(1, (mx - mn) * (mid - 1))); }
+    x.fillStyle = P.mid; x.fillRect(0, Math.round(mid), w, 1);
+    x.fillStyle = P.shade;
+    const la = tx(X.lead, f, w), tb = tx(f.dur - X.trail, f, w);
+    if (X.lead > 0.02) x.fillRect(0, 0, la, h);
+    if (X.trail > 0.1) x.fillRect(tb, 0, w - tb, h);
+    if (X.dc > 0.005) { x.fillStyle = P.bad; x.globalAlpha = 0.8; x.fillRect(0, Math.round(mid - X.dc * (mid - 1)) - 0.5, w, 1); x.globalAlpha = 1; }
+    for (const m of X.marks) { x.fillStyle = P.bad; const px = Math.min(w - 2, Math.max(0, tx(m.t, f, w) - (m.kind === "end" ? 2 : 0))); x.fillRect(px, 0, m.kind === "clip" ? 1 : 2, h); }
+    if (X.seam && !X.seam.ok) { x.fillStyle = P.bad; x.fillRect(w - 3, 0, 3, h); }
+    return;
+  }
+  if (k === "d5") {
+    drawSilhouette(x, P, w, h, v, cols);
+    drawNanLine(x, w, h, v.f0n, cols, P.line, 1.4, null, P.halo);
+    const s3 = Math.max(2.5, Math.min(4.5, h / 6));
+    x.fillStyle = P.tick;
+    for (const e of X.events) { const px = tx(e.t0, f, w) + 0.5; x.beginPath(); x.moveTo(px - s3, 0); x.lineTo(px + s3, 0); x.lineTo(px, s3 * 1.3); x.closePath(); x.fill(); }
+    return;
+  }
+  if (k === "d4") {
+    const rib = h >= 18 && !St.tooShort && St.segs.length > 1 ? Math.max(4, Math.round(h * 0.17)) : 0;
+    if (rib) drawSections(x, P, w, rib, f, St);
+    const top = rib ? rib + 1 : 0, ah = h - top;
+    x.save(); x.translate(0, top);
+    drawValues(x, P, w, ah, v.c1, cols, v.activity, P.ink);
+    if (R.reliable && f.dur >= 5) {
+      const barPx = (240 / Math.max(1, R.tempo)) / f.dur * w;
+      if (barPx >= 5) vlines(x, w, ah, f, R.downTimes, P.bar, 1, 1);
+    }
+    if (C.harmony) drawLine(x, P, w, ah, v.c6, cols);
+    if (C.surprise) drawTicks(x, P, w, ah, v.ticks, cols);
+    x.restore();
+    return;
+  }
+}
+function drawStripFor(cv, spec, f, cols, h, P, opts) {
+  opts = opts || {};
+  const g = prep(cv, h), x = g.x, w = g.w;
+  x.fillStyle = P.bg; x.fillRect(0, 0, w, h);
+  if (!f || !f.F) return;
+  const v = viewOf(f, cols);
+  const C = WL.CLASSES[v.cls];
+  if (!opts.thumb) drawSegLines(x, P, segCols(f, cols), h);
+  if (spec.id === "unity") { drawUnity(x, P, w, h, peaksOf(f, cols), cols); return; }
+  if (spec.kind) { drawKind(x, P, w, h, spec, f, v, C, cols, opts); return; }
+  let hk, colk = null, ticks = false, solid = P.ink;
+  if (spec.key) {
+    hk = spec.key; ticks = !!spec.ticks;
+    if (spec.needs && !C[spec.needs]) { drawOff(x, P, w, h, "Off for " + C.label.toLowerCase()); return; }
+  } else {
+    const d = spec.auto ? D3MAP[v.cls] : spec;
+    hk = d.h; colk = d.col; ticks = !!d.ticks;
+    if ((hk === "c5" && !C.tension) || (colk === "harmony" && !C.harmony)) { drawOff(x, P, w, h, "Off for " + C.label.toLowerCase()); return; }
+  }
+  if (!S.ghost || opts.thumb) {
+    drawValues(x, P, w, h, v[hk], cols, colk ? v[colk] : null, solid);
+  } else {
+    drawValues(x, P, w, h, v[hk], cols, colk ? v[colk] : null, solid);
+    drawOutline(x, P, w, h, peaksOf(f, cols), cols);
+  }
+  if (ticks && C.surprise) drawTicks(x, P, w, h, v.ticks, cols);
+}
+function fmtT(t, fine) {
+  if (!isFinite(t)) return "0:00";
+  const m = Math.floor(t / 60), s = t - m * 60;
+  return m + ":" + (fine ? s.toFixed(1).padStart(4, "0") : String(Math.floor(s)).padStart(2, "0"));
+}
+function drawRuler(cv, f, cols, P) {
+  const h = 30, g = prep(cv, h), x = g.x, w = g.w;
+  x.fillStyle = P.bg; x.fillRect(0, 0, w, h);
+  if (!f) return;
+  const dur = f.dur;
+  x.font = "11px 'IBM Plex Sans', system-ui, sans-serif"; x.textBaseline = "middle";
+  const legend = [];
+  if (f.segments) {
+    f.segments.forEach((s, i) => {
+      const a = s.t0 / dur * w, b = s.t1 / dur * w;
+      if (i % 2) { x.fillStyle = P.band; x.fillRect(a, 0, b - a, h); }
+      x.fillStyle = P.seg; if (i) x.fillRect(Math.round(a), 0, 1, h);
+      const label = s.label, num = String(i + 1);
+      const tw = x.measureText(label).width;
+      x.fillStyle = P.rulerInk; x.textAlign = "left";
+      if (tw + 10 < b - a) x.fillText(label, a + 5, 10);
+      else { x.fillText(num, a + 4, 10); legend.push(i); }
+    });
+  }
+  const steps = [0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120, 300];
+  let step = steps[steps.length - 1];
+  for (const s of steps) if (s / dur * w >= 70) { step = s; break; }
+  x.fillStyle = P.rulerInk; x.textAlign = "left";
+  for (let t = 0; t <= dur + 1e-9; t += step) {
+    const px = Math.round(t / dur * w);
+    x.globalAlpha = 0.6; x.fillRect(px, h - 7, 1, 7); x.globalAlpha = 1;
+    if (px < w - 30) x.fillText(fmtT(t, step < 1), px + 4, h - 8);
+  }
+  return legend;
+}
+
+/* ---------------- effects bench ---------------- */
+const FX = window.WLFX;
+function analysisOf(f) { return { F: f.F, cur: curvesOf(f), R: WL.rhythmOf(f.F), St: WL.structureOf(f.F), X: f.buf ? WL.sfxOf(f.F, f.buf, f.name) : null }; }
+function toolAvail(t, f) {
+  if (!f || !f.F) return "Load or select a file first.";
+  if (t.needs === "tension" && !WL.CLASSES[effClass(f)].tension) return "Tension needs a music or ambience class. Set the asset class above to try it on this file.";
+  if (t.id === "layers") { const X = WL.sfxOf(f.F, f.buf, f.name); if (!X.layers.length) return "No layers were found in this file."; }
+  if (t.id === "loop" && f.dur < 1) return "Needs at least 1 s of audio.";
+  if (t.id === "hpss" && f.dur > 180) return "Attack and body is limited to files under 3 minutes in the browser.";
+  return "";
+}
+function paramDefs(t, f) {
+  if (t.params !== "layers") return t.params;
+  const X = f && f.F ? WL.sfxOf(f.F, f.buf, f.name) : null;
+  const defs = (X ? X.layers : []).map((l, i) => ({ id: "g" + i, label: l.name + " " + (l.hz >= 1000 ? (l.hz / 1000).toFixed(1) + " kHz" : Math.round(l.hz) + " Hz") + " (" + Math.round(l.share * 100) + "%)", min: -24, max: 12, step: 1, value: 0, unit: "dB" }));
+  defs.push({ id: "match", label: "Match loudness", type: "bool", value: true });
+  return defs;
+}
+function renderToolPicker() {
+  const box = $("toolpick");
+  if (!box.childElementCount) {
+    for (const t of FX.TOOLS) {
+      const b = el("button", ""); b.type = "button"; b.dataset.id = t.id;
+      b.appendChild(el("span", "", t.name)); b.appendChild(el("span", "k", t.kind));
+      b.addEventListener("click", () => { S.fx = t.id; store.set("fx", t.id); renderBench(); });
+      box.appendChild(b);
+    }
+  }
+  for (const b of box.children) b.setAttribute("aria-pressed", b.dataset.id === S.fx ? "true" : "false");
+}
+function renderBench() {
+  renderToolPicker();
+  const t = FX.TOOLS.find(x => x.id === S.fx) || FX.TOOLS[0], f = S.sel;
+  $("tooldesc").textContent = t.desc;
+  const box = $("params"); box.innerHTML = "";
+  const vals = S.fxVals[t.id] = S.fxVals[t.id] || {};
+  const defs = paramDefs(t, f);
+  for (const p of defs) {
+    const id = "fx-" + t.id + "-" + p.id;
+    if (vals[p.id] === undefined) vals[p.id] = p.value;
+    if (p.type === "bool") {
+      const lab = el("label", "param bool"); lab.htmlFor = id;
+      const cb = el("input"); cb.type = "checkbox"; cb.id = id; cb.checked = !!vals[p.id];
+      cb.addEventListener("change", () => { vals[p.id] = cb.checked; });
+      lab.appendChild(cb); lab.appendChild(el("span", "", p.label)); box.appendChild(lab);
+    } else {
+      const lab = el("label", "param"); lab.htmlFor = id;
+      lab.appendChild(el("span", "", p.label));
+      const out = el("span", "val");
+      const fmt = v => (Math.abs(p.step) < 1 ? Number(v).toFixed(p.step < 0.1 ? 2 : 1) : String(Math.round(v))) + (p.unit ? " " + p.unit : "");
+      out.textContent = fmt(vals[p.id]);
+      const r = el("input"); r.type = "range"; r.id = id; r.min = p.min; r.max = p.max; r.step = p.step; r.value = vals[p.id];
+      r.addEventListener("input", () => { vals[p.id] = parseFloat(r.value); out.textContent = fmt(vals[p.id]); });
+      lab.appendChild(out); lab.appendChild(r); box.appendChild(lab);
+    }
+  }
+  const why = toolAvail(t, f);
+  $("runfx").disabled = false;
+  $("runfx").textContent = "Render" + (f && f.F ? " " + t.name.toLowerCase() : "");
+  if (!S.fxBusy) $("fxstatus").textContent = why || (f && f.F ? "Works on " + f.name + "." : "");
+  renderFxResult();
+}
+function fxMetrics(f) {
+  const cur = curvesOf(f), X = WL.sfxOf(f.F, f.buf, f.name), g = cur.gate;
+  const ch = []; for (let c = 0; c < f.buf.numberOfChannels; c++) ch.push(f.buf.getChannelData(c));
+  const lufs = FX.lufsOf(ch, f.buf.sampleRate);
+  const mean = a => { let s = 0, k = 0; for (let m = 0; m < a.length; m++) if (g[m]) { s += a[m]; k++; } return k ? s / k : 0; };
+  const lt = Array.from(cur.lufs).filter((_, m) => g[m]).sort((a, b) => a - b);
+  const lra = lt.length ? lt[Math.floor(0.95 * (lt.length - 1))] - lt[Math.floor(0.10 * (lt.length - 1))] : 0;
+  return [
+    ["Length", f.dur, "s", 2], ["Loudness", lufs, "LUFS", 1], ["Peak", X.pkDb, "dBFS", 1], ["Loudness range", lra, "LU", 1],
+    ["Harshness factor", mean(cur.raw.hfac), "", 2], ["Sharpness", mean(cur.raw.sharp), "acum", 2], ["Roughness", mean(cur.raw.Rr), "asper", 2],
+    ["Activity", mean(cur.curves.c2), "", 2], ["Problems found", X.issues.filter(i => i.sev === "bad" || i.sev === "warn").length, "", 0],
+    ["Events", X.events.map(e => e.tag).join(" ").slice(0, 40) || "–", "", -1], ["Layers", X.layers.map(l => l.name + " " + Math.round(l.share * 100) + "%").join(", ") || "–", "", -1]
+  ];
+}
+function renderFxResult() {
+  const box = $("fxres"); box.innerHTML = "";
+  const L = S.fxLast; if (!L) return;
+  const src = S.files.find(x => x.id === L.srcId), outs = L.outIds.map(id => S.files.find(x => x.id === id)).filter(Boolean);
+  if (!src || !outs.length) return;
+  const P = PANELS[S.panel];
+  const head = el("p", "tooldesc"); head.appendChild(el("b", "", L.tool + ": ")); head.appendChild(document.createTextNode(L.report.join(". ") + ".")); box.appendChild(head);
+  const row = (f, label) => {
+    const r = el("div", "fxrow");
+    const a = el("div", ""); const nm = el("div", "nm", f.name); nm.appendChild(el("small", "", label)); a.appendChild(nm);
+    const acts = el("div", "acts");
+    const pb = el("button", "", "Play"); pb.type = "button"; pb.addEventListener("click", () => audition(f)); acts.appendChild(pb);
+    const sb = el("button", "", "Select"); sb.type = "button"; sb.addEventListener("click", () => { if (f.F) { S.sel = f; stopAudio(); offset = 0; render(); } }); acts.appendChild(sb);
+    if ((ALLOW_SAVE || HOST_DL) && label !== "original" && f.buf) { const wb = el("button", "", ALLOW_SAVE ? "Save WAV" : "Save WAV (.zip)"); wb.type = "button"; wb.addEventListener("click", () => saveWav(f, wb)); acts.appendChild(wb); }
+    a.appendChild(acts); r.appendChild(a);
+    const cv = el("canvas", "strip"); cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "Thumbnail of " + f.name);
+    const wrap = el("div", ""); wrap.appendChild(cv); r.appendChild(wrap);
+    box.appendChild(r);
+    requestAnimationFrame(() => { const cols = Math.max(50, Math.floor(cv.clientWidth || 600)); const th = f.F && effClass(f) === "sfx" ? "d5" : "d4"; drawStripFor(cv, DESIGNS.find(d => d.id === th), f.F ? f : null, cols, 32, P, { thumb: true }); });
+  };
+  row(src, "original");
+  outs.forEach(o => row(o, o.F ? "result" : "analysing…"));
+  if (src.F && outs.every(o => o.F)) {
+    const mb = fxMetrics(src), ma = outs.map(fxMetrics);
+    const wrap = el("div", "tablewrap"), tb = el("table", "fxmetrics");
+    const hr = el("tr"); hr.appendChild(el("th", "", "Measure")); hr.appendChild(el("th", "", "Original")); outs.forEach((o, i) => hr.appendChild(el("th", "", outs.length > 1 ? "Result " + (i + 1) : "Result")));
+    const th = el("thead"); th.appendChild(hr); tb.appendChild(th);
+    const body = el("tbody");
+    mb.forEach((m, k) => {
+      const tr = el("tr"); tr.appendChild(el("td", "", m[0]));
+      const fmt = (v, d) => d < 0 ? String(v) : (typeof v === "number" ? v.toFixed(d) : v) + (m[2] ? " " + m[2] : "");
+      tr.appendChild(el("td", "", fmt(m[1], m[3])));
+      ma.forEach(arr => {
+        const v = arr[k][1], td = el("td", "", fmt(v, m[3]));
+        if (m[3] >= 0 && typeof v === "number" && Math.abs(v - m[1]) >= Math.pow(10, -m[3]) * 0.999) { const dd = v - m[1]; td.appendChild(el("span", dd > 0 ? "up" : "down", " (" + (dd > 0 ? "+" : "") + dd.toFixed(m[3]) + ")")); }
+        tr.appendChild(td);
+      });
+      body.appendChild(tr);
+    });
+    tb.appendChild(body); wrap.appendChild(tb); box.appendChild(wrap);
+  }
+  if (!ALLOW_SAVE && !HOST_DL) box.appendChild(el("p", "fxnote", "Saving results as WAV works in the GitHub Pages build of Playhead."));
+  else if (!ALLOW_SAVE) box.appendChild(el("p", "fxnote", "Here results are saved as a .zip holding the WAV, because this viewer does not accept audio downloads."));
+}
+let abSrc = null;
+function audition(f) {
+  stopAudio();
+  if (abSrc) { try { abSrc.stop(); } catch (e) { /* stopped */ } abSrc.disconnect(); abSrc = null; }
+  const c = ctx(); if (c.state === "suspended") c.resume();
+  abSrc = c.createBufferSource(); abSrc.buffer = audioOf(f); abSrc.connect(c.destination); abSrc.start();
+}
+async function saveWav(f, btn) {
+  const ab = FX.encodeWav(f.buf, false), base = f.name.replace(/\.[a-z0-9]+$/i, "");
+  if (!ALLOW_SAVE) {
+    if (!HOST_DL) return;
+    const zip = FX.zipStore([{ name: base + ".wav", data: new Uint8Array(ab) }]);
+    const label = btn ? btn.textContent : "";
+    try { await HOST_DL.save({ filename: base + ".zip", data: new Blob([zip]) }); if (btn) { btn.textContent = "Saved"; setTimeout(() => { btn.textContent = label; }, 1500); } }
+    catch (e) {
+      const code = e && e.code;
+      if (code === "declined") return;
+      if (code === "rate_limited") { $("fxstatus").textContent = "A save prompt is already open."; return; }
+      HOST_DL = null; $("fxstatus").textContent = "Saving is not available in this view."; renderFxResult();
+    }
+    return;
+  }
+  const blob = new Blob([ab], { type: "audio/wav" });
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = f.name.replace(/\.[a-z0-9]+$/i, "") + ".wav";
+  document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+async function runFx() {
+  const t = FX.TOOLS.find(x => x.id === S.fx), f = S.sel;
+  const why = toolAvail(t, f);
+  if (why) { $("fxstatus").textContent = why; return; }
+  if (S.fxBusy) return;
+  S.fxBusy = true; $("runfx").disabled = true;
+  const vals = Object.assign({}, S.fxVals[t.id] || {});
+  if (t.params === "layers") { vals.gains = WL.sfxOf(f.F, f.buf, f.name).layers.map((_, i) => vals["g" + i] || 0); }
+  try {
+    $("fxstatus").textContent = "Rendering " + t.name.toLowerCase() + "…";
+    await paint();
+    const res = await t.run(f.buf, analysisOf(f), vals, p => { $("fxstatus").textContent = "Rendering " + t.name.toLowerCase() + ": " + Math.round(p * 100) + "%"; });
+    if (!res.outputs.length) { $("fxstatus").textContent = res.report.join(". "); return; }
+    const base = f.name.replace(/\.[a-z0-9]+$/i, "");
+    const recs = res.outputs.map(o => ({ name: base + "_" + o.suffix + ".wav", kind: "fx", buf: o.buf, segments: Math.abs(o.buf.duration - f.dur) < 0.01 ? f.segments : null, truth: null, sfxTruth: null, dur: o.buf.duration, cls: f.cls || null }));
+    S.fxLast = { srcId: f.id, outIds: [], report: res.report, tool: t.name };
+    let q;
+    recs.forEach((r, i) => { q = addFile(r, false); S.fxLast.outIds.push(r.id); });
+    renderFxResult();
+    await q;
+    $("fxstatus").textContent = "Done. " + (recs.length > 1 ? recs.length + " results are" : "The result is") + " in the library below.";
+  } catch (e) {
+    $("fxstatus").textContent = "Rendering failed: " + (e && e.message ? e.message : e);
+  } finally {
+    S.fxBusy = false; $("runfx").disabled = false;
+    renderFxResult();
+  }
+}
+
+/* ---------------- render ---------------- */
+function render() {
+  const f = S.sel;
+  const P = PANELS[S.panel];
+  const ruler = scopes.find(s => s.spec.id === "ruler");
+  const cols = Math.max(50, Math.floor(ruler.cv.clientWidth || 800));
+  const legend = drawRuler(ruler.cv, f, cols, P) || [];
+  const sl = $("seglegend");
+  if (f && f.segments && (legend.length || f.segments.some(s => s.note))) {
+    sl.hidden = false;
+    sl.innerHTML = "";
+    f.segments.forEach((s, i) => {
+      const li = document.createElement("li");
+      li.innerHTML = '<span class="n">' + (i + 1) + '</span><span><span class="t"></span> <span class="d"></span></span>';
+      li.querySelector(".t").textContent = s.label;
+      li.querySelector(".d").textContent = s.note ? s.note : "";
+      sl.appendChild(li);
+    });
+  } else { sl.hidden = true; }
+  void legend;
+  const ready = f && f.F;
+  for (const s of scopes) {
+    if (s.group === "ruler") continue;
+    drawStripFor(s.cv, s.spec, ready ? f : null, cols, S.height, P);
+  }
+  updateLabels();
+  renderMatrix();
+  renderLibrary();
+  renderBench();
+  if (ready) placeHead(playing ? offset + (ctx().currentTime - startAt) : offset);
+}
+function updateLabels() {
+  const f = S.sel;
+  const P = PANELS[S.panel];
+  const ready = f && f.F;
+  const cls = ready ? effClass(f) : "rhythmic";
+  const C = WL.CLASSES[cls];
+  const d = ready ? diagOf(f) : null;
+  for (const s of SINGLE) {
+    const ml = $("ml-" + s.id);
+    ml.innerHTML = "";
+    if (!ready) continue;
+    if (s.id === "c1") { const b = document.createElement("span"); b.className = "badge ref"; b.textContent = "reference"; ml.appendChild(b); continue; }
+    if (s.needs && !C[s.needs]) { const b = document.createElement("span"); b.className = "mut"; b.textContent = "Not computed for " + C.label.toLowerCase() + "."; ml.appendChild(b); continue; }
+    const r = Math.abs(d.r[s.id]);
+    const b = document.createElement("span");
+    if (!isFinite(r)) { b.className = "badge ref"; b.textContent = "flat"; }
+    else {
+      b.className = "badge " + (r < 0.3 ? "new" : r < 0.6 ? "mid" : "dep");
+      b.textContent = r < 0.3 ? "moves on its own" : r < 0.6 ? "partly follows loudness" : "follows loudness";
+      const n = document.createElement("b"); n.textContent = r.toFixed(2); b.appendChild(n);
+      b.title = "How closely this curve's column-to-column changes follow loudness's: " + r.toFixed(2) + " (0 unrelated, 1 lockstep)";
+    }
+    ml.appendChild(b);
+    const ts = d.dis[s.id] || [];
+    for (const t of ts) {
+      const c = document.createElement("button"); c.className = "chip"; c.type = "button";
+      c.textContent = fmtT(t);
+      c.setAttribute("aria-label", "Play from " + fmtT(Math.max(0, t - 1)) + ", where " + s.name + " is high relative to loudness");
+      c.addEventListener("click", () => { seek(Math.max(0, t - 1), true); });
+      ml.appendChild(c);
+    }
+  }
+  sfxLabels(f, ready);
+  rhythmLabels(f, ready, d, C);
+  for (const s of DESIGNS) {
+    const ml = $("ml-" + s.id);
+    ml.innerHTML = "";
+    const spec = s.auto ? D3MAP[cls] : s;
+    if (s.auto) $("ds-" + s.id).textContent = ready ? spec.text : "Picks height and colour by asset class.";
+    if (!ready) continue;
+    const lg = document.createElement("span"); lg.className = "legend";
+    const a = document.createElement("span"); a.textContent = spec.lab[0];
+    const sw = document.createElement("span"); sw.className = "swatch"; sw.style.background = rampCSS(P);
+    const b = document.createElement("span"); b.textContent = spec.lab[1];
+    lg.appendChild(a); lg.appendChild(sw); lg.appendChild(b);
+    ml.appendChild(lg);
+    if (s.kind === "d5") {
+      lg.innerHTML = "";
+      lg.appendChild(el("span", "", "low"));
+      const sw2 = el("span", "swatch"); sw2.style.background = "linear-gradient(90deg," + P.spec6.join(",") + ")"; lg.appendChild(sw2);
+      lg.appendChild(el("span", "", "high"));
+      const l2 = el("span", "legend"); const ls = el("span", "lineswatch"); ls.style.setProperty("--lc", P.line);
+      l2.appendChild(ls); l2.appendChild(el("span", "", "pitch")); ml.appendChild(l2);
+    }
+    if (s.kind === "d4") {
+      const l2 = document.createElement("span"); l2.className = "legend";
+      const ls = document.createElement("span"); ls.className = "lineswatch"; ls.style.setProperty("--lc", P.line);
+      const lt = document.createElement("span"); lt.textContent = C.harmony ? "harmonic tension" : "no harmony line for " + C.label.toLowerCase();
+      l2.appendChild(ls); l2.appendChild(lt); ml.appendChild(l2);
+    }
+  }
+  // class select
+  const sel = $("cls");
+  sel.options[0].textContent = ready ? "Auto (" + WL.CLASSES[f.F.guess].label + ")" : "Auto";
+  sel.value = ready && f.cls ? f.cls : "auto";
+  // now line
+  const now = $("now");
+  now.innerHTML = "";
+  if (f) {
+    const b = document.createElement("b"); b.textContent = f.name; now.appendChild(b);
+    const m = document.createElement("span");
+    m.textContent = "  " + fmtT(f.dur) + (f.dur < 60 ? " (" + f.dur.toFixed(2) + " s)" : "") + "  " + f.buf.sampleRate + " Hz  " + (f.buf.numberOfChannels > 1 ? "stereo" : "mono");
+    now.appendChild(m);
+  }
+}
+function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
+function num(label, value, unit) { const s = el("span", "num"); if (label) s.appendChild(document.createTextNode(label + " ")); s.appendChild(el("b", "", value)); if (unit) s.appendChild(document.createTextNode(" " + unit)); return s; }
+function fBadge(label, r) {
+  const b = el("span", "badge " + (r.f >= 0.9 ? "new" : r.f >= 0.7 ? "mid" : "dep"), label);
+  const n = el("b", "", r.f.toFixed(2)); b.appendChild(n);
+  b.title = "F-measure " + r.f.toFixed(2) + ": precision " + r.p.toFixed(2) + ", recall " + r.r.toFixed(2) + " (" + r.n + " found, " + r.ref + " true, ±70 ms)";
+  return b;
+}
+function indepBadge(ml, d, key, name) {
+  const r = Math.abs(d.r[key]);
+  if (!isFinite(r)) return;
+  const b = el("span", "badge " + (r < 0.3 ? "new" : r < 0.6 ? "mid" : "dep"), r < 0.3 ? "moves on its own" : r < 0.6 ? "partly follows loudness" : "follows loudness");
+  b.appendChild(el("b", "", r.toFixed(2)));
+  b.title = "How closely this curve's column-to-column changes follow loudness's: " + r.toFixed(2);
+  ml.appendChild(b);
+  for (const t of (d.dis[key] || [])) {
+    const c = el("button", "chip", fmtT(t)); c.type = "button";
+    c.setAttribute("aria-label", "Play from " + fmtT(Math.max(0, t - 1)) + ", where " + name + " is high relative to loudness");
+    c.addEventListener("click", () => seek(Math.max(0, t - 1), true));
+    ml.appendChild(c);
+  }
+}
+function fmtS(t, dur) { return dur < 60 ? t.toFixed(2) + " s" : fmtT(t, true); }
+const BAND6 = ["20–400 Hz", "400–920 Hz", "0.9–1.7 kHz", "1.7–3.2 kHz", "3.2–6.4 kHz", "6.4–15.5 kHz"];
+function issueBadge(it) { return el("span", "badge " + ({ bad: "dep", warn: "mid", info: "ref", ok: "new" })[it.sev], it.text); }
+function sfxLabels(f, ready) {
+  const P = PANELS[S.panel];
+  for (const s of SFXROWS) $("ml-" + s.id).innerHTML = "";
+  if (!ready || !f.buf) return;
+  const X = WL.sfxOf(f.F, f.buf, f.name), dur = f.dur;
+  // X1: where most loudness sits
+  {
+    const ml = $("ml-x1"), tot = [0, 0, 0, 0, 0, 0];
+    for (let m = 0; m < f.F.nF; m++) { const wgt = Math.pow(10, X.lev[m] / 20); for (let k = 0; k < 6; k++) tot[k] += X.bands6[k][m] * wgt; }
+    const best = tot.indexOf(Math.max(...tot));
+    const lg = el("span", "legend"); lg.appendChild(el("span", "", "low"));
+    const sw = el("span", "swatch"); sw.style.background = "linear-gradient(90deg," + P.spec6.join(",") + ")"; lg.appendChild(sw);
+    lg.appendChild(el("span", "", "high")); ml.appendChild(lg);
+    ml.appendChild(num("most loudness in", BAND6[best]));
+  }
+  // X2: layers
+  {
+    const ml = $("ml-x2");
+    for (const l of X.layers) {
+      const s = el("span", "num"); const sw = el("span", "swatch"); sw.style.width = "10px"; sw.style.background = specColor(P, l.hz); sw.style.marginRight = "5px";
+      s.appendChild(sw); s.appendChild(el("b", "", l.name + " " + (l.hz >= 1000 ? (l.hz / 1000).toFixed(1) + " kHz" : Math.round(l.hz) + " Hz")));
+      s.appendChild(document.createTextNode(" " + Math.round(l.share * 100) + "%, " + fmtS(l.span[0], dur) + "–" + fmtS(l.span[1], dur)));
+      ml.appendChild(s);
+    }
+  }
+  // X3: pitch summary
+  {
+    const ml = $("ml-x3");
+    const tonal = []; for (let m = 0; m < f.F.nF; m++) if (X.aper[m] <= WL.SFX.tonalAper && X.f0[m] >= 50 && X.lev[m] >= X.pk - 35) tonal.push(X.f0[m]);
+    if (tonal.length >= 4) {
+      tonal.sort((a, b) => a - b);
+      const lo = tonal[Math.floor(0.05 * (tonal.length - 1))], hi = tonal[Math.floor(0.95 * (tonal.length - 1))];
+      const fmt = hz => hz >= 1000 ? (hz / 1000).toFixed(1) + " kHz" : Math.round(hz) + " Hz";
+      ml.appendChild(num("pitch", fmt(lo) + (hi / lo > 1.06 ? "–" + fmt(hi) : "")));
+    } else ml.appendChild(el("span", "mut", "No stable pitch; brightness only."));
+  }
+  // X4: envelope numbers
+  {
+    const ml = $("ml-x4");
+    ml.appendChild(num("attack", (X.attack * 1000).toFixed(0), "ms"));
+    ml.appendChild(num("effective", fmtS(X.eff, dur)));
+    ml.appendChild(num("centre", fmtS(X.tcent, dur)));
+    if (X.t20 !== null) ml.appendChild(num("−20 dB after", fmtS(X.t20, dur)));
+    if (X.t40 !== null) ml.appendChild(num("−40 dB after", fmtS(X.t40, dur)));
+  }
+  // X5: events, tags and score
+  {
+    const ml = $("ml-x5");
+    if (f.sfxTruth) {
+      const tr = f.sfxTruth.events, used = new Set(); let hit = 0, tag = 0;
+      for (const e of tr) {
+        let bi = -1, bd = 1e9; X.events.forEach((x, i) => { const dd = Math.abs(x.t0 - e.t); if (!used.has(i) && dd < bd) { bd = dd; bi = i; } });
+        if (bi >= 0 && bd <= 0.04) { used.add(bi); hit++; if (e.tag.split("|").includes(X.events[bi].tag)) tag++; }
+      }
+      const b1 = el("span", "badge " + (hit === tr.length ? "new" : "mid"), "events found"); b1.appendChild(el("b", "", hit + " of " + tr.length)); ml.appendChild(b1);
+      const b2 = el("span", "badge " + (tag === tr.length ? "new" : "mid"), "tags right"); b2.appendChild(el("b", "", tag + " of " + tr.length)); ml.appendChild(b2);
+      b1.title = "True events: " + tr.map(e => e.t.toFixed(2) + " s " + e.tag).join(", ");
+    }
+    X.events.slice(0, 8).forEach(e => {
+      const c = el("button", "chip", fmtS(e.t0, dur) + " " + e.tag + " " + e.word); c.type = "button";
+      c.title = e.profile + " profile, effective " + (e.eff * 1000).toFixed(0) + " ms" + (e.grains.length > 1 ? ", " + e.grains.length + " grains" : "") + (e.f0 ? ", pitch " + Math.round(e.f0) + " Hz" : "");
+      c.addEventListener("click", () => seek(Math.max(0, e.t0 - 0.05), true));
+      ml.appendChild(c);
+    });
+    if (X.events.length > 8) ml.appendChild(el("span", "mut", "+" + (X.events.length - 8) + " more"));
+  }
+  // X6: space
+  {
+    const ml = $("ml-x6");
+    if (!X.stereo) ml.appendChild(el("span", "mut", "Mono file."));
+    else if (X.identical) ml.appendChild(el("span", "mut", "Both channels identical."));
+    else {
+      const g = []; for (let m = 0; m < f.F.nF; m++) if (X.lev[m] >= X.pk - 20) g.push(m);
+      if (g.length) {
+        const pf = p => (p < -0.05 ? "L " : p > 0.05 ? "R " : "C ") + Math.round(Math.abs(p) * 100) + "%";
+        const k3 = Math.max(1, Math.floor(g.length / 5));
+        const p0 = g.slice(0, k3).reduce((a, m) => a + X.pan[m], 0) / k3, p1 = g.slice(-k3).reduce((a, m) => a + X.pan[m], 0) / k3;
+        ml.appendChild(num("pan", pf(p0) + (Math.abs(p1 - p0) > 0.2 ? " → " + pf(p1) : "")));
+        let wmax = 0; for (const m of g) wmax = Math.max(wmax, X.width[m]);
+        ml.appendChild(num("max width", wmax.toFixed(2)));
+      }
+    }
+  }
+  // X7: checks
+  {
+    const ml = $("ml-x7");
+    if (!X.issues.length) { const b = el("span", "badge new", "No problems found"); ml.appendChild(b); }
+    X.issues.forEach(it => ml.appendChild(issueBadge(it)));
+    ml.appendChild(num("peak", X.pkDb.toFixed(1), "dBFS"));
+  }
+}
+function rhythmLabels(f, ready, d, C) {
+  const P = PANELS[S.panel];
+  for (const s of RHY.concat(STR)) $("ml-" + s.id).innerHTML = "";
+  if (!ready) return;
+  const R = WL.rhythmOf(f.F), St = WL.structureOf(f.F), E = WL.eventsOf(f.F);
+  const truth = f.truth;
+  let ml = $("ml-r1");
+  ml.appendChild(num("", String(R.onsetTimes.length), "onsets"));
+  ml.appendChild(num("sound from", fmtS(E.start, f.dur)));
+  ml.appendChild(num("−30 dB at", fmtS(E.end30, f.dur)));
+  const short = f.dur < 5;
+  ml = $("ml-r2");
+  if (!short) {
+    if (R.tempo > 0) ml.appendChild(num("", R.tempo.toFixed(1), "BPM"));
+    if (!R.reliable) ml.appendChild(el("span", "mut", "Weak pulse: beats are a guess."));
+    if (truth) {
+      const fb = WL.beatF(R.beatTimes, truth.beats, truth.regions);
+      const fd = WL.beatF(R.downTimes, truth.downbeats, truth.regions);
+      if (fb) ml.appendChild(fBadge("beats F", fb));
+      if (fd) ml.appendChild(fBadge("downbeats F", fd));
+    } else if (R.beatTimes.length && R.plpTimes.length) {
+      const ag = WL.beatF(R.plpTimes, R.beatTimes, null);
+      if (ag) { const b = el("span", "badge ref", "agrees with R3"); b.appendChild(el("b", "", ag.f.toFixed(2))); b.title = "F-measure between R2 and R3 beats, ±70 ms. No true beats are known for this file."; ml.appendChild(b); }
+    }
+  }
+  ml = $("ml-r3");
+  if (!short) {
+    if (R.tempoRange[1] > 0) ml.appendChild(num("", Math.round(R.tempoRange[0]) + (Math.abs(R.tempoRange[1] - R.tempoRange[0]) >= 2 ? "–" + Math.round(R.tempoRange[1]) : ""), "BPM"));
+    if (truth) { const fp = WL.beatF(R.plpTimes, truth.beats, truth.regions); if (fp) ml.appendChild(fBadge("beats F", fp)); }
+  }
+  ml = $("ml-r4");
+  if (!short) {
+    ml.appendChild(num("median", R.medClar.toFixed(2)));
+    const lg = el("span", "legend");
+    lg.appendChild(el("span", "", "60"));
+    const sw = el("span", "swatch"); sw.style.background = rampCSS(P); lg.appendChild(sw);
+    lg.appendChild(el("span", "", "180 BPM"));
+    ml.appendChild(lg);
+    indepBadge(ml, d, "r4", "pulse clarity");
+  }
+  ml = $("ml-s1");
+  if (!St.tooShort) {
+    ml.appendChild(num("", String(St.bounds.length), St.bounds.length === 1 ? "boundary" : "boundaries"));
+    ml.appendChild(num("kernel ±", (St.L * St.blk).toFixed(1), "s"));
+    indepBadge(ml, d, "s1", "structural novelty");
+  }
+  ml = $("ml-s2");
+  if (!St.tooShort) {
+    const seq = St.segs.map(s => s.label).join(" ");
+    ml.appendChild(el("span", "seq", seq.length > 60 ? seq.slice(0, 60) + " …" : seq));
+    if (truth && f.segments) {
+      const tb = f.segments.slice(1).map(s => s.t0);
+      const hit = tb.filter(t => St.bounds.some(b => Math.abs(b - t) <= 1)).length;
+      ml.appendChild(num("true boundaries found", hit + " of " + tb.length));
+    }
+  }
+}
+function renderMatrix() {
+  const t = $("matrix");
+  t.innerHTML = "";
+  const f = S.sel;
+  if (!f || !f.F) return;
+  const d = diagOf(f);
+  const label = { peak: "Peak", c1: "C1 Loudness", c2: "C2 Activity", c3: "C3 Arousal", c4: "C4 Harshness", c5: "C5 Tension", c6: "C6 Harmony", c7: "C7 Novelty", r4: "R4 Clarity", s1: "S1 Structure" };
+  const head = document.createElement("tr");
+  head.appendChild(document.createElement("th"));
+  d.names.forEach(n => { const th = document.createElement("th"); th.textContent = label[n].split(" ")[0]; th.title = label[n]; head.appendChild(th); });
+  const thead = document.createElement("thead"); thead.appendChild(head); t.appendChild(thead);
+  const tb = document.createElement("tbody");
+  d.names.forEach((a, i) => {
+    const tr = document.createElement("tr");
+    const th = document.createElement("td"); th.textContent = label[a]; tr.appendChild(th);
+    d.names.forEach((b, j) => {
+      const td = document.createElement("td");
+      const v = d.mx[i][j];
+      if (i === j) { td.textContent = ""; }
+      else if (!isFinite(v)) { td.textContent = "–"; }
+      else {
+        td.textContent = v.toFixed(2);
+        const a2 = Math.min(1, Math.abs(v));
+        td.style.background = "color-mix(in srgb, var(--accent) " + Math.round(a2 * 42) + "%, transparent)";
+      }
+      tr.appendChild(td);
+    });
+    tb.appendChild(tr);
+  });
+  t.appendChild(tb);
+}
+function renderLibrary() {
+  const box = $("library");
+  const P = PANELS[S.panel];
+  // rebuild rows if the file list changed
+  if (box.childElementCount !== S.files.length * 2 || box.dataset.ver !== String(S.files.map(f => f.id + (f.F ? "r" : "p")).join(","))) {
+    box.innerHTML = "";
+    box.dataset.ver = String(S.files.map(f => f.id + (f.F ? "r" : "p")).join(","));
+    for (const f of S.files) {
+      const row = document.createElement("div"); row.className = "librow"; row.dataset.id = f.id;
+      row.tabIndex = 0; row.setAttribute("role", "button");
+      const a = document.createElement("div");
+      const n = document.createElement("div"); n.className = "fname"; n.textContent = f.name; a.appendChild(n);
+      const m = document.createElement("div"); m.className = "fmeta"; m.id = "fm-" + f.id; a.appendChild(m);
+      const b = document.createElement("div");
+      const cv = document.createElement("canvas"); cv.className = "strip"; cv.id = "th-" + f.id; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "Thumbnail of " + f.name);
+      b.appendChild(cv);
+      row.appendChild(a); row.appendChild(b);
+      const pick = () => { if (f.F) { S.sel = f; stopAudio(); offset = 0; render(); } };
+      row.addEventListener("click", pick);
+      row.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); pick(); } });
+      box.appendChild(row);
+    }
+  }
+  for (const f of S.files) {
+    const row = box.querySelector('.librow[data-id="' + f.id + '"]');
+    if (!row) continue;
+    row.classList.toggle("sel", f === S.sel);
+    const m = $("fm-" + f.id);
+    m.textContent = f.F ? fmtS(f.dur, f.dur) + "  " + WL.CLASSES[effClass(f)].label : (f.error ? f.error : "Analysing…");
+    const cv = $("th-" + f.id);
+    const cols = Math.max(50, Math.floor(cv.clientWidth || 600));
+    const th = S.thumb === "auto" ? (f.F && effClass(f) === "sfx" ? "d5" : "d4") : S.thumb;
+    const spec = th === "unity" ? { id: "unity" } : th === "c1" ? SINGLE[0] : (DESIGNS.find(d => d.id === th) || DESIGNS[2]);
+    drawStripFor(cv, spec, f.F ? f : null, cols, 24, P, { thumb: true });
+  }
+}
+
+/* ---------------- analysis queue ---------------- */
+function setStatus(t, err) { const s = $("status"); s.textContent = t || ""; s.classList.toggle("err", !!err); }
+const paint = () => new Promise(r => requestAnimationFrame(() => setTimeout(r, 0)));
+function addFile(rec, select) {
+  rec.id = S.nextId++;
+  S.files.push(rec);
+  renderLibrary();
+  S.queue = S.queue.then(async () => {
+    try {
+      setStatus("Analysing " + rec.name + "…");
+      await paint();
+      rec.F = await WL.analyse(rec.buf, p => setStatus("Analysing " + rec.name + ": " + Math.round(p * 100) + "%"));
+      rec.dur = rec.buf.duration;
+      setStatus("Finding beats and sections in " + rec.name + "…");
+      await paint();
+      WL.rhythmOf(rec.F); WL.structureOf(rec.F); WL.eventsOf(rec.F);
+      setStatus("Describing sound objects in " + rec.name + "…");
+      await paint();
+      WL.sfxOf(rec.F, rec.buf, rec.name);
+      if (select || !S.sel) { S.sel = rec; stopAudio(); offset = 0; }
+      $("play").disabled = false;
+      setStatus("");
+      render();
+      if (S.fxLast && S.fxLast.outIds.includes(rec.id)) renderFxResult();
+    } catch (e) {
+      rec.error = "Analysis failed";
+      setStatus("Couldn't analyse " + rec.name + ". " + (e && e.message ? e.message : ""), true);
+      renderLibrary();
+    }
+  });
+  return S.queue;
+}
+async function addKit(selectName) {
+  setStatus("Building the SFX kit…");
+  await paint();
+  const kit = WLProbes.makeSfxKit(44100, WL.kFilterCoeffs);
+  let last;
+  for (const b of kit) last = addFile({ name: b.name, kind: "sfx", buf: b, segments: null, sfxTruth: b.sfxTruth, truth: null, dur: b.duration }, selectName ? b.name === selectName : false);
+  return last;
+}
+async function addProbe(kind, select) {
+  setStatus(kind === "arc" ? "Building the cue arc…" : kind === "ramp" ? "Building the tempo ramp…" : "Building the probe suite…");
+  await paint();
+  const buf = kind === "arc" ? WLProbes.makeCueArc(44100, WL.kFilterCoeffs) : kind === "ramp" ? WLProbes.makeTempoRamp(44100, WL.kFilterCoeffs) : WLProbes.makeProbeSuite(44100, WL.kFilterCoeffs);
+  return addFile({ name: buf.name, kind: "probe", buf, segments: buf.segments, truth: buf.truth || null, dur: buf.duration }, select);
+}
+function decodeFile(file) {
+  return new Promise((res, rej) => {
+    const fr = new FileReader();
+    fr.onload = () => { ctx().decodeAudioData(fr.result.slice(0)).then(res, rej); };
+    fr.onerror = () => rej(new Error("read failed"));
+    fr.readAsArrayBuffer(file);
+  });
+}
+async function loadFiles(list) {
+  const files = Array.from(list).filter(f => f && f.size);
+  let first = true;
+  for (const file of files) {
+    setStatus("Decoding " + file.name + "…");
+    try {
+      const buf = await decodeFile(file);
+      addFile({ name: file.name, kind: "file", buf, audio: buf, dur: buf.duration }, first);
+      first = false;
+    } catch (e) {
+      setStatus("Couldn't decode " + file.name + ". Try WAV, OGG, MP3 or FLAC; Safari can't decode OGG.", true);
+    }
+  }
+}
+
+/* ---------------- playback ---------------- */
+let actx = null, src = null, startAt = 0, offset = 0, playing = false, raf = 0;
+function ctx() { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); return actx; }
+function audioOf(f) {
+  if (f.audio) return f.audio;
+  const c = ctx(), n = f.buf.numberOfChannels;
+  const b = c.createBuffer(n, f.buf.length, f.buf.sampleRate);
+  for (let ch = 0; ch < n; ch++) b.getChannelData(ch).set(f.buf.getChannelData(ch));
+  f.audio = b;
+  return b;
+}
+function stopAudio() {
+  if (src) { try { src.onended = null; src.stop(); } catch (e) { /* already stopped */ } src.disconnect(); src = null; }
+  playing = false; cancelAnimationFrame(raf);
+  $("play").textContent = "Play";
+}
+function play() {
+  const f = S.sel; if (!f || !f.F) return;
+  const c = ctx(); if (c.state === "suspended") c.resume();
+  if (src) { try { src.onended = null; src.stop(); } catch (e) { /* noop */ } src.disconnect(); }
+  const b = audioOf(f);
+  if (offset >= b.duration - 0.02) offset = 0;
+  src = c.createBufferSource(); src.buffer = b; src.connect(c.destination);
+  src.start(0, offset);
+  startAt = c.currentTime; playing = true;
+  $("play").textContent = "Pause";
+  src.onended = () => { if (playing) { offset = 0; stopAudio(); placeHead(0); } };
+  loop();
+}
+function pause() { if (!playing) return; offset += ctx().currentTime - startAt; stopAudio(); placeHead(offset); }
+function seek(t, autoplay) {
+  const f = S.sel; if (!f) return;
+  offset = Math.max(0, Math.min(f.dur, t));
+  placeHead(offset);
+  if (playing || autoplay) play();
+}
+function placeHead(t) {
+  const f = S.sel; if (!f) return;
+  const frac = f.dur ? t / f.dur : 0;
+  for (const s of scopes) {
+    s.ph.classList.add("on");
+    s.ph.style.transform = "translateX(" + (frac * s.w.clientWidth) + "px)";
+  }
+  $("rulerlab").textContent = fmtT(t, true);
+}
+function loop() {
+  if (!playing) return;
+  const t = offset + (ctx().currentTime - startAt);
+  placeHead(Math.min(t, S.sel.dur));
+  raf = requestAnimationFrame(loop);
+}
+
+/* ---------------- wiring ---------------- */
+function bindSelect(id, key, parse) {
+  const el = $(id);
+  el.value = String(S[key]);
+  el.addEventListener("change", () => { S[key] = parse ? parse(el.value) : el.value; store.set(key, S[key]); render(); });
+}
+bindSelect("height", "height", v => parseInt(v, 10));
+bindSelect("shape", "shape");
+bindSelect("scale", "scale");
+bindSelect("panel", "panel");
+bindSelect("thumb", "thumb");
+$("ghost").checked = !!S.ghost;
+$("ghost").addEventListener("change", e => { S.ghost = e.target.checked; store.set("ghost", S.ghost); render(); });
+$("cls").addEventListener("change", e => { const f = S.sel; if (!f) return; f.cls = e.target.value === "auto" ? null : e.target.value; render(); });
+$("open").addEventListener("click", () => $("file").click());
+$("file").addEventListener("change", e => { if (e.target.files.length) loadFiles(e.target.files); e.target.value = ""; });
+$("play").addEventListener("click", () => { playing ? pause() : play(); });
+$("loadArc").addEventListener("click", () => addProbe("arc", true));
+$("loadProbe").addEventListener("click", () => addProbe("probe", true));
+$("loadRamp").addEventListener("click", () => addProbe("ramp", true));
+$("loadKit").addEventListener("click", () => addKit("Gun_Pistol_Shot_02.wav"));
+$("runfx").addEventListener("click", runFx);
+
+document.addEventListener("dragover", e => { e.preventDefault(); document.body.classList.add("drag"); });
+document.addEventListener("dragleave", e => { if (!e.relatedTarget) document.body.classList.remove("drag"); });
+document.addEventListener("drop", e => { e.preventDefault(); document.body.classList.remove("drag"); if (e.dataTransfer && e.dataTransfer.files.length) loadFiles(e.dataTransfer.files); });
+
+document.addEventListener("keydown", e => {
+  if (e.code !== "Space") return;
+  const tg = e.target && e.target.tagName;
+  if (tg === "INPUT" || tg === "SELECT" || tg === "BUTTON" || tg === "TEXTAREA" || (e.target && e.target.classList && e.target.classList.contains("librow"))) return;
+  if (!S.sel || !S.sel.F) return;
+  e.preventDefault(); playing ? pause() : play();
+});
+
+function fracFrom(e, el) { const r = el.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); }
+function hookScopes() {
+  for (const s of scopes) {
+    s.w.addEventListener("pointerdown", e => { if (!S.sel || !S.sel.F) return; seek(fracFrom(e, s.w) * S.sel.dur); });
+    s.w.addEventListener("pointermove", e => {
+      if (!S.sel || !S.sel.F || e.pointerType === "touch") return;
+      const fr = fracFrom(e, s.w);
+      for (const o of scopes) { o.hv.classList.add("on"); o.hv.style.transform = "translateX(" + (fr * o.w.clientWidth) + "px)"; }
+      $("rulerlab").textContent = fmtT(fr * S.sel.dur, true);
+    });
+    s.w.addEventListener("pointerleave", () => {
+      for (const o of scopes) o.hv.classList.remove("on");
+      $("rulerlab").textContent = fmtT(playing ? offset + (ctx().currentTime - startAt) : offset, true);
+    });
+  }
+}
+
+let rt = 0, lastW = 0;
+window.addEventListener("resize", () => {
+  clearTimeout(rt);
+  rt = setTimeout(() => {
+    const w = $("cv-ruler").clientWidth;
+    if (w !== lastW) { lastW = w; render(); if (S.sel) placeHead(playing ? offset + (ctx().currentTime - startAt) : offset); }
+  }, 120);
+});
+
+buildRows();
+hookScopes();
+render();
+(async () => {
+  await addKit("Gun_Pistol_Shot_02.wav");
+  await addProbe("arc", false);
+  await addProbe("ramp", false);
+  await addProbe("probe", false);
+})();
+})();
