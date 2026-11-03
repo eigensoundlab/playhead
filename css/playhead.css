@@ -134,4 +134,12 @@ body.drag .wrap{outline:2px dashed var(--accent);outline-offset:-6px}
   .librow > div:first-child{border-bottom:none;padding-bottom:2px}
   .now{margin-left:0;text-align:left;width:100%}
 }
+/* footer */
+.foot{margin-top:40px;padding-top:12px;border-top:1px solid var(--rule);color:var(--ink2);font-size:12px}
+.foot p{margin:0 0 6px}
+.foot a{color:var(--ink2);text-underline-offset:2px}
+.foot a:hover{color:var(--accent)}
+.cite summary{cursor:pointer;width:max-content}
+.cite p{max-width:80ch;margin:6px 0;color:var(--ink);overflow-wrap:anywhere}
+.cite button{min-height:26px;font-size:12px;padding:2px 8px}
 @media (prefers-reduced-motion: reduce){ .ph{transition:none} }

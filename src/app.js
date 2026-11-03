@@ -1528,6 +1528,13 @@ $("ghost").checked = !!S.ghost;
 $("ghost").addEventListener("change", e => { S.ghost = e.target.checked; store.set("ghost", S.ghost); render(); });
 $("cls").addEventListener("change", e => { const f = S.sel; if (!f) return; f.cls = e.target.value === "auto" ? null : e.target.value; render(); });
 $("open").addEventListener("click", () => $("file").click());
+// footer: copy the citation (falls back to selecting it where the clipboard is blocked, e.g. in sandboxed frames)
+if ($("copycite")) $("copycite").addEventListener("click", async () => {
+  const b = $("copycite"), text = $("ph-cite").textContent.replace(/\s+/g, " ").trim();
+  try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($("ph-cite")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selected, now copy it"; }
+  setTimeout(() => { b.textContent = "Copy citation"; }, 2500);
+});
 $("file").addEventListener("change", e => { if (e.target.files.length) loadFiles(e.target.files); e.target.value = ""; });
 $("play").addEventListener("click", () => { playing ? pause() : play(); });
 $("loadArc").addEventListener("click", () => addProbe("arc", true));

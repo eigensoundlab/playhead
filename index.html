@@ -181,13 +181,21 @@
   <div>
     <h3>Sound-effect methods</h3>
     <ul>
-      <li>Events come from level re-attacks (6 dB within 15 ms) plus spectral onsets for new layers. Runs of three or more similar onsets closer than 0.4 s become one iterative event.</li>
+      <li>Events come from level re-attacks (8 dB within 15 ms) plus spectral onsets for new layers. Runs of three or more similar onsets closer than 0.4 s become one iterative event.</li>
       <li>Tags follow Schaeffer's typology. N means more than half the loudness is pitched (YIN pitch above 250 Hz), Y means pitch or brightness glides, X means everything else. ′ marks events under 0.2 s and ″ marks grains or 8 to 40 Hz pulsing.</li>
       <li>Attack, effective duration and temporal centre follow the Timbre Toolbox (simplified: 20% to 90% attack). Dynamic profiles follow Peeters and Deruty.</li>
-      <li>Thresholds were tuned on the built-in kit and score 25 of 25 there. That score is optimistic; real libraries will show where the rules break.</li>
+      <li>Thresholds were tuned on the built-in kit (24 of 25 tags) and then calibrated on real recordings with a held-out half; the kit score is optimistic.</li>
     </ul>
   </div>
 </div>
+
+<footer class="foot">
+  <p>Playhead <span id="ph-version">0.1.0</span> · © 2026 Daniel Sandner, <a href="https://eigensound.com/">eigensound.com</a> · <a href="https://github.com/eigensoundlab/playhead">Source on GitHub</a> (Apache-2.0)<!-- when the preprint is out: · <a href="https://doi.org/…">Paper</a> --></p>
+  <details class="cite"><summary>Cite</summary>
+    <p id="ph-cite">Sandner, D. (2026). <i>Playhead: overview curves and analysis-driven tools for music and game audio</i> (Version 0.1.0) [Computer software]. https://github.com/eigensoundlab/playhead</p>
+    <button type="button" id="copycite">Copy citation</button>
+  </details>
+</footer>
 </div>
 
 <input type="file" id="file" accept="audio/*,.wav,.ogg,.mp3,.flac,.aif,.aiff,.m4a" multiple hidden>

@@ -217,10 +217,12 @@ It has caught real faults: the self-checks found that the absolute mel floor mad
 
 | File | Features | Curves, rhythm, structure | Sound-effect analysis | Descriptors | Total | Speed |
 |---|---|---|---|---|---|---|
-| 2 s sound effect | 0.17 s | 0.10 s | 0.46 s | 0.12 s | 1.2 s (0.25 s one-time calibration) | 1.3× real time |
-| 30 s | 0.66 s | 0.65 s | 1.10 s | 0.77 s | 3.2 s | 9.5× |
-| 120 s | 2.8 s | 1.6 s | 1.3 s | 1.9 s | 7.6 s | 16× |
-| 300 s | 5.4 s | 2.2 s | 1.6 s | 3.7 s | 12.8 s | 23× |
+| 2 s sound effect | 0.10 s | 0.18 s | 0.31 s | 0.11 s | 0.95 s (0.25 s one-time calibration) | 2.1× real time |
+| 30 s | 0.47 s | 0.44 s | 0.94 s | 0.39 s | 2.2 s (was 3.2 s) | 13.5× |
+| 120 s | 1.3 s | 0.78 s | 1.3 s | 1.3 s | 4.7 s (was 7.6 s) | 26× |
+| 300 s | 2.9 s | 1.6 s | 1.1 s | 2.8 s | 8.5 s (was 12.8 s) | 35× |
+
+The FFT is a radix-2² transform: after the bit reversal, each pass does two radix-2 stages at once, so the data is read and written half as often, and trivial twiddles skip their multiplications. It is about 2× faster than the plain radix-2 it replaced (31 µs instead of 64 µs for 2048 points here) and agrees with it to 3e-16. On the 73-file corpus every self-check value and every summary value is identical to the old FFT's (1436 and 3723 of them), and the corpus run took 453 s instead of 646 s.
 
 The descriptors were made about 3× faster without changing results (all tests pass with the same values): cepstral peak prominence uses half the frames, two frames per FFT and complex products instead of `atan2`; the repetition envelopes are converted to dB once and overlapping Welch segments are shared; recurrence uses a selection algorithm instead of a sort; the short STFT packs two real frames per complex FFT.
 
@@ -232,14 +234,14 @@ In the app, analysis runs in a pool of Web Workers (up to four, one per spare co
 
 | Tool | 2 s | 30 s | 120 s | 300 s |
 |---|---|---|---|---|
-| STFT engine alone (analysis and resynthesis, no change) | 0.11 s | 1.0 s | 3.9 s | 9.6 s |
-| De-harsh | 0.24 s | 1.9 s | 7.2 s | 17.8 s |
-| Layer remix | 0.11 s | 1.0 s | 5.0 s | 11.7 s |
-| Attack and body | 0.22 s | 2.3 s | 9.5 s | 25.2 s (was 106 s) |
-| Tension shaper | 0.09 s | 1.2 s | 5.3 s | 11.6 s |
-| Four variations | 0.49 s | 4.6 s | 16.7 s | 52 s |
+| STFT engine alone (analysis and resynthesis, no change) | 0.06 s | 0.46 s | 2.0 s | 4.3 s (was 10.9 s) |
+| De-harsh | 0.12 s | 0.89 s | 4.3 s | 10.5 s (was 17.4 s) |
+| Layer remix | 0.06 s | 0.56 s | 2.3 s | 6.2 s (was 13.4 s) |
+| Attack and body | 0.09 s | 1.1 s | 4.8 s | 14.4 s (was 106 s) |
+| Tension shaper | 0.08 s | 0.56 s | 2.7 s | 6.6 s (was 14.8 s) |
+| Four variations | 0.17 s | 2.1 s | 9.1 s | 32 s (was 65 s) |
 
-Two CPU fixes came first, with outputs identical to float32 precision: attack and body's median filters keep a sorted window instead of sorting every one (4.2× faster), and the STFT engine transforms two channels per complex FFT. A 2048-point FFT still takes 72 µs here (plain radix-2), so a radix-4 or split-radix FFT is the next CPU step and would speed up the analysis too.
+Three CPU changes, all with outputs identical to float32 precision on reference renders: attack and body's median filters keep a sorted window instead of sorting every one, the STFT engine transforms two channels per complex FFT, and the faster FFT above.
 
 Unlike the analysis, almost all of the rendering is data-parallel: every frame's FFT, every bin's gain, every median window. Only de-harsh's release smoothing runs in sequence over time, and even that is independent per bin. The GPU-friendly share is over 90 %, so a WebGPU path could make long renders several times faster. That matters for long files and for batch generation (hundreds of variations, whole libraries). It does not matter for a 2 s sound effect, which already renders in a quarter of a second. Real-time use in a game does not need the GPU at all: the analysis runs offline and only its control curves ship, and applying them at runtime is a cheap dynamic EQ.
 
@@ -285,7 +287,7 @@ paper/                outline of the accompanying paper (CC BY 4.0)
 - Second tier of descriptors from the research notes: DMD/ESPRIT modal decomposition, texture statistics, horizontal visibility graphs, detrended fluctuation analysis, a phasegram for growls.
 - More calibrated parameters (structure noise floors, STA/LTA trigger, repetition thresholds) in the joint grid, and a larger, more varied calibration library.
 - Localised processing: any effect applied through a layer, event or descriptor mask (saturation on the body layer only, reverb only on impact tails, de-noise only in gaps), and export of the analysis as EQ settings and automation lanes for ordinary plug-ins.
-- Faster FFT (radix-4 or split-radix) for the analysis and the tools, then an optional WebGPU path for long renders and batch generation.
+- Real-input transforms for mono material (two frames per FFT) and an optional WebGPU path for long renders and batch generation, both checked against the current float64 path.
 - Descriptor validation on further labelled sets (FSD50K for sound effects, DEAM for music) and per-frame use of the curves, not only clip summaries.
 
 ## Unity Asset Store note
@@ -300,3 +302,9 @@ The Asset Store submission guidelines (§1.2.b) currently exclude packages carry
 - Audio you process with Playhead is yours; the tool claims no rights in its output.
 
 Cite with [CITATION.cff](CITATION.cff) (GitHub shows a "Cite this repository" button).
+
+### Releasing
+
+1. Set the new version in `package.json`, `CITATION.cff`, `.zenodo.json` and the footer and citation in `index.html`; `npm test` fails if they disagree.
+2. Tag `vX.Y.Z` and publish a GitHub release. With the repository switched on in Zenodo's GitHub settings, Zenodo archives the release and mints a DOI, using `.zenodo.json` (which takes precedence over `CITATION.cff`).
+3. After the first release, add the concept DOI (it always resolves to the latest version) to `CITATION.cff` as `doi:`, to the footer citation and as a badge here. When the paper is out, add it as `preferred-citation` in `CITATION.cff` and as a related identifier (`isDescribedBy`) in `.zenodo.json`.

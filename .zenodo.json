@@ -1,0 +1,27 @@
+{
+  "upload_type": "software",
+  "title": "Playhead: overview curves and analysis-driven tools for music and game audio",
+  "version": "0.1.0",
+  "creators": [
+    { "name": "Sandner, Daniel" }
+  ],
+  "description": "<p>Playhead is a browser-based lab for <em>playhead waveforms</em>: a waveform overview plus calibrated feature lines (loudness, activity, tension, harshness, beats, sections and sound-event types) and nine cross-field descriptors taken from machine diagnostics, seismology, voice science, optimal transport, information theory, recurrence analysis and impact acoustics. The same analysis drives seven editing, mixing and mastering tools (clean-up for export, de-harsh, layer remix, attack and body, tension shaper, loop maker, variations), and every result is re-analysed.</p><p>The release contains the validation tooling behind the accompanying paper: analytic reference tests, label-free metamorphic self-checks for unlabelled libraries, threshold calibration with a held-out half and repeated random splits, an ESC-50 classification experiment with negative controls, and a comparison of each tool with a static EQ, an ideal dynamic EQ and ideal EQ automation.</p><p>The app runs entirely in the browser without dependencies (JavaScript, HTML, CSS); the batch tools use Node.js and the experiments Python. Live version: <a href=\"https://eigensoundlab.github.io/playhead/\">eigensoundlab.github.io/playhead</a>.</p>",
+  "access_right": "open",
+  "license": "apache-2.0",
+  "language": "eng",
+  "keywords": [
+    "audio visualization",
+    "waveform",
+    "audio descriptors",
+    "psychoacoustics",
+    "music information retrieval",
+    "sound design",
+    "game audio",
+    "adaptive audio effects",
+    "dynamic equalization",
+    "metamorphic testing",
+    "Web Audio",
+    "digital signal processing"
+  ],
+  "notes": "The results reported in README.md, experiments/ and paper/ were produced with this version. Third-party audio used in the experiments (ESC-50, Sonic Pi samples, librosa examples) is not included; tools/fetch-corpus.sh and experiments/esc50/README.md describe how to obtain it."
+}

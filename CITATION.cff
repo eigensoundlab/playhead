@@ -17,9 +17,13 @@ url: "https://eigensoundlab.github.io/playhead/"
 keywords:
   - audio visualization
   - waveform
+  - audio descriptors
   - psychoacoustics
   - music information retrieval
-  - game audio
   - sound design
+  - game audio
   - adaptive audio effects
+  - dynamic equalization
+  - metamorphic testing
   - Web Audio
+  - digital signal processing
