@@ -87,6 +87,9 @@
   <div class="sechead"><h2>Structure</h2><p>Sections found by comparing every moment with every other moment. A letter repeats when material returns.</p></div>
   <div class="rows" id="rows-structure"></div>
 
+  <div class="sechead"><h2>Cross-field descriptors</h2><p>Measures borrowed from machine diagnostics, seismology, ecoacoustics, voice science, optimal transport, information theory and impact acoustics. Most have a fixed value for noise or a steady tone, so the built-in descriptor tour shows each one doing exactly what the maths says.</p></div>
+  <div class="rows" id="rows-desc"></div>
+
   <div class="sechead"><h2>Combined playhead waveforms</h2><p>Height carries the main curve and colour a second one, on a ramp that gets lighter as the value rises. These are the candidates for the actual preview.</p></div>
   <div class="rows" id="rows-design"></div>
 </div>
@@ -144,6 +147,7 @@
       <button id="loadArc">Load cue arc</button>
       <button id="loadRamp">Load tempo ramp</button>
       <button id="loadProbe">Load probe suite</button>
+      <button id="loadTour">Load descriptor tour</button>
     </div>
   </div>
   <div>
@@ -190,6 +194,7 @@
 
 <script>window.PLAYHEAD_ALLOW_SAVE = true;</script>
 <script src="src/analysis.js"></script>
+<script src="src/descriptors.js"></script>
 <script src="src/probes.js"></script>
 <script src="src/effects.js"></script>
 <script src="src/app.js"></script>

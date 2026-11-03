@@ -51,6 +51,18 @@ const BARK_EDGES = [20, 100, 200, 300, 400, 510, 630, 770, 920, 1080, 1270, 1480
 const NBARK = 24;
 const NCOARSE = 12;                  // pairs of Bark bands
 const NMEL = 40;
+/* Tunable feature and detection parameters (tools/tune.js calibrates them on real recordings).
+   melFloorDb: absolute floor of the mel spectrum; melRelDb > 0 replaces it by (file maximum - melRelDb), which makes every
+   mel-based measure invariant to playback level. keepRaw stores the unfloored spectrum so the floor can be changed later. */
+// melRelDb 80 and the recurrence range in descriptors.js were frozen by tools/tune.js on half of a 73-file corpus (held-out half: 94.1 % -> 95.8 %)
+const FEAT = { melFloorDb: -80, melRelDb: 80, keepRaw: false };
+const ONSET = { min: 0.6, madK: 1.5 };
+function applyMelFloor(src, dst) {
+  let mx = -Infinity; for (let i = 0; i < src.length; i++) if (src[i] > mx) mx = src[i];
+  const fl = FEAT.melRelDb > 0 ? Math.max(-140, mx - FEAT.melRelDb) : FEAT.melFloorDb;
+  for (let i = 0; i < src.length; i++) dst[i] = src[i] > fl ? src[i] : fl;
+  return dst;
+}
 const CHROMA_EXP = 1.0;   // power-weighted peaks: suppresses weak harmonics
 // Aures roughness carrier weighting g(z), z = 0..24 Bark (MoSQITo _gzi_weighting)
 const G_AURES = [0.15, 0.26, 0.38, 0.47, 0.54, 0.65, 0.76, 0.83, 0.90, 0.98, 0.98, 0.90, 0.80, 0.70, 0.62, 0.54, 0.49, 0.43, 0.39, 0.35, 0.30, 0.30, 0.30, 0.30, 0.30];
@@ -205,7 +217,7 @@ async function extractFeatures(buf, onProgress, opts) {
       const mw = melW[b];
       let e = 0;
       for (let i = 0; i < mw.ws.length; i++) e += mw.ws[i] * P[mw.ks + i];
-      melDb[mo + b] = 10 * Math.log10(Math.max(e, 1e-8));
+      melDb[mo + b] = 10 * Math.log10(Math.max(e, 1e-14));
     }
     // spectral flatness (bin level)
     let ls = 0, as = 0, cnt = 0;
@@ -298,9 +310,11 @@ async function extractFeatures(buf, onProgress, opts) {
   onProgress(0.95);
   await tick();
 
+  const melRaw = FEAT.keepRaw ? Float32Array.from(melDb) : null;
+  applyMelFloor(melDb, melDb);
   return {
     sr, len, dur, H, N, nF, dt, nch, fine,
-    kz, pk, melDb, bark, chroma, sfm,
+    kz, pk, melDb, melRaw, bark, chroma, sfm,
     rough, roughT, nB
   };
 }
@@ -585,7 +599,7 @@ function baseOf(F) {
     const v = op[m];
     if (v <= 0) continue;
     if (v < op[m - 1] || v < op[m - 2] || v <= op[m + 1] || v < op[m + 2]) continue;
-    if (v < Math.max(1.5 * mad[m] * 1.4826, 0.6)) continue;
+    if (v < Math.max(ONSET.madK * mad[m] * 1.4826, ONSET.min)) continue;
     if (onsets.length && m - onsets[onsets.length - 1] < minGap) {
       if (v > op[onsets[onsets.length - 1]]) onsets[onsets.length - 1] = m;
       continue;
@@ -1351,7 +1365,8 @@ const SFX = {
   yinWin: 2048, yinThr: 0.15, fmin: 50, fmax: 4000, maxPitchPts: 900,
   tonalAper: 0.25, tonalFrac: 0.5, glideSemis: 4, rangeSemis: 5, rangeOct: 1.2, glideOct: 0.8,
   impulseDur: 0.2, grainGap: 0.4, grainDb: 12, grainOct: 2.0, grainGlideOct: 0.5, hpShare: 0.25, iterMin: 3, iterDepth: 0.35, contRise: 5,
-  eventFloor: 40, nmfK: 3, nmfIter: 150, nmfCols: 400
+  // riseDb/bandRiseDb 8 (was 6): picked on the tuning half in 19 of 20 repeated splits by tools/tune.js --grid
+  eventFloor: 40, riseDb: 8, bandRiseDb: 8, nmfK: 3, nmfIter: 150, nmfCols: 400
 };
 const SFX_WORDS = {
   N: { impulse: "tonal hit", sustained: "tone", iterative: "tonal flutter" },
@@ -1469,7 +1484,7 @@ function sfxOf(F, buf, name) {
     for (let m = 0; m < n; m++) { let v = Infinity, at = m; for (let k = Math.max(0, m - w15); k <= m; k++) if (levS[k] < v) { v = levS[k]; at = k; } dl[m] = levS[m] - v; lo[m] = at; }
     const wn = Math.max(1, fr(0.01));
     for (let m = 1; m < n - 1; m++) {
-      if (dl[m] < 6 || levS[m] < floorDb) continue;
+      if (dl[m] < SFX.riseDb || levS[m] < floorDb) continue;
       let isMax = true; for (let k = Math.max(0, m - wn); k <= Math.min(n - 1, m + wn); k++) if (dl[k] > dl[m]) { isMax = false; break; }
       if (isMax) cand.push(lo[m]);
     }
@@ -1486,11 +1501,13 @@ function sfxOf(F, buf, name) {
     }
     return r;
   };
-  for (const m of X.onsets) if (peakAfter(m) >= floorDb && bandRise(m) >= 6) cand.push(m);
+  for (const m of X.onsets) if (peakAfter(m) >= floorDb && bandRise(m) >= SFX.bandRiseDb) cand.push(m);
   cand.sort((p, q) => p - q);
   let ons = [];
   for (const m of cand) { if (m < first || m >= endF - fr(0.02)) continue; if (ons.length && m - ons[ons.length - 1] < fr(0.025)) continue; ons.push(m); }
   if (first >= 0 && (!ons.length || ons[0] - first > fr(0.03))) ons.unshift(first);
+  // a sound already present at the first frame starts at 0: rise detectors need past frames and would report it a window late
+  else if (first >= 0 && first <= 1 && ons.length && ons[0] > first) ons[0] = first;
   // what changed at each onset: level, and the centroid of the energy that was added
   const onInfo = ons.map(m => {
     let num = 0, den = 0;
@@ -1894,7 +1911,9 @@ function disagreements(curve, ref, mask, k, minSepFrac) {
   return out.sort((x, y) => x - y).map(i => ({ i, d: d[i] }));
 }
 
-const api = { extractFeatures, computeCurves, analyse, calibrate, guessClass, pool, pearson, diffCorr, disagreements, CLASSES, REF, quantileMasked, kFilterCoeffs, rhythmOf, eventsOf, structureOf, beatF, RHYTHM, STRUCT, sfxOf, SFX, getFFT, hannP, movMean, interpTimes, biquadInto, NMEL };
+// re-derive everything downstream of the features after a parameter change (calibration)
+function resetDerived(F) { F.melDb = F.melRaw ? applyMelFloor(F.melRaw, F.melDb) : F.melDb; delete F._base; delete F._rhythm; delete F._struct; delete F._events; delete F._sfx; delete F._desc; F.guess = guessClass(F); return F; }
+const api = { FEAT, ONSET, applyMelFloor, resetDerived, extractFeatures, computeCurves, analyse, calibrate, guessClass, pool, pearson, diffCorr, disagreements, CLASSES, REF, quantileMasked, kFilterCoeffs, rhythmOf, eventsOf, structureOf, beatF, RHYTHM, STRUCT, sfxOf, SFX, getFFT, hannP, movMean, interpTimes, biquadInto, NMEL };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.WL = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

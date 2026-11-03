@@ -569,7 +569,57 @@ function makeSfxKit(sr, kFilterCoeffs) {
   return kit;
 }
 
-const api = { makeProbeSuite, makeCueArc, makeTempoRamp, makeSfxKit };
+
+/* ---------------- descriptor probes: signals with analytic reference values (CC0) ---------------- */
+// Each returns { buf, expect } for the unit tests; makeDescriptorTour joins them into one labelled file for the lab.
+function mkMono(sr, x) { return { sampleRate: sr, length: x.length, numberOfChannels: 1, duration: x.length / sr, getChannelData: () => x }; }
+function gauss(r) { let u = 0, v = 0; while (u === 0) u = r(); v = r(); return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v); }
+const DP = {
+  noise(sr, dur, seed, amp) { const r = mulberry32(seed || 1), x = new Float32Array(Math.round(dur * sr)); for (let i = 0; i < x.length; i++) x[i] = (amp || 0.1) * gauss(r); return x; },
+  pink(sr, dur, seed) { const r = mulberry32(seed || 2), x = new Float32Array(Math.round(dur * sr)); let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0; for (let i = 0; i < x.length; i++) { const w = gauss(r); b0 = 0.99886 * b0 + w * 0.0555179; b1 = 0.99332 * b1 + w * 0.0750759; b2 = 0.96900 * b2 + w * 0.1538520; b3 = 0.86650 * b3 + w * 0.3104856; b4 = 0.55000 * b4 + w * 0.5329522; b5 = -0.7616 * b5 - w * 0.0168980; x[i] = 0.02 * (b0 + b1 + b2 + b3 + b4 + b5 + b6 + w * 0.5362); b6 = w * 0.115926; } return x; },
+  tone(sr, dur, f, amp) { const x = new Float32Array(Math.round(dur * sr)); for (let i = 0; i < x.length; i++) x[i] = (amp || 0.3) * Math.sin(2 * Math.PI * (f || 440) * i / sr); return x; },
+  // short decaying clicks at the given times over a faint noise floor
+  clicks(sr, dur, times, amps, seed) { const r = mulberry32(seed || 3), x = DP.noise(sr, dur, (seed || 3) + 100, 0.0005), L = Math.round(0.004 * sr); times.forEach((t, k) => { const i0 = Math.round(t * sr), a = amps ? amps[k] : 0.5; for (let i = 0; i < L && i0 + i < x.length; i++) x[i0 + i] += a * gauss(r) * Math.exp(-i / (0.0008 * sr)); }); return x; },
+  periodicTimes(dur, rate) { const t = []; for (let s = 0.25; s < dur - 0.05; s += 1 / rate) t.push(s); return t; },
+  poissonTimes(dur, rate, seed) { const r = mulberry32(seed || 4), t = []; let s = 0.25; while (true) { s += -Math.log(1 - r()) / rate; if (s >= dur - 0.05) break; t.push(s); } return t; },
+  clusterTimes(dur, seed) { const r = mulberry32(seed || 5), t = []; let s = 0.25; while (true) { s += -Math.log(1 - r()) / 1.2; if (s >= dur - 0.3) break; const k = 4 + Math.floor(r() * 6); let u = s; for (let j = 0; j < k; j++) { t.push(u); u += 0.02 + 0.03 * r(); } } return t.sort((a, b) => a - b); },
+  // logarithmic sweep: R octaves per second, five harmonics so the whole spectrum moves
+  sweep(sr, dur, f0, R) { const x = new Float32Array(Math.round(dur * sr)); let ph = 0; for (let i = 0; i < x.length; i++) { const f = f0 * Math.pow(2, R * i / sr); ph += 2 * Math.PI * f / sr; let v = 0; for (let h = 1; h <= 5; h++) if (f * h < sr * 0.45) v += Math.sin(h * ph) / h; x[i] = 0.2 * v; } return x; },
+  am(sr, dur, fm, seed) { const x = DP.noise(sr, dur, seed || 6, 0.15); for (let i = 0; i < x.length; i++) x[i] *= 0.5 + 0.5 * Math.sin(2 * Math.PI * fm * i / sr); return x; },
+  impacts(sr, dur, period, seed) { const r = mulberry32(seed || 7), x = new Float32Array(Math.round(dur * sr)); for (let t0 = 0.1; t0 < dur - 0.05; t0 += period) { const i0 = Math.round(t0 * sr); for (let i = 0; i0 + i < x.length && i < sr * period; i++) x[i0 + i] += 0.4 * gauss(r) * Math.exp(-i / (0.06 * sr)); } return x; },
+  reverse(x) { return Float32Array.from(x).reverse(); },
+  // struck bar: modes f1 * [1, 2.76, 5.40, 8.93, 13.34], amplitude decay b_k = pi tan(phi) f_k (Klatzky et al. 2000)
+  modal(sr, dur, f1, tanPhi, seed) { const r = mulberry32(seed || 8), x = DP.noise(sr, dur, (seed || 8) + 50, 0.00005), ratios = [1, 2.76, 5.40, 8.93, 13.34]; ratios.forEach((q, k) => { const f = f1 * q; if (f > sr * 0.45) return; const b = Math.PI * tanPhi * f, ph = r() * 6.283; for (let i = 0; i < x.length; i++) { const e = Math.exp(-b * i / sr); if (e < 1e-6) break; x[i] += 0.25 / (k + 1) * e * Math.sin(2 * Math.PI * f * i / sr + ph); } }); return x; },
+  // a phrase of distinct notes (different pitch and timbre), optionally repeated
+  phrase(sr, notes, reps, seed) { const r = mulberry32(seed || 9), nd = 0.4, seq = []; for (let k = 0; k < notes; k++) seq.push({ f: 110 * Math.pow(2, Math.floor(r() * 36) / 12), h: 1 + Math.floor(r() * 6) }); const x = new Float32Array(Math.round(notes * reps * nd * sr)); for (let rp = 0; rp < reps; rp++) seq.forEach((nt, k) => { const i0 = Math.round((rp * notes + k) * nd * sr); for (let i = 0; i < nd * sr && i0 + i < x.length; i++) { let v = 0; for (let h = 1; h <= nt.h; h++) v += Math.sin(2 * Math.PI * nt.f * h * i / sr) / h; x[i0 + i] = 0.2 * v * Math.min(1, i / (0.01 * sr), (nd * sr - i) / (0.01 * sr)); } }); return x; },
+  // glottal-like pulse train through a 700 Hz resonance: strongly periodic
+  pulses(sr, dur, f0) { const x = new Float32Array(Math.round(dur * sr)), per = sr / f0; for (let k = 0; k * per < x.length; k++) x[Math.round(k * per)] = 1; const out = new Float32Array(x.length), w = 2 * Math.PI * 700 / sr, rr = 0.97, a1 = -2 * rr * Math.cos(w), a2 = rr * rr; let y1 = 0, y2 = 0; for (let i = 0; i < x.length; i++) { const y = x[i] - a1 * y1 - a2 * y2; out[i] = 0.02 * y; y2 = y1; y1 = y; } return out; }
+};
+function makeDescriptorTour(sr) {
+  const parts = [
+    ["White noise", DP.noise(sr, 4, 21, 0.08), "kurtosis 0, arrow 0, no repetition"],
+    ["Steady tone", DP.tone(sr, 4, 440, 0.2), "kurtosis −1, phase coherence 1, held state"],
+    ["Click train 8/s", DP.clicks(sr, 5, DP.periodicTimes(5, 8)), "burstiness −1, repetition 8 Hz"],
+    ["Poisson clicks", DP.clicks(sr, 5, DP.poissonTimes(5, 8, 22)), "burstiness about 0"],
+    ["Clustered crackle", DP.clicks(sr, 5, DP.clusterTimes(5, 23)), "burstiness above 0, high kurtosis"],
+    ["Sweep up 2 oct/s", DP.sweep(sr, 3, 150, 2), "spectral velocity +2 oct/s"],
+    ["Sweep down 2 oct/s", DP.reverse(DP.sweep(sr, 3, 150, 2)), "spectral velocity −2 oct/s"],
+    ["Speech-rate AM 5 Hz", DP.am(sr, 5, 5, 24), "repetition 5 Hz, speech-like modulation"],
+    ["Engine-rate AM 23 Hz", DP.am(sr, 5, 23, 25), "repetition 23 Hz"],
+    ["Impacts", DP.impacts(sr, 4, 0.5, 26), "arrow of time positive"],
+    ["Reversed impacts", DP.reverse(DP.impacts(sr, 4, 0.5, 26)), "arrow of time negative"],
+    ["Glass-like hit", DP.modal(sr, 2.5, 900, 0.002, 27), "log tau_d about 2.2"],
+    ["Wood-like hit", DP.modal(sr, 1.5, 400, 0.03, 28), "log tau_d about 1.0"],
+    ["Phrase played 3 times", DP.phrase(sr, 6, 3, 29), "recurrence, determinism"],
+    ["Voice-like pulses 150 Hz", DP.pulses(sr, 3, 150), "cepstral peak prominence high"]
+  ];
+  const gap = Math.round(0.25 * sr); let total = 0; for (const p of parts) total += p[1].length + gap;
+  const L = new Float32Array(total), segs = []; let o = 0;
+  for (const [label, x, note] of parts) { L.set(x, o); segs.push({ label, t0: o / sr, t1: (o + x.length) / sr, note }); o += x.length + gap; }
+  return { sampleRate: sr, length: total, numberOfChannels: 2, duration: total / sr, getChannelData: () => L, segments: segs, name: "Descriptor tour", kind: "probe" };
+}
+
+const api = { makeProbeSuite, makeCueArc, makeTempoRamp, makeSfxKit, makeDescriptorTour, DP, mkMono };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.WLProbes = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

@@ -55,26 +55,36 @@ async function stftApply(chans, sr, N, gainFn, onProgress) {
   const H = N >> 2, half = N >> 1, fft = WL.getFFT(N), w = WL.hannP(N);
   const len = chans[0].length, nCh = chans.length, pad = N;
   const outs = chans.map(() => new Float64Array(len + 2 * pad)), norm = new Float64Array(len + 2 * pad);
-  const re = chans.map(() => new Float64Array(N)), im = chans.map(() => new Float64Array(N));
+  // channels go two per complex FFT (one in the real part, one in the imaginary part): the gains are real and
+  // symmetric, so they act on both at once, and each channel's spectrum is split out only for the magnitudes
+  const nP = (nCh + 1) >> 1, re = Array.from({ length: nP }, () => new Float64Array(N)), im = Array.from({ length: nP }, () => new Float64Array(N));
   const mag = new Float64Array(half + 1), g = new Float32Array(half + 1);
   const nF = Math.ceil((len + N) / H);
   for (let f = 0; f < nF; f++) {
     const start = f * H - half;
-    for (let c = 0; c < nCh; c++) {
-      const x = chans[c], r = re[c], q = im[c];
-      for (let i = 0; i < N; i++) { const s = start + i; r[i] = s >= 0 && s < len ? x[s] * w[i] : 0; q[i] = 0; }
+    for (let p = 0; p < nP; p++) {
+      const x = chans[2 * p], y = chans[2 * p + 1], r = re[p], q = im[p];
+      for (let i = 0; i < N; i++) { const s = start + i, ok = s >= 0 && s < len; r[i] = ok ? x[s] * w[i] : 0; q[i] = ok && y ? y[s] * w[i] : 0; }
       fft(r, q);
     }
-    for (let k = 0; k <= half; k++) { let e = 0; for (let c = 0; c < nCh; c++) e += re[c][k] * re[c][k] + im[c][k] * im[c][k]; mag[k] = Math.sqrt(e / nCh); }
+    for (let k = 0; k <= half; k++) {
+      let e = 0; const kk = (N - k) % N;
+      for (let p = 0; p < nP; p++) {
+        const r = re[p], q = im[p];
+        if (2 * p + 1 < nCh) { const ar = r[k] + r[kk], ai = q[k] - q[kk], br = q[k] + q[kk], bi = r[kk] - r[k]; e += 0.25 * (ar * ar + ai * ai + br * br + bi * bi); }
+        else e += r[k] * r[k] + q[k] * q[k];
+      }
+      mag[k] = Math.sqrt(e / nCh);
+    }
     g.fill(1);
     gainFn(f, (start + half) / sr, mag, g);
-    for (let c = 0; c < nCh; c++) {
-      const r = re[c], q = im[c];
+    for (let p = 0; p < nP; p++) {
+      const r = re[p], q = im[p], two = 2 * p + 1 < nCh;
       for (let k = 0; k <= half; k++) { r[k] *= g[k]; q[k] *= g[k]; if (k > 0 && k < half) { r[N - k] *= g[k]; q[N - k] *= g[k]; } }
       for (let i = 0; i < N; i++) q[i] = -q[i];
       fft(r, q);
-      const o = outs[c];
-      for (let i = 0; i < N; i++) { const s = start + i + pad; o[s] += (r[i] / N) * w[i]; }
+      const o = outs[2 * p], o2 = two ? outs[2 * p + 1] : null;
+      for (let i = 0; i < N; i++) { const s = start + i + pad; o[s] += (r[i] / N) * w[i]; if (two) o2[s] -= (q[i] / N) * w[i]; }
     }
     for (let i = 0; i < N; i++) norm[start + i + pad] += w[i] * w[i];
     if ((f & 127) === 127) { if (onProgress) onProgress(f / nF); await tick(); }
@@ -167,26 +177,60 @@ async function deharsh(src, an, opt, onProgress) {
   }
   const Ld = new Float64Array(half + 1), P = new Float64Array(half + 2), state = new Float32Array(half + 1).fill(0), gdb = new Float32Array(half + 1);
   const relA = 1 - Math.exp(-(N / 4) / sr / 0.06);
-  let gateSum = 0, gateN = 0, maxCut = 0;
+  // gate: absolute (annoyance scale), relative (this file's own P50..P95 range), or always open
+  const mode = opt.mode || "absolute";
+  const gated = a => { const o = []; for (let m = 0; m < nFr; m++) if (cur.gate[m]) o.push(a[m]); return o.sort((x, y) => x - y); };
+  const qs = (s, p) => s.length ? s[Math.floor(p * (s.length - 1))] : 0;
+  const hs = gated(hf), ss = gated(sh);
+  const gLo = mode === "relative" ? qs(hs, 0.5) : opt.threshold, gW = mode === "relative" ? Math.max(0.03, qs(hs, 0.9) - gLo) : 0.6;
+  const S0 = mode === "absolute" ? 1.75 : Math.min(1.75, qs(ss, 0.5));
+  // detector: the harshness model (default), or the level in the same frequency region, as a conventional
+  // dynamic EQ would use; the level gate always opens between this file's own P50 and P90 (in dB)
+  const byLevel = opt.sidechain === "level" && mode !== "always";
+  let lev = null, lLo = 0, lW = 1;
+  if (byLevel) {
+    const A = await stftMagnitudes(ch, sr, N); lev = new Float32Array(A.nF);
+    for (let f = 0; f < A.nF; f++) { let e = 0; for (let k = 0; k <= half; k++) { const m = A.M[f * A.bins + k]; e += (wRes[k] + wTilt[k]) * m * m; } lev[f] = 10 * Math.log10(e + 1e-20); }
+    const top = lev.reduce((a, b) => Math.max(a, b), -Infinity), snd = Array.from(lev).filter(v => v > top - 50).sort((a, b) => a - b);
+    lLo = qs(snd, 0.5); lW = Math.max(1, qs(snd, 0.9) - lLo);
+  }
+  let gateSum = 0, gateN = 0, maxCut = 0, cutSum = 0, cutN = 0;
+  const trace = opt.trace ? { t: [], gate: [] } : null;
   const outs = await stftApply(ch, sr, N, (f, t, mag, g) => {
     const h = at(hf, t), S = at(sh, t);
-    const gate = Math.max(0, Math.min(1, (h - opt.threshold) / 0.6));
-    gateSum += gate; gateN++;
+    const gate = mode === "always" ? 1 : byLevel ? Math.max(0, Math.min(1, (lev[Math.min(lev.length - 1, f)] - lLo) / lW)) : Math.max(0, Math.min(1, (h - gLo) / gW));
+    gateSum += gate; gateN++; if (trace) { trace.t.push(t); trace.gate.push(gate); }
     for (let k = 0; k <= half; k++) Ld[k] = 20 * Math.log10(mag[k] + 1e-9);
     P[0] = 0; for (let k = 0; k <= half; k++) P[k + 1] = P[k] + Ld[k];
     for (let k = 0; k <= half; k++) {
       const sm = (P[hi[k] + 1] - P[lo[k]]) / (hi[k] - lo[k] + 1);
       const excess = Math.min(12, Math.max(0, Ld[k] - sm - 2));
-      let target = -opt.amount * gate * (wRes[k] * excess * 0.8 + wTilt[k] * Math.max(0, S - 1.75) * 4);
+      let target = -opt.amount * gate * (wRes[k] * excess + wTilt[k] * Math.max(0, S - S0) * 4);
       target = Math.max(target, -opt.maxCut);
       // instant attack, 60 ms release
       state[k] = target < state[k] ? target : state[k] + (target - state[k]) * relA;
     }
-    for (let k = 0; k <= half; k++) { const a = state[Math.max(0, k - 1)], b = state[k], c = state[Math.min(half, k + 1)]; gdb[k] = (a + b + c) / 3; if (-gdb[k] > maxCut) maxCut = -gdb[k]; g[k] = undb(gdb[k]); }
+    let fs = 0, fw = 0;
+    for (let k = 0; k <= half; k++) {
+      const a = state[Math.max(0, k - 1)], b = state[k], c = state[Math.min(half, k + 1)]; gdb[k] = (a + b + c) / 3; if (-gdb[k] > maxCut) maxCut = -gdb[k]; g[k] = undb(gdb[k]);
+      if (wRes[k] > 0 || wTilt[k] > 0) { const e = mag[k] * mag[k]; fs -= gdb[k] * e; fw += e; }
+    }
+    if (fw > 0) { cutSum += fs / fw; cutN++; }
   }, onProgress);
-  const report = ["Gate open " + Math.round(100 * gateSum / Math.max(1, gateN)) + "% of the time", "Deepest cut " + maxCut.toFixed(1) + " dB"];
+  const report = [(mode === "always" ? "Always on" : byLevel ? "Level detector (" + lW.toFixed(1) + " dB range above this file's median level)" : (mode === "relative" ? "Relative gate (harshness " + gLo.toFixed(2) + " to " + (gLo + gW).toFixed(2) + ")" : "Absolute gate")) + (mode === "always" ? "" : ": open " + Math.round(100 * gateSum / Math.max(1, gateN)) + "% of the time"),
+    "Average cut above 0.8 kHz " + (cutSum / Math.max(1, cutN)).toFixed(1) + " dB, deepest " + maxCut.toFixed(1) + " dB"];
+  // what was removed: dry minus wet before loudness matching, raised for listening
+  let removed = null;
+  if (opt.delta) {
+    const dry = chansOf(src), d = dry.map((c, i) => { const o = new Float32Array(c.length); for (let n = 0; n < c.length; n++) o[n] = c[n] - outs[i][n]; return o; });
+    const lr = lufsOf(d, sr), ld = lufsOf(dry, sr);
+    if (lr > -69 && ld - lr <= 40 && peakOf(d) > 0) { scaleTo(d, undb(-6)); removed = mkBuf(sr, d); report.push("Removed part is " + (ld - lr).toFixed(0) + " LU below the original (raised to −6 dBFS peak for listening)"); }
+    else report.push(lr > -69 ? "Removed part is " + (ld - lr).toFixed(0) + " LU below the original, too quiet to hear, so it is not rendered" : "Nothing measurable was removed");
+  }
   finish(src, outs, opt.match ? "loudness" : "none", report);
-  return { outputs: [{ suffix: "deharsh", buf: mkBuf(sr, outs) }], report };
+  const outputs = [{ suffix: byLevel ? "deharsh-level" : "deharsh", buf: mkBuf(sr, outs) }];
+  if (removed) outputs.push({ suffix: (byLevel ? "deharsh-level" : "deharsh") + "-removed", buf: removed });
+  return { outputs, report, stats: { open: gateSum / Math.max(1, gateN), avgCut: cutSum / Math.max(1, cutN), maxCut }, trace };
 }
 
 /* ---------- 3. Layer remix: Wiener masks from the NMF layers ---------- */
@@ -228,20 +272,28 @@ async function layerMix(src, an, opt, onProgress) {
 }
 
 /* ---------- 4. Attack and body: median-filter HPSS (Fitzgerald 2010), soft masks ---------- */
-function medianFilter1D(get, n, half, out) {
-  const buf = new Float32Array(2 * half + 1);
-  for (let i = 0; i < n; i++) {
-    let c = 0;
-    for (let k = i - half; k <= i + half; k++) buf[c++] = get(Math.min(n - 1, Math.max(0, k)));
-    const s = buf.slice(0, c).sort(); out[i] = s[c >> 1];
+// running median over a sorted window: each step swaps the outgoing value for the incoming one and moves it into
+// place, so there is no allocation or full sort per sample (same values as sorting every window; edges repeat)
+function medianFilter1D(src, off, stride, n, half, out, win) {
+  const w = 2 * half + 1, at = k => src[off + Math.min(n - 1, Math.max(0, k)) * stride];
+  for (let k = -half; k <= half; k++) win[k + half] = at(k);
+  win.subarray(0, w).sort(); out[0] = win[half];
+  for (let i = 1; i < n; i++) {
+    const old = at(i - half - 1), nv = at(i + half);
+    if (old === nv) { out[i] = win[half]; continue; }
+    let lo = 0, hi = w - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (win[m] < old) lo = m + 1; else hi = m; }
+    let j = lo;
+    if (nv > old) { while (j + 1 < w && win[j + 1] < nv) { win[j] = win[j + 1]; j++; } }
+    else { while (j > 0 && win[j - 1] > nv) { win[j] = win[j - 1]; j--; } }
+    win[j] = nv; out[i] = win[half];
   }
 }
 async function hpss(src, an, opt, onProgress) {
   const sr = src.sampleRate, ch = chansOf(src), N = frameN(sr, src.duration);
   const { M, nF, bins } = await stftMagnitudes(ch, sr, N);
-  const Hm = new Float32Array(M.length), Pm = new Float32Array(M.length), tmp = new Float32Array(Math.max(nF, bins));
-  for (let k = 0; k < bins; k++) { medianFilter1D(i => M[i * bins + k], nF, 8, tmp); for (let i = 0; i < nF; i++) Hm[i * bins + k] = tmp[i]; if ((k & 63) === 63) await tick(); }
-  for (let i = 0; i < nF; i++) { medianFilter1D(k => M[i * bins + k], bins, 8, tmp); for (let k = 0; k < bins; k++) Pm[i * bins + k] = tmp[k]; if ((i & 127) === 127) await tick(); }
+  const Hm = new Float32Array(M.length), Pm = new Float32Array(M.length), tmp = new Float32Array(Math.max(nF, bins)), win = new Float32Array(17);
+  for (let k = 0; k < bins; k++) { medianFilter1D(M, k, bins, nF, 8, tmp, win); for (let i = 0; i < nF; i++) Hm[i * bins + k] = tmp[i]; if ((k & 255) === 255) await tick(); }
+  for (let i = 0; i < nF; i++) { medianFilter1D(M, i * bins, 1, bins, 8, Pm.subarray(i * bins, (i + 1) * bins), win); if ((i & 511) === 511) await tick(); }
   const gA = undb(opt.attackDb), gB = undb(opt.bodyDb);
   let pShare = 0, tot = 0;
   for (let i = 0; i < M.length; i++) { const h = Hm[i] * Hm[i], p = Pm[i] * Pm[i]; pShare += p / (h + p + 1e-20) * M[i] * M[i]; tot += M[i] * M[i]; }
@@ -400,8 +452,10 @@ const TOOLS = [
     params: [{ id: "peakDb", label: "Peak", min: -12, max: 0, step: 0.5, value: -1, unit: "dBFS" }, { id: "mono", label: "Fold identical channels to mono", type: "bool", value: true }],
     run: cleanup },
   { id: "deharsh", name: "De-harsh", kind: "Mixing",
-    desc: "Suppresses narrow resonances between 0.8 and 10 kHz and tilts down the top end, but only while the harshness model (sharpness, roughness and fluctuation in Zwicker's annoyance form) says the sound is harsh.",
-    params: [{ id: "amount", label: "Amount", min: 0, max: 1, step: 0.05, value: 0.6 }, { id: "threshold", label: "Gate threshold", min: 0, max: 1.5, step: 0.05, value: 0.15, unit: "harshness" }, { id: "maxCut", label: "Deepest cut", min: 3, max: 18, step: 1, value: 9, unit: "dB" }, { id: "match", label: "Match loudness", type: "bool", value: true }],
+    desc: "Suppresses narrow resonances between 0.8 and 10 kHz and tilts down the top end while the harshness model (sharpness, roughness and fluctuation in Zwicker's annoyance form) is high. \"Harshest moments\" acts on the top of this file's own harshness range, so it works on mixes; \"Only harsh sounds\" uses the absolute scale, where most music never qualifies; \"Always\" ignores the model. The detector can be switched to the level in the same frequency range, which makes it a conventional dynamic EQ, for comparison. The second result is what was removed, raised for listening.",
+    params: [{ id: "mode", label: "Act on", type: "select", value: "relative", options: [["relative", "Harshest moments of this file"], ["absolute", "Only harsh sounds (absolute)"], ["always", "Always"]] },
+      { id: "sidechain", label: "Detector", type: "select", value: "harshness", options: [["harshness", "Harshness model"], ["level", "Band level (conventional dynamic EQ)"]] },
+      { id: "amount", label: "Amount", min: 0, max: 1, step: 0.05, value: 0.6 }, { id: "threshold", label: "Absolute threshold", min: 0, max: 1.5, step: 0.05, value: 0.15, unit: "harshness" }, { id: "maxCut", label: "Deepest cut", min: 3, max: 18, step: 1, value: 9, unit: "dB" }, { id: "match", label: "Match loudness", type: "bool", value: true }, { id: "delta", label: "Also render what was removed", type: "bool", value: true }],
     run: deharsh },
   { id: "layers", name: "Layer remix", kind: "Sound design",
     desc: "Rebalances the layers found by NMF (row X2) with soft Wiener masks: lift the casing ring, drop the sub, and so on.",
@@ -423,6 +477,61 @@ const TOOLS = [
     params: [{ id: "count", label: "Copies", min: 2, max: 6, step: 1, value: 4 }, { id: "layerDb", label: "Layer spread", min: 0, max: 6, step: 0.5, value: 3, unit: "dB" }, { id: "pitch", label: "Pitch spread", min: 0, max: 3, step: 0.1, value: 1, unit: "st" }, { id: "grains", label: "Reorder grains", type: "bool", value: true }],
     run: variations }
 ];
+
+/* ---------- comparison with a static EQ ----------
+   How much of a tool's spectrogram change could the single best fixed EQ reproduce? The EQ is the per-bin gain that
+   matches the output's long-term spectrum; "notEq" is the power-weighted mean |dB| difference left after applying it. */
+const rnd = (v, d) => (typeof v === "number" && isFinite(v)) ? Number(v.toFixed(d)) : null;
+const dbv = v => 20 * Math.log10(Math.max(1e-12, v));
+async function eqExplained(dry, wet, sr) {
+  const N = 2048, A = await stftMagnitudes(dry, sr, N), B = await stftMagnitudes(wet, sr, N);
+  const K = A.bins, T = Math.min(A.nF, B.nF), pa = new Float64Array(K), pb = new Float64Array(K);
+  let mx = 0;
+  for (let f = 0; f < T; f++) for (let k = 0; k < K; k++) { const x = A.M[f * K + k], y = B.M[f * K + k]; pa[k] += x * x; pb[k] += y * y; if (x > mx) mx = x; if (y > mx) mx = y; }
+  const G = new Float64Array(K); for (let k = 0; k < K; k++) G[k] = pa[k] > 0 ? Math.sqrt(pb[k] / pa[k]) : 1;
+  let st = 0, sr2 = 0, w = 0; const floor = mx * 1e-3;
+  for (let f = 0; f < T; f++) for (let k = 1; k < K; k++) {
+    const x = A.M[f * K + k], y = B.M[f * K + k]; if (x < floor && y < floor) continue;
+    const ww = Math.max(x, y) ** 2, dt = Math.abs(dbv(y + 1e-9) - dbv(x + 1e-9)), de = Math.abs(dbv(y + 1e-9) - dbv(x * G[k] + 1e-9));
+    st += dt * ww; sr2 += de * ww; w += ww;
+  }
+  // the static EQ in third-octave bands (what a fixed EQ would have to do)
+  const bands = []; for (let fc = 31.5; fc < sr / 2 * 0.9; fc *= Math.pow(2, 1 / 3)) {
+    const lo = Math.ceil(fc * Math.pow(2, -1 / 6) * N / sr), hi = Math.floor(fc * Math.pow(2, 1 / 6) * N / sr); let a = 0, b = 0;
+    for (let k = Math.max(1, lo); k <= Math.min(K - 1, hi); k++) { a += pa[k]; b += pb[k]; }
+    if (a > 0) bands.push([Math.round(fc), rnd(10 * Math.log10(b / a), 1)]);
+  }
+  const change = st / w, resid = sr2 / w;
+  // Two time-varying EQs on top of the static one, both fitted to this very output (upper bounds, so they flatter the EQ):
+  //   dynamic    each third-octave band's gain is any function of that band's own input level (2 dB steps), with
+  //              instant attack and release: the best a conventional dynamic EQ or multiband compressor could do
+  //   automation each band's gain may follow any curve at 0.1 s resolution: the best an engineer automating
+  //              a 30-band EQ could do
+  const nb = Math.max(1, Math.round(3 * Math.log2(sr / 2 * 0.9 / 31.5))), band = new Int16Array(K);
+  for (let k = 0; k < K; k++) band[k] = Math.max(0, Math.min(nb - 1, Math.round(3 * Math.log2(Math.max(1, k * sr / N) / 31.5))));
+  const Eg = new Float64Array(T * nb), Ew = new Float64Array(T * nb), Ed = new Float64Array(T * nb);
+  for (let f = 0; f < T; f++) for (let k = 1; k < K; k++) { const x = A.M[f * K + k], y = B.M[f * K + k], i = f * nb + band[k]; Eg[i] += (x * G[k]) ** 2; Ew[i] += y * y; Ed[i] += x * x; }
+  const eFloor = (floor * floor) * 4, tgt = new Float64Array(T * nb), wt = new Float64Array(T * nb);
+  for (let i = 0; i < T * nb; i++) { const m = Math.max(Eg[i], Ew[i]); if (m > eFloor) { tgt[i] = 10 * Math.log10((Ew[i] + 1e-20) / (Eg[i] + 1e-20)); wt[i] = m; } }
+  const dyn = new Float64Array(T * nb), aut = new Float64Array(T * nb);
+  for (let b = 0; b < nb; b++) {
+    let top = -Infinity; for (let f = 0; f < T; f++) if (wt[f * nb + b] > 0) top = Math.max(top, 10 * Math.log10(Ed[f * nb + b] + 1e-20));
+    if (!isFinite(top)) continue;
+    const sum = new Float64Array(52), sw = new Float64Array(52), bin = new Int16Array(T);
+    for (let f = 0; f < T; f++) { const i = f * nb + b; bin[f] = Math.min(51, Math.floor(Math.max(0, top - 10 * Math.log10(Ed[i] + 1e-20)) / 2)); if (wt[i] > 0) { sum[bin[f]] += tgt[i] * wt[i]; sw[bin[f]] += wt[i]; } }
+    for (let f = 0; f < T; f++) dyn[f * nb + b] = sw[bin[f]] > 0 ? sum[bin[f]] / sw[bin[f]] : 0;
+    const hw = Math.max(1, Math.round(0.05 * sr / A.H));
+    for (let f = 0; f < T; f++) { let s = 0, q = 0; for (let j = Math.max(0, f - hw); j <= Math.min(T - 1, f + hw); j++) { const i = j * nb + b; s += tgt[i] * wt[i]; q += wt[i]; } aut[f * nb + b] = q > 0 ? s / q : 0; }
+  }
+  let rd = 0, ra = 0;
+  for (let f = 0; f < T; f++) for (let k = 1; k < K; k++) {
+    const x = A.M[f * K + k], y = B.M[f * K + k]; if (x < floor && y < floor) continue;
+    const ww = Math.max(x, y) ** 2, i = f * nb + band[k], yd = dbv(y + 1e-9);
+    rd += Math.abs(yd - dbv(x * G[k] * Math.pow(10, dyn[i] / 20) + 1e-9)) * ww; ra += Math.abs(yd - dbv(x * G[k] * Math.pow(10, aut[i] / 20) + 1e-9)) * ww;
+  }
+  const share = r => rnd(change > 0.05 ? Math.max(0, 1 - r / change) : NaN, 2);
+  return { change: rnd(change, 2), notEq: rnd(resid, 2), eqShare: share(resid), dynShare: share(rd / w), autoShare: share(ra / w), eqBands: bands };
+}
 
 /* ---------- store-only ZIP (for hosts that accept .zip but not .wav downloads) ---------- */
 let CRC_T = null;
@@ -455,7 +564,7 @@ function zipStore(files) {
   return out;
 }
 
-const api = { TOOLS, encodeWav, zipStore, crc32, mkBuf, lufsOf, stftApply, cleanup, deharsh, layerMix, hpss, tensionShape, loopMaker, variations };
+const api = { TOOLS, eqExplained, encodeWav, zipStore, crc32, mkBuf, chansOf, resample, lufsOf, stftApply, stftMagnitudes, _stftMag: stftMagnitudes, cleanup, deharsh, layerMix, hpss, tensionShape, loopMaker, variations };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.WLFX = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

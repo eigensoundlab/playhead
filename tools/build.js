@@ -12,7 +12,7 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const read = p => fs.readFileSync(path.join(root, p), "utf8");
-const SOURCES = ["src/analysis.js", "src/probes.js", "src/effects.js", "src/app.js"];
+const SOURCES = ["src/analysis.js", "src/descriptors.js", "src/probes.js", "src/effects.js", "src/app.js"];
 
 function parts() {
   const index = read("index.html");
@@ -24,7 +24,8 @@ function parts() {
   const js = SOURCES.map(read);
   return { fonts, body, css, js };
 }
-const inlineScripts = js => js.map(s => "<script>\n" + s.replace(/<\/script/gi, "<\\/script") + "\n</script>").join("\n");
+// inline scripts carry an id so the app can build its analysis workers from their text
+const inlineScripts = js => js.map((s, i) => "<script id=\"ph-" + SOURCES[i].replace(/^src\/|\.js$/g, "") + "\">\n" + s.replace(/<\/script/gi, "<\\/script") + "\n</script>").join("\n");
 
 function single(allowSave) {
   const { fonts, body, css, js } = parts();

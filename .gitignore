@@ -11,3 +11,6 @@ paper/*.bbl
 paper/*.blg
 paper/*.out
 paper/*.synctex.gz
+corpus/
+batch-out/
+playhead-batch/

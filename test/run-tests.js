@@ -7,6 +7,8 @@
 const WL = require("../src/analysis.js");
 const P = require("../src/probes.js");
 const FX = require("../src/effects.js");
+// optional parameter override, used by tools/tune.js to test frozen calibration values
+if (process.env.PLAYHEAD_PARAMS) require("../tools/params.js").apply(JSON.parse(process.env.PLAYHEAD_PARAMS));
 
 const results = [];
 function check(name, value, pass, detail) {
@@ -80,9 +82,10 @@ const finite = buf => { for (let c = 0; c < buf.numberOfChannels; c++) for (cons
   {
     const src = kitBy("Gun_Pistol"), An = kitAn[src.name];
     const r = await FX.layerMix(src, An, { gains: An.X.layers.map((l, i) => i === 0 ? -12 : 0), match: true });
-    const B = await analyseAll(r.outputs[0].buf, "layers.wav");
-    const d = An.X.layers[0].share - (B.X.layers[0] ? B.X.layers[0].share : 0);
-    check("effects: layer remix lowers the sub layer share", (d * 100).toFixed(0) + " points", d >= 0.15 && finite(r.outputs[0].buf));
+    // measured directly as the share of energy below 150 Hz (re-running NMF on the result can reorder the layers)
+    const lowShare = async buf => { const ch = []; for (let c = 0; c < buf.numberOfChannels; c++) ch.push(buf.getChannelData(c)); const S = await FX.stftMagnitudes(ch, buf.sampleRate, 2048); let lo = 0, all = 0; const k150 = Math.floor(150 * 2048 / buf.sampleRate); for (let f = 0; f < S.nF; f++) for (let k = 1; k < S.bins; k++) { const e = S.M[f * S.bins + k] ** 2; all += e; if (k <= k150) lo += e; } return lo / all; };
+    const l0 = await lowShare(src), l1 = await lowShare(r.outputs[0].buf), d = l0 - l1;
+    check("effects: layer remix (sub −12 dB) lowers energy below 150 Hz", (100 * l0).toFixed(0) + "% → " + (100 * l1).toFixed(0) + "%", An.X.layers[0].hz < 150 && d >= 0.15 && finite(r.outputs[0].buf));
   }
   {
     const src = kitBy("Glass"), An = kitAn[src.name];
@@ -109,10 +112,20 @@ const finite = buf => { for (let c = 0; c < buf.numberOfChannels; c++) for (cons
   }
 
   {
+    const IO = require("../tools/audio-io.js"), os = require("os"), path = require("path"), fs = require("fs");
+    const x = new Float32Array(1000).map((_, i) => Math.sin(i / 7) * 0.8), y = x.map(v => -v / 2), f = path.join(os.tmpdir(), "playhead-io-test.wav");
+    IO.writeWav(f, IO.makeBuffer(48000, [x, y]), false);
+    const b = IO.readWav(f); fs.unlinkSync(f);
+    let err = 0; for (let i = 0; i < 1000; i++) err = Math.max(err, Math.abs(b.getChannelData(0)[i] - x[i]), Math.abs(b.getChannelData(1)[i] - y[i]));
+    check("batch: WAV write and read back", err.toExponential(1), b.sampleRate === 48000 && b.numberOfChannels === 2 && b.length === 1000 && err < 1e-4);
+  }
+  {
     const crc = FX.crc32(new TextEncoder().encode("123456789")).toString(16);
     const z = FX.zipStore([{ name: "a.wav", data: new Uint8Array([1, 2, 3]) }]);
     check("export: CRC-32 and zip container", crc, crc === "cbf43926" && z.length === 30 + 5 + 3 + 46 + 5 + 22);
   }
+
+  await require("./descriptor-tests.js")(check);
 
   const failed = results.filter(r => !r.pass);
   console.log("\n" + (results.length - failed.length) + " of " + results.length + " checks passed in " + ((Date.now() - t0) / 1000).toFixed(0) + " s");
