@@ -12,7 +12,9 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const read = p => fs.readFileSync(path.join(root, p), "utf8");
-const SOURCES = ["src/analysis.js", "src/descriptors.js", "src/probes.js", "src/effects.js", "src/app.js"];
+const SOURCES = ["src/analysis.js", "src/descriptors.js", "src/probes.js", "src/effects.js", "src/playhead.js", "src/app.js"];
+const CORE = ["src/analysis.js", "src/descriptors.js", "src/effects.js", "src/playhead.js"];
+const VERSION = require("../package.json").version;
 
 function parts() {
   const index = read("index.html");
@@ -60,6 +62,39 @@ ${body}
 ${inlineScripts(js)}
 `;
 }
+/* ---------- library bundles for other applications (dist/) ----------
+   Each core file is a UMD script that attaches one object (WL, PHD, WLFX, Playhead) to its root. The bundles run all of
+   them against a private object instead of the global one, so nothing leaks into the host page or module. */
+const FOOTER = /\}\)\(typeof globalThis !== "undefined" \? globalThis : this\);\s*$/;
+function coreBody() {
+  return "const __ph = {};\n" + CORE.map(f => {
+    const src = read(f);
+    if (!FOOTER.test(src)) throw new Error("unexpected module footer in " + f);
+    return "// ---- " + f + "\n" + src.replace(FOOTER, "})(__ph);\n");
+  }).join("\n") + "\nconst Playhead = __ph.Playhead;\nPlayhead.internals = { WL: __ph.WL, PHD: __ph.PHD, FX: __ph.WLFX };\n";
+}
+const BANNER = `/*! Playhead core ${VERSION} | Apache-2.0 | (c) 2026 Daniel Sandner | https://github.com/eigensoundlab/playhead */\n`;
+function coreUMD() {
+  return BANNER + "(function (g, factory) {\n  const P = factory();\n  if (typeof module === \"object\" && module && module.exports) module.exports = P; else g.Playhead = P;\n})(typeof globalThis !== \"undefined\" ? globalThis : this, function () {\n\"use strict\";\nconst module = undefined, require = undefined;\n"
+    + coreBody() + "return Playhead;\n});\n";
+}
+function coreESM() {
+  return BANNER + "const module = undefined, require = undefined;\n" + coreBody()
+    + "export default Playhead;\nexport const { version, schema, schemaVersion, profiles, analyze, process, tools, toMarkers, curveAt, drawStrip } = Playhead;\n";
+}
+// command line as one CommonJS file (Node built-ins only), the input of the single-executable build
+function cliBundle() {
+  const io = read("tools/audio-io.js").replace(/^#!.*\n/, ""), cli = read("tools/playhead-cli.js").replace(/^#!.*\n/, "");
+  return "#!/usr/bin/env node\n" + BANNER + "\"use strict\";\nglobal.__PLAYHEAD_BUNDLED__ = (function () {\nconst module = undefined, require = undefined;\n" + coreBody() + "return Playhead;\n})();\n"
+    + "global.__PLAYHEAD_IO__ = (function () { const module = { exports: {} };\n" + io + "\nreturn module.exports; })();\n" + cli;
+}
+function writeDist(dir) {
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "playhead-core.js"), coreUMD());
+  fs.writeFileSync(path.join(dir, "playhead-core.mjs"), coreESM());
+  fs.writeFileSync(path.join(dir, "playhead-cli.cjs"), cliBundle(), { mode: 0o755 });
+}
+
 function copyDir(src, dst) {
   fs.mkdirSync(dst, { recursive: true });
   for (const e of fs.readdirSync(src, { withFileTypes: true })) {
@@ -69,7 +104,8 @@ function copyDir(src, dst) {
 }
 
 const args = process.argv.slice(2);
-if (args[0] === "--fragment") {
+if (args[0] === "--dist") { writeDist(path.join(root, "dist")); console.log("wrote dist/"); }
+else if (args[0] === "--fragment") {
   const out = args[1] || "playhead-fragment.html";
   fs.writeFileSync(out, fragment(args[2] || "Playhead"));
   console.log("wrote", out);
@@ -82,5 +118,8 @@ if (args[0] === "--fragment") {
   copyDir(path.join(root, "src"), path.join(site, "src"));
   fs.writeFileSync(path.join(site, ".nojekyll"), "");
   fs.writeFileSync(path.join(site, "playhead-single.html"), single(true));
-  console.log("built", site);
+  writeDist(path.join(root, "dist"));
+  writeDist(path.join(site, "dist"));
+  copyDir(path.join(root, "examples"), path.join(site, "examples"));
+  console.log("built", site, "and dist/ (playhead-core.js, playhead-core.mjs, playhead-cli.cjs)");
 }

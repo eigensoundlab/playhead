@@ -9,7 +9,16 @@
     "type": "git",
     "url": "git+https://github.com/eigensoundlab/playhead.git"
   },
-  "keywords": ["audio", "waveform", "music-information-retrieval", "psychoacoustics", "game-audio", "sound-design", "visualization", "web-audio"],
+  "keywords": [
+    "audio",
+    "waveform",
+    "music-information-retrieval",
+    "psychoacoustics",
+    "game-audio",
+    "sound-design",
+    "visualization",
+    "web-audio"
+  ],
   "private": true,
   "engines": {
     "node": ">=18"
@@ -17,6 +26,11 @@
   "scripts": {
     "test": "node test/run-tests.js",
     "build": "node tools/build.js",
-    "start": "node tools/serve.js 8080"
+    "start": "node tools/serve.js 8080",
+    "build:cli": "node tools/build-cli.js",
+    "build:dist": "node tools/build.js --dist"
+  },
+  "bin": {
+    "playhead": "tools/playhead-cli.js"
   }
 }

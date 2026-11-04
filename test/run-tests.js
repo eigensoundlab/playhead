@@ -129,11 +129,12 @@ const finite = buf => { for (let c = 0; c < buf.numberOfChannels; c++) for (cons
     const fs = require("fs"), root = require("path").join(__dirname, ".."), rd = p => fs.readFileSync(require("path").join(root, p), "utf8");
     const v = JSON.parse(rd("package.json")).version, cff = (/^version:\s*([\w.-]+)/m.exec(rd("CITATION.cff")) || [])[1];
     const html = rd("index.html"), foot = (/id="ph-version">([^<]+)</.exec(html) || [])[1], cite = (/\(Version ([^)]+)\)/.exec(html) || [])[1];
-    const zen = JSON.parse(rd(".zenodo.json")).version;
-    check("release: version in package.json, CITATION.cff, .zenodo.json, footer, citation", [v, cff, zen, foot, cite].join(" / "), [cff, zen, foot, cite].every(x => x === v));
+    const zen = JSON.parse(rd(".zenodo.json")).version, api = (/const VERSION = "([^"]+)"/.exec(rd("src/playhead.js")) || [])[1];
+    check("release: version in package.json, CITATION.cff, .zenodo.json, API, footer, citation", [v, cff, zen, api, foot, cite].join(" / "), [cff, zen, api, foot, cite].every(x => x === v));
   }
 
   await require("./descriptor-tests.js")(check);
+  await require("./integration-tests.js")(check);
 
   const failed = results.filter(r => !r.pass);
   console.log("\n" + (results.length - failed.length) + " of " + results.length + " checks passed in " + ((Date.now() - t0) / 1000).toFixed(0) + " s");

@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Playhead embedding example</title>
+<style>
+:root{--bg:#f7f9fa;--ink:#13181b;--ink2:#4e5960;--rule:#cdd5da;--card:#fff;--accent:#1b6fb5}
+@media (prefers-color-scheme:dark){:root{--bg:#0f1214;--ink:#e3e8ea;--ink2:#9aa5ac;--rule:#252b30;--card:#171b1e;--accent:#5aa9e6}}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",sans-serif}
+main{max-width:980px;margin:0 auto;padding:24px 16px 48px}
+h1{font-size:20px;margin:0 0 4px}p{color:var(--ink2);margin:0 0 12px;max-width:75ch}
+.bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;margin:12px 0}
+label{font-size:13px;color:var(--ink2)}select,button,input{font:inherit;font-size:13px}
+.strip{background:var(--card);border:1px solid var(--rule);border-radius:6px;padding:8px;margin:8px 0}
+canvas{display:block;width:100%}
+#status{font-size:13px;color:var(--ink2)}
+table{border-collapse:collapse;font-size:12px;width:100%;background:var(--card)}td,th{border-bottom:1px solid var(--rule);padding:3px 6px;text-align:left}
+code{font-size:12px}
+</style>
+</head>
+<body>
+<main>
+<h1>Playhead in another application</h1>
+<p>Minimal host page for the library bundle: the sound is decoded by the browser, analysed in a module worker by <code>Playhead.analyze()</code>, and drawn with <code>Playhead.drawStrip()</code>. Nothing leaves the page. Use it as a template for SFX Workbench, kurator or any web tool.</p>
+<div class="bar">
+  <input type="file" id="file" accept="audio/*">
+  <label>Profile <select id="profile"><option value="auto">auto</option><option value="fast">fast</option><option value="sfx">sfx</option><option value="music">music</option></select></label>
+  <label>Line <select id="curve"><option value="">default</option><option>loudness</option><option>activity</option><option>tension</option><option>harshness</option><option>n1Kurtosis</option></select></label>
+  <label>Colour <select id="colour"><option value="">default</option><option value="none">none</option><option>harshness</option><option>tension</option><option>activity</option></select></label>
+  <button id="json" disabled>Save JSON</button>
+  <span id="status" role="status" aria-live="polite">Choose a sound.</span>
+</div>
+<div class="strip"><canvas id="big" height="96" aria-label="Playhead strip"></canvas></div>
+<div class="strip"><canvas id="small" height="28" aria-label="Compact playhead strip"></canvas></div>
+<table id="marks" hidden><thead><tr><th>Kind</th><th>Start (s)</th><th>End (s)</th><th>Name</th></tr></thead><tbody></tbody></table>
+</main>
+<script type="module">
+import Playhead from "../dist/playhead-core.mjs";
+const $ = id => document.getElementById(id);
+const worker = new Worker(new URL("./analysis-worker.mjs", import.meta.url), { type: "module" });
+let doc = null, nextId = 1;
+const dark = () => matchMedia("(prefers-color-scheme: dark)").matches;
+function draw() {
+  if (!doc) return;
+  const theme = dark() ? { wave: "#6b767d", waveLow: [40, 60, 90], waveHigh: [120, 180, 240], line: "#ff8a4c", tick: "#e3e8ea", text: "#e3e8ea", rule: "#9aa5ac" } : {};
+  for (const id of ["big", "small"]) {
+    const cv = $(id), dpr = window.devicePixelRatio || 1, w = cv.clientWidth, h = Number(cv.getAttribute("height"));
+    cv.width = Math.round(w * dpr); cv.height = Math.round(h * dpr); cv.style.height = h + "px";
+    const ctx = cv.getContext("2d"); ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.clearRect(0, 0, w, h);
+    const colour = $("colour").value === "none" ? null : ($("colour").value || undefined);
+    Playhead.drawStrip(ctx, doc, { width: w, height: h, curve: $("curve").value || undefined, colour, theme, sections: id === "big", events: true });
+  }
+}
+function showMarks() {
+  const rows = Playhead.toMarkers(doc, { kinds: doc.sections ? ["sections", "downbeats"] : ["events"] });
+  $("marks").hidden = !rows.length;
+  $("marks").querySelector("tbody").innerHTML = rows.slice(0, 200).map(m => `<tr><td>${m.kind}</td><td>${m.start.toFixed(3)}</td><td>${m.end != null ? m.end.toFixed(3) : ""}</td><td>${m.name.replace(/[<&]/g, c => c === "<" ? "&lt;" : "&amp;")}</td></tr>`).join("");
+}
+$("file").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  $("status").textContent = "Decoding…";
+  const ac = new (window.AudioContext || window.webkitAudioContext)();
+  let buf; try { buf = await ac.decodeAudioData(await f.arrayBuffer()); } catch (err) { $("status").textContent = "This browser cannot decode the file."; return; } finally { ac.close(); }
+  const channels = Array.from({ length: Math.min(2, buf.numberOfChannels) }, (_, c) => buf.getChannelData(c).slice());
+  const id = nextId++, t0 = performance.now();
+  worker.onmessage = m => {
+    if (m.data.id !== id) return;
+    if (m.data.progress != null) { $("status").textContent = "Analysing… " + Math.round(100 * m.data.progress) + " %"; return; }
+    if (m.data.error) { $("status").textContent = "Analysis failed: " + m.data.error; return; }
+    doc = m.data.doc;
+    const ev = doc.events ? doc.events.length + " events" : doc.onsets.length + " onsets", sec = doc.sections ? ", " + doc.sections.length + " sections" : "";
+    $("status").textContent = `${doc.source.duration.toFixed(1)} s, ${doc.profile}, ${ev}${sec}; ${Math.round(performance.now() - t0)} ms`;
+    $("json").disabled = false; draw(); showMarks();
+  };
+  worker.postMessage({ id, sampleRate: buf.sampleRate, channels, opts: { profile: $("profile").value, name: f.name } }, channels.map(c => c.buffer));
+});
+for (const id of ["curve", "colour"]) $(id).addEventListener("change", draw);
+addEventListener("resize", draw);
+$("json").addEventListener("click", () => {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(new Blob([JSON.stringify(doc)], { type: "application/json" }));
+  a.download = (doc.source.name || "sound").replace(/\.[^.]+$/, "") + ".playhead.json"; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+</script>
+</body>
+</html>

@@ -57,6 +57,24 @@ A "Descriptor tour" signal (CC0) in the lab plays each reference case in turn, s
 
 Every result is re-analysed, so the bench shows what changed (loudness, harshness, layer shares, loudness range, problems) next to an A/B player with its own playhead and a WAV download.
 
+## Using Playhead in other applications
+
+The analysis is also a library and a command line, so other tools can use it ([docs/INTEGRATION.md](docs/INTEGRATION.md)):
+
+```js
+import Playhead from "./playhead-core.mjs";            // dist/, or the script build playhead-core.js
+const doc = await Playhead.analyze({ sampleRate, channels }, { profile: "auto" });   // plain JSON, schema playhead-analysis v1
+Playhead.drawStrip(canvas.getContext("2d"), doc);      // the strip, in a page or an OffscreenCanvas
+```
+
+```sh
+playhead analyze sound.wav > sound.playhead.json       # one executable per platform, no Node needed
+playhead markers song.wav --kinds sections,downbeats   # tab-separated regions and markers for editors
+playhead process shot.wav --tool layers --param gains=-12
+```
+
+Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
+
 ## Batch analysis and self-checks
 
 `tools/batch.js` runs the same analysis over folders of real files, with no browser:
@@ -260,6 +278,7 @@ src/analysis.js       feature extraction, curves, rhythm, structure, sound-effec
 src/descriptors.js    cross-field descriptors N1–N9
 src/probes.js         synthetic test signals with ground truth, descriptor tour
 src/effects.js        analysis-driven tools, WAV encoder
+src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process()
 src/app.js            user interface
 test/run-tests.js     regression checks
 test/descriptor-tests.js  analytic reference tests for the descriptors
@@ -275,7 +294,11 @@ experiments/esc50/    ESC-50 experiment: librosa baseline, evaluation, negative 
 experiments/corpus/   results on the 73-file corpus behind the README and the paper (self-checks, calibration, tools vs EQ, triggers)
 experiments/paper/    figure data and figure script for the paper (tools/paper-data.js, figures.py)
 tools/audio-io.js     WAV reader/writer; other formats through ffmpeg
-tools/build.js        builds _site/ and a single-file version
+tools/build.js        builds _site/, a single-file version and dist/ (library bundles, command-line bundle)
+tools/playhead-cli.js command line: analyze, markers, process, tools
+tools/build-cli.js    one executable for the current platform (Node single executable application)
+examples/             a host page and an analysis worker using the library bundle
+docs/INTEGRATION.md   API, document schema and recipes for other applications
 tools/serve.js        local static server
 paper/                outline and licence of the accompanying paper (CC BY 4.0); the LaTeX source is kept in a separate repository
 ```
@@ -284,14 +307,15 @@ paper/                outline and licence of the accompanying paper (CC BY 4.0);
 
 ## Roadmap
 
-- Optional WebGPU path for batched FFTs and NMF, behind the CPU reference implementation and its tests.
+- Pilots of the library and command line in a sound-effect workbench, an asset manager, REAPER and a Unity game; short-decay material estimates (under 0.12 s) for very damped impacts; generators checked against the descriptors (material, event statistics, arrow of time).
+- Optional WebGPU path for batched FFTs and NMF, behind the CPU reference implementation and its tests, once a pilot shows it is the bottleneck.
 - Fallback decoder for Ogg/Opus where the browser can't decode them.
 - Unity editor package: `[CustomPreview(typeof(AudioClip))]` with `ObjectPreview`, analysis cached by asset GUID through `AssetPostprocessor`.
 - Validation on real material: DEAM continuous arousal ratings, beat and structure datasets, and a short user study comparing the preview designs at 48, 24 and 12 px height.
 - Second tier of descriptors from the research notes: DMD/ESPRIT modal decomposition, texture statistics, horizontal visibility graphs, detrended fluctuation analysis, a phasegram for growls.
 - More calibrated parameters (structure noise floors, STA/LTA trigger, repetition thresholds) in the joint grid, and a larger, more varied calibration library.
 - Localised processing: any effect applied through a layer, event or descriptor mask (saturation on the body layer only, reverb only on impact tails, de-noise only in gaps), and export of the analysis as EQ settings and automation lanes for ordinary plug-ins.
-- Real-input transforms for mono material (two frames per FFT) and an optional WebGPU path for long renders and batch generation, both checked against the current float64 path.
+- Real-input transforms for mono material (two frames per FFT).
 - Descriptor validation on further labelled sets (FSD50K for sound effects, DEAM for music) and per-frame use of the curves, not only clip summaries.
 
 ## Unity Asset Store note

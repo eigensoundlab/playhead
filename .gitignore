@@ -14,3 +14,5 @@ paper/*.synctex.gz
 corpus/
 batch-out/
 playhead-batch/
+# built library bundles and executables (CI builds them for releases)
+dist/
