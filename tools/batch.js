@@ -89,7 +89,7 @@ function svgDesc(d, dur) {
 }
 function descTables(files) {
   const classes = [...new Set(files.map(f => f.sum.cls))];
-  const med = (vals) => { const v = vals.filter(Number.isFinite).sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) / 2)] : NaN; };
+  const med = (vals) => { const v = vals.filter(Number.isFinite).sort((a, b) => a - b), h = v.length >> 1; return !v.length ? NaN : v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2; };
   const fmt = (v, d) => Number.isFinite(v) ? v.toFixed(d) : "–";
   const rows = [["Impulsiveness, kurtosis K", "K", 1], ["Repetition found (share of files)", "repShare", 0], ["Speech-rate modulation (dB)", "speech", 1], ["Burstiness B", "B", 2], ["Temporal entropy Ht", "Ht", 2], ["Arrow of time T(20 ms)", "T20", 2], ["Periodicity, CPP (dB)", "cpp", 1], ["Phase coherence", "pci", 2], ["Interest, predictive information (nats)", "pir", 3], ["Recurrence rate", "RR", 2], ["Laminarity", "LAM", 2], ["Ring time (s)", "ring", 2]];
   const val = (cl, key) => { const fs = files.filter(f => cl === "all" || f.sum.cls === cl); if (key === "repShare") return fs.length ? 100 * fs.filter(f => Number.isFinite(f.sum.rep)).length / fs.length : NaN; return med(fs.map(f => f.sum[key])); };

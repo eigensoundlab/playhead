@@ -141,5 +141,6 @@ body.drag .wrap{outline:2px dashed var(--accent);outline-offset:-6px}
 .foot a:hover{color:var(--accent)}
 .cite summary{cursor:pointer;width:max-content}
 .cite p{max-width:80ch;margin:6px 0;color:var(--ink);overflow-wrap:anywhere}
+.cite p.m{color:var(--ink2)}
 .cite button{min-height:26px;font-size:12px;padding:2px 8px}
 @media (prefers-reduced-motion: reduce){ .ph{transition:none} }

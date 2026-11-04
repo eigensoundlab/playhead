@@ -58,7 +58,7 @@ if (!inputs.length) { console.error("usage: node tools/dyneq.js <files or folder
 const files = IO.listAudio(inputs);
 let base = path.dirname(files[0]); while (!files.every(f => f.startsWith(base + path.sep)) && base !== path.dirname(base)) base = path.dirname(base);
 const t0 = Date.now(), res = [], queue = files.slice(); let active = 0;
-const med = v => { v = v.filter(Number.isFinite).sort((a, b) => a - b); return v.length ? v[Math.floor((v.length - 1) / 2)] : NaN; };
+const med = v => { v = v.filter(Number.isFinite).sort((a, b) => a - b); const h = v.length >> 1; return !v.length ? NaN : v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2; };
 const pc = v => Number.isFinite(v) ? Math.round(100 * v) + " %" : "–";
 const finish = () => {
   const ok = res.filter(r => !r.error);

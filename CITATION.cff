@@ -10,7 +10,17 @@ abstract: >-
 authors:
   - family-names: Sandner
     given-names: Daniel
+    orcid: "https://orcid.org/0000-0002-1041-814X"
 version: 0.1.0
+date-released: 2026-11-03
+doi: 10.5281/zenodo.23932625
+identifiers:
+  - type: doi
+    value: 10.5281/zenodo.23932625
+    description: "Concept DOI: all versions, resolves to the latest"
+  - type: doi
+    value: 10.5281/zenodo.23932626
+    description: "Version 0.1.0"
 license: Apache-2.0
 repository-code: "https://github.com/eigensoundlab/playhead"
 url: "https://eigensoundlab.github.io/playhead/"

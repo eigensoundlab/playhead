@@ -1,8 +1,10 @@
 # Paper: outline
 
+The LaTeX source of the first paper is kept in a separate repository (private until it is posted), which pins this software at version 0.1.0 and checks every quoted number against `experiments/`. This outline records the plan and the evaluation table.
+
 Working title: **Playhead waveforms: interpretable overview curves and analysis-driven tools for music and game audio**
 
-Author: Daniel Sandner. Licence: CC BY 4.0 (see `LICENSE.md`). Target length: 4–8 pages.
+Author: Daniel Sandner (ORCID [0000-0002-1041-814X](https://orcid.org/0000-0002-1041-814X)). Licence: CC BY 4.0 (see `LICENSE.md`). Target length: 4–8 pages.
 
 ## Claim
 
@@ -40,10 +42,10 @@ Whether people read the strips faster is a separate, partly subjective question 
 | Do the curves add information beyond the waveform? | Probes plus real music | Correlation with RMS envelope, and of first differences |
 | Does the intensity curve follow listeners? | DEAM continuous arousal ratings | Correlation against a loudness-only baseline |
 | Do beats and sections hold on real music? | Public beat-tracking and structure datasets | Standard MIR metrics against librosa / madmom baselines |
-| Can the test battery be fooled? | ESC-50 negative controls: noise, shuffled descriptors, loudness copies (3 seeds each) | No control beats the baseline (55.8–59.9 % against 60.6 %); real descriptors beat every control at p ≤ 4e-15 |
+| Can the test battery be fooled? | ESC-50 negative controls: noise, shuffled descriptors, loudness copies (3 seeds each) | No control beats the baseline (55.8–59.9 % against 60.6 %); real descriptors beat every control at p ≤ 5e-15 |
 | Proposed, not run: can people read the strips? | Task study, 12–20 participants | Accuracy and time on "where is the build-up / the drop / the second hit" at 48, 24 and 12 px height, against waveform only |
 | How far is each tool from ordinary EQ? | 73 real files | Share of the spectrogram change reproduced by a static EQ, an ideal dynamic EQ and ideal third-octave automation (layer remix 84/86/95 %, de-harsh 72/81/88 %, attack and body 60/68/76 %, variations 34/50/54 %) |
-| Does an analysis-driven trigger differ from a level trigger? | 52 real files, identical processing, two detectors | Overlap of open moments (median Jaccard 17 %); sharpness removed in the harshest 10 % (0.041 vs 0.018 acum) and in the calmer half (0 vs 0.009) at a smaller average cut |
+| Does an analysis-driven trigger differ from a level trigger? | 52 real files, identical processing, two detectors | Overlap of open moments (median Jaccard 17 %); sharpness removed in the harshest 10 % (0.042 vs 0.018 acum) and in the calmer half (0 vs 0.010) at a smaller average cut |
 | Do the tools do what the descriptors claim? | Kit and real assets | Descriptor change at matched loudness, plus a loudness-matched blind A/B listening test |
 
 State plainly that thresholds were tuned on the synthetic kit, and report real-material results separately.
@@ -58,5 +60,5 @@ State plainly that thresholds were tuned on the synthetic kit, and report real-m
 
 ## Reproducibility
 
-- Tag a release for the submitted version and archive it with Zenodo (gives a DOI for the code).
+- Software archived on Zenodo: version 0.1.0 is [10.5281/zenodo.23932626](https://doi.org/10.5281/zenodo.23932626) (cite this one for the reported results); all versions [10.5281/zenodo.23932625](https://doi.org/10.5281/zenodo.23932625). Tag and archive a new version if the submitted results change.
 - `npm test` reproduces the synthetic results. Figures are generated from the app's own rendering code.

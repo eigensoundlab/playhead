@@ -2,7 +2,9 @@
 
 **A waveform plus one or two lines that show what the waveform can't: intensity, busyness, tension, beats, sections and the kind of event, for music and game sound effects. The same analysis then drives editing, mixing and mastering tools.**
 
-Live: <https://eigensoundlab.github.io/playhead/> · Author: Daniel Sandner · Licence: Apache-2.0
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23932625.svg)](https://doi.org/10.5281/zenodo.23932625)
+
+Live: <https://eigensoundlab.github.io/playhead/> · Author: Daniel Sandner ([ORCID 0000-0002-1041-814X](https://orcid.org/0000-0002-1041-814X)) · Licence: Apache-2.0
 
 Playhead is a research prototype. It runs entirely in the browser: audio you drop in is decoded and analysed locally and never leaves the tab. A Unity editor preview is the intended first integration.
 
@@ -153,7 +155,7 @@ Self-checks on 73 real files (56 CC0 Sonic Pi samples and 17 librosa example exc
 | N9 ring time ÷1.06 and material unchanged when faster (sound effects) | 17/17, 5/5 |
 | N9 ring time on music | 7/14: decays overlap, so material is marked unreliable on mixes |
 
-Each descriptor's column-to-column changes correlate only weakly with loudness's: median |r| 0.06 (N4) to 0.17 (N1), against 0.77 for the existing tension curve C5. That shows they carry different information, not yet that it is useful to a listener.
+Each descriptor's column-to-column changes correlate only weakly with loudness's: median |r| 0.05 (N2) to 0.17 (N1), against 0.77 for the existing tension curve C5. That shows they carry different information, not yet that it is useful to a listener.
 
 Bugs found this way and fixed: a sound already present at sample 0 had its event reported a window (23 ms) late; the absolute mel floor made activity, events and recurrence depend on playback level.
 
@@ -173,10 +175,10 @@ A dynamic EQ adds only 2 to 16 points over a static one. Layer remix is almost e
 | | Harshness model | Band level (conventional dynamic EQ) |
 |---|---|---|
 | Open / average cut | 21 % / 0.4 dB | 26 % / 0.6 dB |
-| Acts on the harshest 10 % of moments | 100 % (by construction) | 41 % (music 33 %) |
-| Acts on the calmer half | 0 % | 18 % (music 23 %) |
-| Sharpness removed in the harshest 10 % | 0.041 acum | 0.018 acum |
-| Sharpness removed in the calmer half | 0.000 | 0.009 acum |
+| Gate opening on the harshest 10 % of moments | 100 % (by construction) | 42 % (music 33 %) |
+| Gate opening on the calmer half | 0 % | 19 % (music 23 %) |
+| Sharpness removed in the harshest 10 % | 0.042 acum | 0.018 acum |
+| Sharpness removed in the calmer half | 0.000 | 0.010 acum |
 
 The two detectors open on the same moments only 17 % of the time (median Jaccard; gate correlation 0.23). With less cut overall, the analysis-driven gate removes more than twice the sharpness where the file is harshest and leaves the rest alone. Sharpness is one input of the harshness model, so this shows the trigger works as designed; whether listeners prefer the result needs a listening test.
 
@@ -195,7 +197,7 @@ Do the descriptors carry information that standard features lack? On [ESC-50](ht
 
 Adding the descriptors helps with both classifiers and against both baselines (paired McNemar tests, p from 2e-42 to 4e-8), and 74 features of MFCC + descriptors beat the 130-feature librosa set (p = 3e-5). Added one at a time, repetition (+2.6 points), impulsiveness (+2.2) and events (+1.9) help most; the families overlap, so dropping any single one costs under a point. The largest class gains are engine, coughing, chainsaw, sneezing and drinking (F1 +0.17 to +0.27). Learned networks reach about 98 % on this set; the point is complementary, interpretable information, not classification accuracy. Details and reproduction: [experiments/esc50](experiments/esc50/README.md).
 
-Negative controls show the test cannot be fooled by adding columns: 48 columns of noise, of the real descriptor values shuffled between clips, or of loudness copies all leave the librosa set at or below its 60.6 % (55.8–59.9 % over three seeds), and the real descriptors beat each of them at p ≤ 4e-15.
+Negative controls show the test cannot be fooled by adding columns: 48 columns of noise, of the real descriptor values shuffled between clips, or of loudness copies all leave the librosa set at or below its 60.6 % (55.8–59.9 % over three seeds), and the real descriptors beat each of them at p ≤ 5e-15.
 
 ### Testing a new descriptor
 
@@ -269,11 +271,13 @@ tools/fetch-corpus.sh fetches the CC0 and CC-licensed test recordings
 tools/profile.js      per-stage timing (--fx: tool rendering)
 tools/dyneq.js        de-harsh with its harshness detector against a conventional level-driven dynamic EQ
 tools/export-features.js  one feature vector per file (MFCC baseline, psychoacoustic curves, descriptors) as CSV
-experiments/esc50/    ESC-50 experiment: librosa baseline, evaluation, HTML report, results.json
+experiments/esc50/    ESC-50 experiment: librosa baseline, evaluation, negative controls, HTML report, results
+experiments/corpus/   results on the 73-file corpus behind the README and the paper (self-checks, calibration, tools vs EQ, triggers)
+experiments/paper/    figure data and figure script for the paper (tools/paper-data.js, figures.py)
 tools/audio-io.js     WAV reader/writer; other formats through ffmpeg
 tools/build.js        builds _site/ and a single-file version
 tools/serve.js        local static server
-paper/                outline of the accompanying paper (CC BY 4.0)
+paper/                outline and licence of the accompanying paper (CC BY 4.0); the LaTeX source is kept in a separate repository
 ```
 
 `analysis.js`, `descriptors.js`, `probes.js` and `effects.js` are plain UMD scripts: they run in the browser and in Node without a bundler.
@@ -301,10 +305,15 @@ The Asset Store submission guidelines (§1.2.b) currently exclude packages carry
 - Generated test signals: CC0 1.0.
 - Audio you process with Playhead is yours; the tool claims no rights in its output.
 
-Cite with [CITATION.cff](CITATION.cff) (GitHub shows a "Cite this repository" button).
+Cite the version you used. For 0.1.0, the version that produced the results reported here:
+
+> Sandner, D. (2026). *Playhead: overview curves and analysis-driven tools for music and game audio* (Version 0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23932626
+
+To refer to the software in general, use the concept DOI [10.5281/zenodo.23932625](https://doi.org/10.5281/zenodo.23932625), which always resolves to the latest version. [CITATION.cff](CITATION.cff) has both (GitHub shows a "Cite this repository" button).
 
 ### Releasing
 
 1. Set the new version in `package.json`, `CITATION.cff`, `.zenodo.json` and the footer and citation in `index.html`; `npm test` fails if they disagree.
 2. Tag `vX.Y.Z` and publish a GitHub release. With the repository switched on in Zenodo's GitHub settings, Zenodo archives the release and mints a DOI, using `.zenodo.json` (which takes precedence over `CITATION.cff`).
-3. After the first release, add the concept DOI (it always resolves to the latest version) to `CITATION.cff` as `doi:`, to the footer citation and as a badge here. When the paper is out, add it as `preferred-citation` in `CITATION.cff` and as a related identifier (`isDescribedBy`) in `.zenodo.json`.
+3. Zenodo mints a new version DOI for each release; the concept DOI (10.5281/zenodo.23932625) stays the same. After the release, add the new version DOI to `CITATION.cff` (`identifiers`) and to the footer citation in `index.html`, and update `date-released`. GitHub Pages serves the main branch, so the live app shows it even though the archived release cannot contain its own DOI.
+4. When the paper is out, add it as `preferred-citation` in `CITATION.cff`, as a related identifier (`isDescribedBy`) in `.zenodo.json`, and as a link in the footer.
