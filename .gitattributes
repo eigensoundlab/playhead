@@ -1,0 +1,15 @@
+# Text files use LF in the repository and in working copies on every platform, so scripts, the CLI and the
+# bundles in dist/ are byte-identical everywhere (and Git stops warning about LF/CRLF conversion).
+* text=auto eol=lf
+
+# Binary files: never convert.
+*.wav binary
+*.flac binary
+*.mp3 binary
+*.ogg binary
+*.png binary
+*.jpg binary
+*.pdf binary
+*.zip binary
+*.gz binary
+*.exe binary

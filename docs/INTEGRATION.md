@@ -74,6 +74,11 @@ These are starting points: the library, command line and document are tested her
 
 ### SFX Workbench (browser, ES modules)
 
+Implemented in SFX Workbench 0.6.0 (optional, off by default): a Playhead view of the source and output lanes, Playhead
+events as accent anchors next to the built-in transients, a Reaction engine whose medium follows the action's level or
+a Playhead curve, morph amounts that follow a curve of A, and a Playhead check of every generated sound. The notes
+below are the general recipe.
+
 Copy `dist/playhead-core.mjs` to `src/vendor/`. Analyse in a module worker, as `examples/analysis-worker.mjs` does; for the single-file offline build, either create the worker from a Blob of the bundle's text, or analyse short sounds on the main thread (a 2 s sound takes about 0.4 s; the analysis yields to the page regularly).
 
 ```js
