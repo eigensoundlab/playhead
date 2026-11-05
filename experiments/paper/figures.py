@@ -5,8 +5,8 @@
     node tools/paper-data.js                                   # analysis of the CC0 synthetic signals
     python3 experiments/paper/figures.py --out path/to/paper/figures
 
-Reads experiments/paper/figure-data.json, experiments/esc50/results.json and controls.json, and
-experiments/corpus/tools-vs-eq.csv. Writes vector PDFs sized for a two-column page (DAFx: column 83.5 mm,
+Reads experiments/paper/figure-data.json and robot-data.json (with robot-hit-steel.wav), experiments/esc50/results.json
+and controls.json, and experiments/corpus/tools-vs-eq.csv. Writes vector PDFs sized for a two-column page (DAFx: column 83.5 mm,
 text width 175 mm). Lines differ in style as well as colour, so the figures survive greyscale printing.
 """
 import csv, json, os, sys, statistics
@@ -137,3 +137,53 @@ from matplotlib.patches import Patch
 ax.legend(handles=[Patch(color=RAMP[0], label="static EQ"), Patch(color=RAMP[1], label="+ dynamic EQ"), Patch(color=RAMP[2], label="+ EQ automation"), Patch(color=ORANGE, label="no EQ")],
           loc="lower left", bbox_to_anchor=(-0.35, 1.02), ncol=2, frameon=False, handlelength=1.0, columnspacing=1.2, handletextpad=0.4)
 save(fig, "fig-eq.pdf")
+
+# ---------- What the waveform hides: a robot hit on steel, ordinary views and two Playhead looks ----------
+import numpy as np
+from scipy.io import wavfile
+Rb = json.load(open(os.path.join(HERE, "robot-data.json")))["robot"]
+fs_, xs_ = wavfile.read(os.path.join(HERE, "robot-hit-steel.wav"))
+xs_ = xs_.astype(np.float64)
+if xs_.ndim > 1: xs_ = xs_.mean(axis=1)
+xs_ = xs_ / (np.abs(xs_).max() or 1.0); Tr = len(xs_) / fs_
+PURPLE = "#7a4fb5"
+fig = plt.figure(figsize=(COL, 2.75))
+gs = fig.add_gridspec(4, 1, height_ratios=[0.75, 1.0, 0.85, 0.85], hspace=0.1, left=0.115, right=0.985, top=0.99, bottom=0.155)
+TAIL = (1.0, 1.1)
+def label(a, txt):
+    a.text(0.006, 0.97, txt, transform=a.transAxes, ha="left", va="top", fontsize=6.5, color=INK, bbox=dict(facecolor="white", edgecolor="none", pad=0.5, alpha=0.9))
+# (a) waveform, min/max per column
+a = fig.add_subplot(gs[0]); n = len(Rb["wave"]); tw = [(i + 0.5) * Tr / n for i in range(n)]
+a.fill_between(tw, [w[0] for w in Rb["wave"]], [w[1] for w in Rb["wave"]], color="#8d8c86", lw=0)
+a.set_ylim(-1.05, 1.05); a.set_yticks([]); label(a, "(a) waveform")
+# (b) spectrogram: 2048-point STFT, hop 256, Hann, dB re the loudest bin over 80 dB, log frequency
+a = fig.add_subplot(gs[1]); N, H = 2048, 256; w = np.hanning(N)
+frames = np.array([xs_[i:i + N] * w for i in range(0, len(xs_) - N, H)])
+S = 20 * np.log10(np.abs(np.fft.rfft(frames, axis=1)) + 1e-12); S -= S.max(); S = np.clip(S, -80, 0)
+fq = np.fft.rfftfreq(N, 1 / fs_); tt = (np.arange(len(frames)) * H + N / 2) / fs_; keep = (fq >= 40) & (fq <= 16000)
+a.pcolormesh(tt, fq[keep], S[:, keep].T, cmap="magma", vmin=-80, vmax=0, shading="nearest", rasterized=True)
+a.set_yscale("log"); a.set_ylim(40, 16000); a.set_yticks([100, 1000, 10000]); a.set_yticklabels(["100 Hz", "1 kHz", "10 kHz"], fontsize=5.8)
+a.minorticks_off(); label(a, "(b) spectrogram, 80 dB range")
+# (c), (d) the looks: curves mirrored like a waveform and overlaid, scaled as Playhead draws them, onsets marked below
+SER = {"onsetStrength": ("onset strength", BLUE, "-"), "harshness": ("harshness", AQUA, "--"), "n1Kurtosis": ("impulsiveness (N1)", ORANGE, "-"), "n7Surprisal": ("surprise (N7)", PURPLE, "-.")}
+LOOKS = [("(c)", "(c) look: Sound character", ["onsetStrength", "harshness", "n1Kurtosis"]), ("(d)", "(d) look: Hits and surprise", ["onsetStrength", "harshness", "n7Surprisal"])]
+handles = {}
+for k, (tg, name, keys) in enumerate(LOOKS):
+    a = fig.add_subplot(gs[2 + k])
+    for key in keys:
+        lab, col, ls = SER[key]; v = Rb["curves"][key]["v"]; tc = [(i + 0.5) / Rb["rate"] for i in range(len(v))]
+        pts = [(t, y) for t, y in zip(tc, v) if y is not None]
+        t_, y_ = zip(*pts)
+        a.fill_between(t_, [-q for q in y_], y_, color=col, alpha=0.15, lw=0)
+        handles[key], = a.plot(t_, y_, color=col, lw=0.8, ls=ls, label=lab); a.plot(t_, [-q for q in y_], color=col, lw=0.8, ls=ls)
+    for o in Rb["onsets"]: a.plot([o, o], [-1.1, -0.96], color=INK, lw=0.6, clip_on=False)
+    a.set_ylim(-1.1, 1.1); a.set_yticks([]); label(a, name)
+for i, a in enumerate(fig.axes):
+    a.set_xlim(0, Tr); a.axvspan(*TAIL, color="#1d1d1b", alpha=0.08, lw=0)
+    if i < len(fig.axes) - 1: a.set_xticks([]); a.spines["bottom"].set_visible(False)
+    else: a.set_xlabel("time (s); ticks: onsets", labelpad=1.5)
+fig.axes[-1].annotate("low ring left, %d dB\nunder the peak" % round(-Rb["tailDb"]), xy=(1.04, 0.62), xytext=(0.8, 0.5), fontsize=6, color=INK, ha="center", va="center",
+                      arrowprops=dict(arrowstyle="-", color=INK, lw=0.5), bbox=dict(facecolor="white", edgecolor="none", pad=0.4, alpha=0.9))
+fig.legend([handles[k] for k in ("onsetStrength", "harshness", "n1Kurtosis", "n7Surprisal")], [SER[k][0] for k in ("onsetStrength", "harshness", "n1Kurtosis", "n7Surprisal")],
+           loc="lower center", ncol=4, frameon=False, fontsize=6, handlelength=1.8, columnspacing=1.0, handletextpad=0.4, bbox_to_anchor=(0.55, -0.01))
+save(fig, "fig-robot.pdf")

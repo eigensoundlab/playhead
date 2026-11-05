@@ -333,7 +333,7 @@ tools/dyneq.js        de-harsh with its harshness detector against a conventiona
 tools/export-features.js  one feature vector per file (MFCC baseline, psychoacoustic curves, descriptors) as CSV
 experiments/esc50/    ESC-50 experiment: librosa baseline, evaluation, negative controls, HTML report, results
 experiments/corpus/   results on the 73-file corpus behind the README and the paper (self-checks, calibration, tools vs EQ, triggers)
-experiments/paper/    figure data and figure script for the paper (tools/paper-data.js, figures.py)
+experiments/paper/    figure data, figure script and a sound for the paper (tools/paper-data.js, figures.py)
 tools/audio-io.js     WAV reader/writer; other formats through ffmpeg
 tools/build.js        builds _site/, a single-file version and dist/ (library bundles, command-line bundle)
 tools/playhead-cli.js command line: analyze, markers, process, tools
@@ -371,13 +371,18 @@ The Asset Store submission guidelines (§1.2.b) currently exclude packages carry
 - Code: Apache License 2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 - Paper and its figures: CC BY 4.0, see [paper/LICENSE.md](paper/LICENSE.md).
 - Generated test signals: CC0 1.0.
+- `experiments/paper/robot-hit-steel.wav`, a sound by the author used for one of the paper's figures: CC BY 4.0.
 - Audio you process with Playhead is yours; the tool claims no rights in its output.
 
 Cite the version you used. The corpus, ESC-50 and EQ-comparison results reported here were produced with 0.1.0:
 
 > Sandner, D. (2026). *Playhead: overview curves and analysis-driven tools for music and game audio* (Version 0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23932626
 
-To refer to the software in general, use the concept DOI [10.5281/zenodo.23932625](https://doi.org/10.5281/zenodo.23932625), which always resolves to the latest version. [CITATION.cff](CITATION.cff) has both (GitHub shows a "Cite this repository" button).
+For 0.2.0:
+
+> Sandner, D. (2026). *Playhead: overview curves and analysis-driven tools for music and game audio* (Version 0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23985438
+
+To refer to the software in general, use the concept DOI [10.5281/zenodo.23932625](https://doi.org/10.5281/zenodo.23932625), which always resolves to the latest version. [CITATION.cff](CITATION.cff) lists them all (GitHub shows a "Cite this repository" button).
 
 ### Releasing
 

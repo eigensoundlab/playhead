@@ -22,6 +22,9 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.23932626
     description: "Version 0.1.0 (the version behind the results in the paper)"
+  - type: doi
+    value: 10.5281/zenodo.23985438
+    description: "Version 0.2.0"
 license: Apache-2.0
 repository-code: "https://github.com/eigensoundlab/playhead"
 url: "https://eigensoundlab.github.io/playhead/"
