@@ -44,6 +44,16 @@ function quant(arr, p) {
 function meanF(arr) { let s = 0, k = 0; for (const v of arr) if (isFinite(v)) { s += v; k++; } return k ? s / k : NaN; }
 function rng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 // values at arbitrary times -> one value per analysis frame (linear; NaN stays NaN)
+// many short values (one per short frame) -> analysis frames, keeping the largest in each frame
+function toFramesMax(vals, times, F) {
+  const o = new Float32Array(F.nF).fill(NaN);
+  for (let i = 0; i < vals.length; i++) {
+    const v = vals[i]; if (!isFinite(v)) continue;
+    const m = Math.min(F.nF - 1, Math.max(0, Math.floor(times[i] / F.dt)));
+    if (!(o[m] >= v)) o[m] = v;
+  }
+  return o;
+}
 function toFrames(vals, times, F) {
   const o = new Float32Array(F.nF).fill(NaN), n = vals.length;
   if (!n) return o;
@@ -93,10 +103,10 @@ function shortStft(x, sr, dur) {
   const T = Math.max(1, Math.floor((x.length - N) / H) + 1), rate = sr / H, binHz = sr / N;
   const blkF = Math.max(1, Math.round(DESC.kurtStep * rate)), nBlk = Math.ceil(T / blkF);
   const S1 = new Float64Array(nBlk * (half + 1)), S2 = new Float64Array(nBlk * (half + 1)), cnt = new Uint16Array(nBlk);
-  const env = DESC.envBands.map(() => new Float32Array(T)), bandOf = new Int8Array(half + 1).fill(-1);
+  const env = DESC.envBands.map(() => new Float32Array(T)), bandOf = new Int8Array(half + 1).fill(-1), pw = new Float32Array(T);
   for (let k = 1; k <= half; k++) { const f = k * binHz; DESC.envBands.forEach(([lo, hi], b) => { if (f >= lo && f < hi) bandOf[k] = b; }); }
   const re = new Float64Array(N), im = new Float64Array(N);
-  const acc = (t, k, p) => { const bi = Math.floor(t / blkF), o = bi * (half + 1); S1[o + k] += p; S2[o + k] += p * p; if (bandOf[k] >= 0) env[bandOf[k]][t] += p; };
+  const acc = (t, k, p) => { const bi = Math.floor(t / blkF), o = bi * (half + 1); S1[o + k] += p; S2[o + k] += p * p; pw[t] += p; if (bandOf[k] >= 0) env[bandOf[k]][t] += p; };
   // two real frames per complex FFT: z = a + i b, A[k] = (Z[k] + conj Z[N-k]) / 2, B[k] = (Z[k] - conj Z[N-k]) / 2i
   for (let t = 0; t < T; t += 2) {
     const tb = t + 1 < T ? t + 1 : -1, sa = t * H, sb = tb >= 0 ? tb * H : 0;
@@ -109,13 +119,16 @@ function shortStft(x, sr, dur) {
       if (tb >= 0) { const br = (zi + yi) / 2, bim = (yr - zr) / 2; acc(tb, k, br * br + bim * bim); }
     }
   }
-  return { N, H, half, T, rate, binHz, blkF, nBlk, S1, S2, cnt, env };
+  return { N, H, half, T, rate, binHz, blkF, nBlk, S1, S2, cnt, env, pw };
 }
 function kurtosisOf(st, F, gate, dur) {
-  const { half, binHz, blkF, nBlk, S1, S2, cnt, rate } = st;
+  const { half, binHz, blkF, nBlk, S1, S2, cnt, rate, pw, T, N, H } = st;
   const win = Math.max(1, Math.round((dur <= 6 ? DESC.kurtWinShort : DESC.kurtWin) * rate / blkF));
   const bands = DESC.kurtBands.map(([lo, hi]) => [Math.max(1, Math.ceil(lo / binHz)), Math.min(half, Math.floor(hi / binHz))]);
   const times = [], kmax = [], khz = [], kall = [];
+  // where the impulses are: each window's kurtosis given to its frames in proportion to their power, so a curve drawn
+  // from it rises at an impulse, not half a window before it (the window values stay the statistic for summaries)
+  const loc = new Float32Array(T).fill(NaN);
   const a1 = new Float64Array(half + 1), a2 = new Float64Array(half + 1);
   let maxPow = 0; for (let i = 0; i < S1.length; i++) if (S1[i] > maxPow) maxPow = S1[i];
   const bandK = (A1, A2, M) => {
@@ -141,7 +154,13 @@ function kurtosisOf(st, F, gate, dur) {
     let best = NaN, bh = NaN;
     r.bands.forEach((b, i) => { if (b.share >= 0.02 && isFinite(b.K) && (!isFinite(best) || b.K > best)) { best = b.K; bh = Math.sqrt(DESC.kurtBands[i][0] * DESC.kurtBands[i][1]); } });
     kmax.push(best); khz.push(bh); kall.push(r.all);
+    if (isFinite(best)) {
+      const f0 = b0 * blkF, f1 = Math.min(T, b1 * blkF); let pmax = 0;
+      for (let f = f0; f < f1; f++) if (pw[f] > pmax) pmax = pw[f];
+      for (let f = f0; f < f1; f++) { const v = best > 0 && pmax > 0 ? best * pw[f] / pmax : best; if (!(loc[f] >= v)) loc[f] = v; }
+    }
   }
+  const locT = Array.from({ length: T }, (_, f) => (f * H + N / 2) / (rate * H));
   // whole file
   a1.fill(0); a2.fill(0); let M = 0;
   for (let b = 0; b < nBlk; b++) { const o = b * (half + 1); M += cnt[b]; for (let k = 1; k <= half; k++) { a1[k] += S1[o + k]; a2[k] += S2[o + k]; } }
@@ -149,7 +168,7 @@ function kurtosisOf(st, F, gate, dur) {
   let wb = -1; whole.bands.forEach((b, i) => { if (b.share >= 0.02 && isFinite(b.K) && (wb < 0 || b.K > whole.bands[wb].K)) wb = i; });
   const Mw = win * blkF;
   return {
-    curve: toFrames(kmax, times, F), hz: toFrames(khz, times, F), all: toFrames(kall, times, F),
+    curve: toFrames(kmax, times, F), hz: toFrames(khz, times, F), all: toFrames(kall, times, F), local: toFramesMax(loc, locT, F),
     sig: 1.645 * 2 / Math.sqrt(Mw),
     summary: { K: whole.all, Kmax: wb >= 0 ? whole.bands[wb].K : NaN, band: wb >= 0 ? DESC.kurtBands[wb] : null, bands: whole.bands.map(b => b.K) }
   };
@@ -658,7 +677,7 @@ async function describe(F, buf) {
   const rec = recurrenceOf(F, gate, dur); lap("recurrence"); await tick(); t0 = now();
   const dec = decaysOf(F, events, gate); lap("decay");
   const D = {
-    curves: { kurt: kurt.curve, kurtHz: kurt.hz, repHz: rep.hz, repProm: rep.prom, ht: toFrames(htV, htT, F), vel: mot.vel, reshape: mot.reshape, cpp: cp.cpp, pci: cp.pci, arrow: arr.curve, surprisal: inf.surprisal, pir: inf.pir, info: inf.info, recDensity: rec.density, lam: rec.lam },
+    curves: { kurt: kurt.curve, kurtLocal: kurt.local, kurtHz: kurt.hz, repHz: rep.hz, repProm: rep.prom, ht: toFrames(htV, htT, F), vel: mot.vel, reshape: mot.reshape, cpp: cp.cpp, pci: cp.pci, arrow: arr.curve, surprisal: inf.surprisal, pir: inf.pir, info: inf.info, recDensity: rec.density, lam: rec.lam },
     events, decays: dec.decays, kurtSig: kurt.sig, timing: T,
     summary: { kurtosis: kurt.summary, repetition: rep.summary, events: evSum, motion: mot.summary, periodicity: cp.summary, arrow: arr.summary, info: inf.summary, recurrence: rec.summary, decay: dec.summary }
   };

@@ -211,7 +211,7 @@ function viewOf(f, cols) {
   const Dd = f.F._desc;
   if (Dd) {
     const C = Dd.curves, pn = PHD.poolNaN;
-    v.D = { kurt: pn(C.kurt, cols, "max"), kurtHz: pn(C.kurtHz, cols, "mean"), repProm: pn(C.repProm, cols, "max"), repHz: pn(C.repHz, cols, "mean"), vel: pn(C.vel, cols, "mean"), reshape: pn(C.reshape, cols, "mean"),
+    v.D = { kurt: pn(C.kurt, cols, "max"), kurtLoc: pn(C.kurtLocal || C.kurt, cols, "max"), kurtHz: pn(C.kurtHz, cols, "mean"), repProm: pn(C.repProm, cols, "max"), repHz: pn(C.repHz, cols, "mean"), vel: pn(C.vel, cols, "mean"), reshape: pn(C.reshape, cols, "mean"),
       cpp: pn(C.cpp, cols, "mean"), pci: pn(C.pci, cols, "mean"), arrow: pn(C.arrow, cols, "mean"), pir: pn(C.pir, cols, "mean"), info: pn(C.info, cols, "max"), dens: pn(C.recDensity, cols, "mean"), lam: pn(C.lam, cols, "mean"), raw: Dd };
   }
   if (X) {
@@ -423,7 +423,7 @@ function drawDesc(x, P, w, h, k, f, v, cols) {
   const hline = (u, col, dash) => { x.strokeStyle = col; x.lineWidth = 1; x.setLineDash(dash || []); x.beginPath(); x.moveTo(0, Math.round(yOf(u)) + 0.5); x.lineTo(w, Math.round(yOf(u)) + 0.5); x.stroke(); x.setLineDash([]); };
   if (k === "n1") {   // kurtosis: 0 at a quarter height, -1 at the bottom, log above
     const u = K => K >= 0 ? 0.25 + 0.75 * Math.log1p(K) / Math.log1p(30) : 0.25 + 0.25 * Math.max(-1, K);
-    for (let c = 0; c < cols; c++) { const K = D.kurt[c]; if (!Number.isFinite(K)) continue; bar(c, yOf(0.25), yOf(u(K)), K > D.raw.kurtSig ? specColor(P, D.kurtHz[c] || 2000) : P.dim); }
+    for (let c = 0; c < cols; c++) { const K = D.kurtLoc[c]; if (!Number.isFinite(K)) continue; bar(c, yOf(0.25), yOf(u(K)), K > D.raw.kurtSig ? specColor(P, D.kurtHz[c] || 2000) : P.dim); }
     hline(0.25, P.mid); hline(u(D.raw.kurtSig), P.off, [2, 3]);
     return;
   }
@@ -663,10 +663,10 @@ function drawStripFor(cv, spec, f, cols, h, P, opts) {
    pasted there, and sent with feedback. */
 const PHAPI = window.Playhead || null;
 const CMP_COLOURS = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise"];
-const CMP_LINES = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "structureNovelty", "localPulse", "n1Kurtosis", "n4Velocity", "n6Arrow", "n7Surprisal"];
-const CMP_LANES = ["structureNovelty", "localPulse", "loudness", "activity", "arousal", "harshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
-const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Downbeats"], ["beats", "Beats"], ["onsets", "Onsets"], ["events", "Events"], ["novelty", "Novelty (top)"]];
-const CMP_SCULPT = ["", "loudness", "arousal", "activity", "harshness", "tension"];
+const CMP_LINES = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "structureNovelty", "localPulse", "onsetStrength", "n1Kurtosis", "n4Velocity", "n6Arrow", "n7Surprisal"];
+const CMP_LANES = ["structureNovelty", "localPulse", "onsetStrength", "loudness", "activity", "arousal", "harshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
+const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Bar lines"], ["beats", "Beats"], ["onsets", "Onsets"], ["events", "Events"], ["novelty", "Novelty (top)"]];
+const CMP_SCULPT = ["", "loudness", "arousal", "activity", "harshness", "tension", "onsetStrength", "localPulse"];
 const CMP_MAX_LANES = 3, CMP_HEIGHTS = [64, 96, 128, 160, 192];
 const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), h: store.get("lookHeight", 128), refs: store.get("lookRefs", true) };
 const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"]];

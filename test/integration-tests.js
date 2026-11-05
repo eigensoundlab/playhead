@@ -36,7 +36,9 @@ module.exports = async function (check) {
   check("api: strip renderer draws on any 2D context", (calls.fillRect || 0) + " columns", drew && calls.fillRect >= 800 && calls.stroke > 0);
   // looks: the automatic look and its explicit code draw the same; codes round-trip; every look draws with a legend
   const logOf = (doc, opts) => { const log = []; const c = new Proxy({ canvas: { width: 500, height: 80 } }, { get: (t, k) => k in t ? t[k] : (...a) => { log.push(k + JSON.stringify(a)); }, set: (t, k, v) => { log.push(k + "=" + JSON.stringify(v)); return true; } }); const r = Playhead.drawStrip(c, doc, opts); return { log: log.join("\n"), r }; };
-  const same = logOf(m, {}).log === logOf(m, { look: "wave:activity,sections,line:tension,ticks:downbeats+events" }).log && logOf(g1, {}).log === logOf(g1, { look: "wave:harshness,sections,line:activity,ticks:downbeats+events" }).log;
+  // (music: the automatic look keeps its small downbeat ticks, other looks draw bar lines through the strip)
+  const same = logOf(g1, {}).log === logOf(g1, { look: "wave:harshness,sections,line:activity,ticks:downbeats+events" }).log
+    && logOf(m, { look: "wave:activity,sections,line:tension,ticks:downbeats+events" }).log.length > logOf(m, {}).log.length;
   const codes = Object.values(Playhead.looks).filter(L => L.code);
   const trip = codes.every(L => Playhead.lookCode(Playhead.parseLook(L.code)) === L.code) && Playhead.lookCode(Playhead.parseLook("wave:loudness,bogus,lane:activity~signed,ticks:events+nope")) === "wave:loudness,lane:activity~signed,ticks:events";
   const drawn = [m, g1].every(d => Object.keys(Playhead.looks).every(k => { const o = logOf(d, { look: k }); return o.log.length > 0 && typeof o.r.legend === "string" && o.r.legend.length > 0; }));
@@ -77,6 +79,26 @@ module.exports = async function (check) {
   check("looks: novelty marks, outline, sculpted waveform, lookFits", `${m.noveltyTicks.length} novelty marks; sculpted peak ${(tallest / 2 / half).toFixed(2)} of full`,
     m.noveltyTicks.length > 0 && Array.isArray(g1.noveltyTicks) && strokes === 2 && or.legend.includes("outline") && Math.abs(tallest / 2 / half - 0.5) < 0.03 && fits
     && Playhead.lookCode(Playhead.parseLook("sculpt:loudness,wave:harshness,outline,ticks:events+novelty")) === "sculpt:loudness,wave:harshness,outline,ticks:events+novelty");
+  // impulsiveness is drawn where the impulses are, not half a window before them
+  { const sr2 = 44100, nn = sr2 * 12, xx = new Float32Array(nn); let sd = 7; const RR = () => (sd = (sd * 16807) % 2147483647) / 2147483647;
+    for (let i = 0; i < nn; i++) xx[i] = (RR() * 2 - 1) * 0.05 + 0.1 * Math.sin(2 * Math.PI * 220 * i / sr2);
+    for (const t of [3, 6.5, 9]) { const i0 = Math.round(t * sr2); for (let k = 0; k < 300; k++) xx[i0 + k] += 0.9 * Math.exp(-k / 40) * (RR() * 2 - 1); }
+    const dk = await Playhead.analyze({ sampleRate: sr2, channels: [xx] }, { profile: "music" }), c = dk.curves.n1Kurtosis, rr = dk.curves.rate;
+    const lead = [3, 6.5, 9].map(t => { const i0 = Math.round(t * rr); let pk = -1e9, pi = 0; for (let i = i0 - 30; i < i0 + 30; i++) if (c[i] > pk) { pk = c[i]; pi = i; } let rise = pi; while (rise > 0 && c[rise] > pk / 2) rise--; return { peak: pi / rr - t, rise: rise / rr - t }; });
+    check("descriptors: impulsiveness curve peaks at the clicks and rises at most 0.1 s before them", lead.map(l => l.rise.toFixed(2)).join(" / ") + " s",
+      lead.every(l => Math.abs(l.peak) <= 0.06 && l.rise >= -0.11) && Array.isArray(dk.curves.onsetStrength) && Math.max(...dk.curves.onsetStrength) === 1); }
+  // tools no EQ can copy: reverb on the tails keeps the attacks dry and adds a tail; drive changes only the events;
+  // ring time lengthens or shortens the decay
+  { const gun = kit.find(b => b.name.includes("Pistol")), gch = [0, 1].map(c => gun.getChannelData(c));
+    const tv = await Playhead.process(gun, "tailverb", {}), to = tv.outputs[0].channels;
+    const X = WL.sfxOf(await WL.analyse(gun), gun, "g"), a0 = Math.round(X.events[0].t0 * sr), p0 = Math.round(X.events[0].peakT * sr);
+    let maxDiff = 0; const gk = to[0][p0] / (gch[0][p0] || 1e-9); for (let i = a0; i < p0; i++) maxDiff = Math.max(maxDiff, Math.abs(to[0][i] - gch[0][i] * gk));
+    const dr = await Playhead.process(gun, "drive", { where: "attack", match: false });
+    const rgL = await Playhead.process(glass, "ring", { ratio: 2 }), rgS = await Playhead.process(glass, "ring", { ratio: 0.5 }), rg1 = await Playhead.process(glass, "ring", { ratio: 1 });
+    const t60 = async o => (await Playhead.analyze({ sampleRate: o.sampleRate, channels: o.channels }, { profile: "sfx" })).descriptors.decay.t60;
+    const [tL, tS, t1] = [await t60(rgL.outputs[0]), await t60(rgS.outputs[0]), await t60(rg1.outputs[0])];
+    check("effects: reverb on the tails, drive the hits, ring time", `tail +${((to[0].length - gun.length) / sr).toFixed(1)} s; T60 ${tS.toFixed(3)} / ${t1.toFixed(3)} / ${tL.toFixed(3)} s`,
+      to[0].length > gun.length && maxDiff < 1e-4 && dr.outputs[0].channels[0].length === gun.length && dr.report.length > 0 && tL > 1.5 * t1 && tS < 0.75 * t1 && Playhead.tools().some(t => t.id === "ring")); }
   const fa = await Playhead.fromAnalysis(await WL.analyse(glass), glass, { name: "glass" });
   check("api: fromAnalysis gives the analyze() document", "", JSON.stringify(strip(fa)) === JSON.stringify(strip(g1)));
   const pr = await Playhead.process(glass, "layers", { gains: [-12] });

@@ -57,6 +57,26 @@ A "Descriptor tour" signal (CC0) in the lab plays each reference case in turn, s
 
 Every result is re-analysed, so the bench shows what changed (loudness, harshness, layer shares, loudness range, problems) next to an A/B player with its own playhead and a WAV download.
 
+### Tools no EQ can copy
+
+The bench's first tools mostly turn frequencies up and down at the right moments, which a good EQ can approach (the
+shares above). Three newer tools do what an EQ cannot, because they follow the events the analysis finds:
+
+| Tool | What it does | Change (dB) | Static EQ | Dynamic EQ | Ideal automation |
+|---|---|---|---|---|---|
+| Reverb on the tails | reverb sent only from each hit's peak to the end of its decay; attacks stay dry | 0.9 | 0% | 57% | 38% |
+| Drive the hits (attacks) | saturation on the events only, held at the original level, so only the harmonics change | 0.7 | 39% | 69% | 47% |
+| Drive the hits (bodies) | the same after each peak | 0.4 | 16% | 68% | 35% |
+| Ring time ×2 | each event rings twice as long, relative to its own peak (T60 0.066 → 0.128 s on the glass hit) | 2.0 | 36% | 85% | 89% |
+| Ring time ×0.5 | damped (T60 0.066 → 0.038 s) | 1.6 | 52% | 79% | 79% |
+| *De-harsh, for comparison* | | 1.9 | 83% | 91% | 96% |
+| *Layer remix (sub −12 dB)* | | 10.8 | 98% | 99% | 98% |
+
+Medians over five built-in sounds (glass, pistol, door, footstep, sword), the same measure as above; a first look, not
+a corpus result. Reverb on the tails and the drive change what no EQ can (new energy after the sound, new harmonics).
+Ring time is mostly within reach of an ideal level-driven dynamic EQ on single hits; its point is the target (a decay
+the material descriptor N9 reads), which no ordinary EQ offers.
+
 ## Using Playhead in other applications
 
 The analysis is also a library and a command line, so other tools can use it ([docs/INTEGRATION.md](docs/INTEGRATION.md)):

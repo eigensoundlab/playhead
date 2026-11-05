@@ -446,6 +446,112 @@ function encodeWav(buf, float32) {
   return ab;
 }
 
+
+/* ---------- 8. Event-masked tools: processing that follows the sound's events ----------
+   An EQ, dynamic or not, can only turn existing frequencies up or down. These three do what it cannot: add a reverb
+   tail that starts after each hit's peak (new energy, smeared in time), saturate only the hits (new harmonics), and
+   change how long each event rings (its decay, relative to its own peak). The events come from the sound-object
+   analysis (start, peak, end of decay). */
+function eventsOf(an, sr, n) {
+  const ev = (an.X && an.X.events) || [];
+  return ev.map(e => ({ a: Math.max(0, Math.round(e.t0 * sr)), p: Math.max(0, Math.round(e.peakT * sr)), e: Math.min(n, Math.round(Math.max(e.tEnd || e.t1, e.t1) * sr)) }))
+    .filter(e => e.e > e.a).sort((x, y) => x.a - y.a);
+}
+// a 0..1 mask with linear ramps of r samples; spans: [[start, end], ...]
+function spanMask(n, spans, r) {
+  const m = new Float32Array(n);
+  for (const [a, b] of spans) {
+    const s0 = Math.max(0, a), s1 = Math.min(n, b); if (s1 <= s0) continue;
+    for (let i = Math.max(0, s0 - r); i < Math.min(n, s1 + r); i++) { const u = i < s0 ? 1 - (s0 - i) / r : i >= s1 ? 1 - (i - s1 + 1) / r : 1; if (u > m[i]) m[i] = u; }
+  }
+  return m;
+}
+// stereo-friendly reverb: four damped combs and two all-passes per channel (Schroeder), comb lengths offset per channel
+function reverb(x, sr, t60, toneHz, chan) {
+  const base = [1557, 1617, 1491, 1422].map(l => Math.round((l + chan * 23) * sr / 44100)), ap = [225, 556].map(l => Math.round((l + chan * 17) * sr / 44100));
+  const n = x.length, y = new Float32Array(n), damp = Math.exp(-2 * Math.PI * toneHz / sr);
+  for (const L of base) {
+    const g = Math.pow(10, -3 * L / (t60 * sr)), buf = new Float32Array(L); let idx = 0, lp = 0;
+    for (let i = 0; i < n; i++) { const out = buf[idx]; lp = out * (1 - damp) + lp * damp; buf[idx] = x[i] + lp * g; idx = idx + 1 === L ? 0 : idx + 1; y[i] += out / base.length; }
+  }
+  for (const L of ap) {
+    const buf = new Float32Array(L); let idx = 0;
+    for (let i = 0; i < n; i++) { const b = buf[idx], v = y[i] + 0.5 * b; buf[idx] = v; y[i] = b - 0.5 * v; idx = idx + 1 === L ? 0 : idx + 1; }
+  }
+  return y;
+}
+async function tailVerb(src, an, opt) {
+  const sr = src.sampleRate, ch = chansOf(src), n = ch[0].length, ev = eventsOf(an, sr, n);
+  if (!ev.length) return { outputs: [{ suffix: "tailverb", buf: mkBuf(sr, ch) }], report: ["No events found: nothing was sent to the reverb"] };
+  const hold = Math.round(opt.holdMs / 1000 * sr), r = Math.round(0.02 * sr);
+  // send: each event from its peak (plus the hold) to the end of its decay; duck: the wet signal leaves each attack dry
+  const send = spanMask(n, ev.map(e => [e.p + hold, e.e]), r), duck = opt.dryAttacks ? spanMask(n, ev.map(e => [e.a, e.p + Math.round(0.01 * sr)]), Math.round(0.005 * sr)) : null;
+  const wetG = undb(opt.wetDb), tail = Math.round(Math.min(6, opt.t60) * sr * 0.6), len = n + tail;
+  const outs = ch.map((x, c) => {
+    const xin = new Float32Array(len); for (let i = 0; i < n; i++) xin[i] = x[i] * send[i];
+    const w = reverb(xin, sr, opt.t60, opt.toneHz, c), o = new Float32Array(len);
+    for (let i = 0; i < len; i++) o[i] = (i < n ? x[i] : 0) + w[i] * wetG * (duck && i < n ? 1 - duck[i] : 1);
+    return o;
+  });
+  // fade the added tail out over its last 30%, so the file ends cleanly
+  const f0 = n + Math.round(tail * 0.7); for (const o of outs) for (let i = f0; i < len; i++) o[i] *= 1 - (i - f0) / (len - f0);
+  let on = 0; for (let i = 0; i < n; i++) on += send[i] > 0.5 ? 1 : 0;
+  const report = ["Reverb sent from " + ev.length + " event tail" + (ev.length === 1 ? "" : "s") + ", " + Math.round(100 * on / n) + "% of the time" + (opt.dryAttacks ? "; attacks kept dry" : ""), "Decay " + opt.t60 + " s, " + (len - n > 0 ? (tail / sr).toFixed(1) + " s added at the end" : "")];
+  finish(src, outs, "peak", report);
+  return { outputs: [{ suffix: "tailverb", buf: mkBuf(sr, outs) }], report };
+}
+async function driveHits(src, an, opt) {
+  const sr = src.sampleRate, ch = chansOf(src), n = ch[0].length, ev = eventsOf(an, sr, n);
+  if (!ev.length) return { outputs: [{ suffix: "drive", buf: mkBuf(sr, ch) }], report: ["No events found: nothing was driven"] };
+  const at = Math.round(0.03 * sr), spans = ev.map(e => opt.where === "attack" ? [e.a, e.p + at] : opt.where === "body" ? [e.p + at, e.e] : [e.a, e.e]);
+  const m = spanMask(n, spans, Math.round(0.005 * sr)), k = undb(opt.driveDb), mix = opt.mix / 100, pk = Math.max(1e-6, peakOf(ch));
+  // the saturated signal is brought back to the dry signal's level every few milliseconds, so what changes is the
+  // waveform's shape (new harmonics), not its loudness contour (which a dynamic EQ or a compressor could copy)
+  const W = Math.max(16, Math.round(0.004 * sr));
+  const outs = ch.map(x => {
+    const d = new Float32Array(n); for (let i = 0; i < n; i++) d[i] = Math.tanh(k * x[i] / pk) * pk;
+    const cx = new Float64Array(n + 1), cd = new Float64Array(n + 1);
+    for (let i = 0; i < n; i++) { cx[i + 1] = cx[i] + x[i] * x[i]; cd[i + 1] = cd[i] + d[i] * d[i]; }
+    const o = new Float32Array(n);
+    for (let i = 0; i < n; i++) {
+      const a = Math.max(0, i - W), b = Math.min(n, i + W), ex = cx[b] - cx[a], ed = cd[b] - cd[a], g = ed > 1e-20 ? Math.sqrt(ex / ed) : 0, w = mix * m[i];
+      o[i] = x[i] * (1 - w) + d[i] * g * w;
+    }
+    return o;
+  });
+  let on = 0; for (let i = 0; i < n; i++) on += m[i] > 0.5 ? 1 : 0;
+  const report = ["Saturated the " + (opt.where === "attack" ? "attacks" : opt.where === "body" ? "bodies" : "whole events") + " of " + ev.length + " event" + (ev.length === 1 ? "" : "s") + " (" + Math.round(100 * on / n) + "% of the time)", "Drive +" + opt.driveDb + " dB, mix " + opt.mix + "%"];
+  finish(src, outs, opt.match ? "loudness" : "peak", report);
+  return { outputs: [{ suffix: "drive", buf: mkBuf(sr, outs) }], report };
+}
+async function ringTime(src, an, opt, onProgress) {
+  const sr = src.sampleRate, ch = chansOf(src), n = ch[0].length, ev = eventsOf(an, sr, n);
+  if (!ev.length) return { outputs: [{ suffix: "ring", buf: mkBuf(sr, ch) }], report: ["No events found: nothing was changed"] };
+  const N = frameN(sr, src.duration), { M, nF, bins, H } = await stftMagnitudes(ch, sr, N), binHz = sr / N, fr = t => Math.round(t / H);
+  // each event's decay: from its peak to the next event's start (or the end of the file); the reference is the
+  // loudest frame of each bin around the peak, and every later frame is raised or lowered so the decay stretches
+  const ref = new Float32Array(nF * bins).fill(0), owner = new Int32Array(nF).fill(-1);
+  ev.forEach((e, i) => {
+    const p0 = Math.max(0, fr(e.p) - 1), p1 = Math.min(nF, fr(e.p) + 3), end = Math.min(nF, i + 1 < ev.length ? fr(ev[i + 1].a) : nF);
+    const r = new Float32Array(bins); for (let f = p0; f < p1; f++) for (let k = 0; k < bins; k++) r[k] = Math.max(r[k], M[f * bins + k]);
+    for (let f = fr(e.p) + 1; f < end; f++) { owner[f] = i; ref.set(r, f * bins); }
+  });
+  const maxUp = undb(opt.maxBoostDb), floor = undb(-70);
+  let gSum = 0, gN = 0;
+  const outs = await stftApply(ch, sr, N, (f, t, mag, g) => {
+    if (f >= nF || owner[f] < 0) return;
+    for (let k = 0; k < bins; k++) {
+      const R = ref[f * bins + k], m = M[f * bins + k]; if (R <= 0 || m <= R * floor) continue;
+      const ratio = opt.ratio * Math.pow(Math.max(50, k * binHz) / 1000, opt.tilt), e = 1 / ratio - 1;
+      const u = Math.min(1, m / R), v = Math.min(maxUp, Math.max(1 / maxUp, Math.pow(u, e)));
+      g[k] = v; gSum += Math.log10(v) * 20; gN++;
+    }
+  }, onProgress);
+  const report = ["Decay of " + ev.length + " event" + (ev.length === 1 ? "" : "s") + " ×" + opt.ratio + (opt.tilt ? ", high partials ×" + rnd(opt.ratio * Math.pow(8, opt.tilt), 2) + " at 8 kHz" : "") + (opt.ratio > 1 ? " (rings longer)" : opt.ratio < 1 ? " (damped)" : ""), "Average change in the tails " + (gN ? (gSum / gN >= 0 ? "+" : "") + (gSum / gN).toFixed(1) : "0") + " dB"];
+  finish(src, outs, opt.match ? "peak" : "none", report);
+  return { outputs: [{ suffix: "ring", buf: mkBuf(sr, outs) }], report };
+}
+
 const TOOLS = [
   { id: "cleanup", name: "Clean up for export", kind: "Game audio",
     desc: "Fixes what the asset checks find: removes DC offset, rebuilds clipped peaks, trims silence, adds fades where the file clicks or the tail was cut, folds identical channels to mono, and normalises the peak.",
@@ -475,7 +581,24 @@ const TOOLS = [
   { id: "vars", name: "Variations", kind: "Game audio",
     desc: "Makes copies that differ the way repeated game sounds should: random layer balance, reordered grains inside iterative events, and a small pitch change.",
     params: [{ id: "count", label: "Copies", min: 2, max: 6, step: 1, value: 4 }, { id: "layerDb", label: "Layer spread", min: 0, max: 6, step: 0.5, value: 3, unit: "dB" }, { id: "pitch", label: "Pitch spread", min: 0, max: 3, step: 0.1, value: 1, unit: "st" }, { id: "grains", label: "Reorder grains", type: "bool", value: true }],
-    run: variations }
+    run: variations },
+  { id: "tailverb", name: "Reverb on the tails", kind: "Sound design",
+    desc: "Sends only the tails of the events into a reverb: each hit from its peak to the end of its decay, so the attack stays dry and punchy and the tail blooms. An EQ cannot do this: it adds new energy after the sound and smears it in time.",
+    params: [{ id: "wetDb", label: "Reverb level", min: -30, max: 0, step: 1, value: -8, unit: "dB" }, { id: "t60", label: "Decay", min: 0.3, max: 6, step: 0.1, value: 1.6, unit: "s" },
+      { id: "holdMs", label: "Start after the peak", min: 0, max: 300, step: 5, value: 30, unit: "ms" }, { id: "toneHz", label: "Tone", min: 1500, max: 16000, step: 500, value: 6000, unit: "Hz" },
+      { id: "dryAttacks", label: "Keep the attacks dry", type: "bool", value: true }],
+    run: tailVerb },
+  { id: "drive", name: "Drive the hits", kind: "Sound design",
+    desc: "Saturates only the events (their attacks, their bodies, or all of them) and leaves the rest clean. The saturated part is held at the original level, so what changes is the harmonics, which no EQ can add, not the loudness.",
+    params: [{ id: "where", label: "Where", type: "select", value: "attack", options: [["attack", "Attacks"], ["body", "Bodies (after the peak)"], ["whole", "Whole events"]] },
+      { id: "driveDb", label: "Drive", min: 0, max: 30, step: 1, value: 18, unit: "dB" }, { id: "mix", label: "Mix", min: 0, max: 100, step: 5, value: 70, unit: "%" },
+      { id: "match", label: "Match loudness", type: "bool", value: true }],
+    run: driveHits },
+  { id: "ring", name: "Ring time", kind: "Sound design",
+    desc: "Changes how long each event rings, relative to its own peak: longer for metal and glass, shorter for wood and cardboard. Higher partials can ring longer or shorter than lower ones, which moves the material read by the decay descriptor (N9). An EQ sets the same gain at every level; this sets it by how far each partial has decayed since its event's peak.",
+    params: [{ id: "ratio", label: "Ring time", min: 0.25, max: 4, step: 0.05, value: 2 }, { id: "tilt", label: "High partials", min: -0.5, max: 0.5, step: 0.05, value: 0 },
+      { id: "maxBoostDb", label: "Largest lift", min: 6, max: 36, step: 1, value: 18, unit: "dB" }, { id: "match", label: "Keep the peak", type: "bool", value: true }],
+    run: ringTime }
 ];
 
 /* ---------- comparison with a static EQ ----------
@@ -564,7 +687,7 @@ function zipStore(files) {
   return out;
 }
 
-const api = { TOOLS, eqExplained, encodeWav, zipStore, crc32, mkBuf, chansOf, resample, lufsOf, stftApply, stftMagnitudes, _stftMag: stftMagnitudes, cleanup, deharsh, layerMix, hpss, tensionShape, loopMaker, variations };
+const api = { TOOLS, eqExplained, encodeWav, zipStore, crc32, mkBuf, chansOf, resample, lufsOf, stftApply, stftMagnitudes, _stftMag: stftMagnitudes, cleanup, deharsh, layerMix, hpss, tensionShape, loopMaker, variations, tailVerb, driveHits, ringTime };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.WLFX = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

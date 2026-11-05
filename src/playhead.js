@@ -167,10 +167,13 @@ async function build(F, buf, opts, t0, prog) {
     const D = await PHD.describe(F, buf);
     prog(0.9);
     Object.assign(doc.curves, {
-      n1Kurtosis: resample(D.curves.kurt, F, cols, null, "max"), n2RepetitionHz: resample(D.curves.repHz, F, cols, null), n4Velocity: resample(D.curves.vel, F, cols, null),
+      n1Kurtosis: resample(D.curves.kurtLocal || D.curves.kurt, F, cols, null, "max"), n2RepetitionHz: resample(D.curves.repHz, F, cols, null), n4Velocity: resample(D.curves.vel, F, cols, null),
       n5Cpp: resample(D.curves.cpp, F, cols, null), n5Coherence: resample(D.curves.pci, F, cols, null), n6Arrow: resample(D.curves.arrow, F, cols, null),
       n7Surprisal: resample(D.curves.surprisal, F, cols, null), n8Recurrence: resample(D.curves.recDensity, F, cols, null)
     });
+    // onset strength (spectral flux, the beat tracker's input): where the hits and attacks are, scaled to its 99th percentile
+    const Rr = WL.rhythmOf(F), envS = Array.from(Rr.env).filter(v => v > 0).sort((a, b) => a - b), envTop = envS.length ? envS[Math.floor(0.99 * (envS.length - 1))] || 1 : 1;
+    doc.curves.onsetStrength = resample(Rr.env.map(v => Math.min(1, v / envTop)), F, cols, null, "max");
     const s = D.summary;
     doc.descriptors = plain({
       kurtosis: { K: s.kurtosis.K, Kmax: s.kurtosis.Kmax, band: s.kurtosis.band },
@@ -283,7 +286,7 @@ const DEFAULT_THEME = {
 const SERIES = ["#2f9378", "#7e60c4"];
 const CURVE_LABELS = {
   loudness: "loudness", activity: "activity", arousal: "arousal", harshness: "harshness", tension: "tension", harmonicTension: "harmonic tension",
-  surprise: "novelty (spectral surprise)", lufs: "loudness (LUFS)", structureNovelty: "structural change", localPulse: "local pulse",
+  surprise: "novelty (spectral surprise)", lufs: "loudness (LUFS)", structureNovelty: "structural change", localPulse: "local pulse", onsetStrength: "onset strength (hits)",
   n1Kurtosis: "impulsiveness", n2RepetitionHz: "repetition rate", n4Velocity: "spectral motion", n5Cpp: "periodicity", n5Coherence: "phase coherence",
   n6Arrow: "time arrow", n7Surprisal: "surprisal", n8Recurrence: "recurrence"
 };
@@ -301,6 +304,8 @@ const LOOKS = {
   overlay: { name: "Curves over the waveform", desc: "Activity and harshness drawn like waveforms on top of the waveform itself, to compare their shapes directly.", code: "form:overlay,shape:mirror,wave,lane:activity,lane:harshness" },
   horizon: { name: "Horizon lanes", desc: "Loudness, activity and harshness as horizon charts: compact lanes that keep detail at small heights.", code: "shape:horizon,wave,lane:loudness,lane:activity,lane:harshness" },
   specstructure: { name: "Spectrogram and structure", desc: "The spectrogram with sections, structural change and downbeats.", code: "spec,sections,lane:structureNovelty~signed,ticks:downbeats" },
+  overview: { name: "Music overview", desc: "Curves only, overlaid and mirrored like a waveform: local pulse, activity and recurrence, with sections, bar lines and novelty marks.", code: "form:overlay,shape:mirror,sections,lane:localPulse,lane:activity,lane:n8Recurrence,ticks:downbeats+novelty" },
+  hits: { name: "Hits and pulse", desc: "The waveform with onset strength (where the hits are) and the local pulse as lanes, beats and bar lines.", code: "wave,lane:onsetStrength,lane:localPulse,ticks:beats+downbeats" },
   sculpted: { name: "Waveform as loud as it sounds", desc: "The waveform's envelope follows perceived loudness (a dB-like scale) while its detail stays; colour shows harshness, with the ordinary peak outline for comparison.", code: "sculpt:loudness,wave:harshness,outline,ticks:events+novelty" }
 };
 const isSfxDoc = doc => doc.profile === "sfx" || doc.assetClass === "sfx";
@@ -311,7 +316,7 @@ function legacyLayers(doc, opts) {
   if (opts.sections !== false) L.push({ type: "sections" });
   L.push({ type: "line", curve: opts.curve || (sfx ? "activity" : "tension"), range: opts.lineRange });
   const of = []; if (opts.beats !== false) of.push("downbeats"); if (opts.events !== false) of.push("events");
-  L.push({ type: "ticks", of });
+  L.push({ type: "ticks", of, small: true });
   return L;
 }
 /** Look code -> layers. Accepts a look name ("structure") or a code; unknown parts are skipped. */
@@ -350,13 +355,17 @@ function describeLook(layers, doc) {
     if (l.type === "wave") parts.push(l.colour && has(l.colour) ? "colour: " + lab(l.colour) : "waveform");
     else if (l.type === "spec") parts.push(!doc || doc.spectrum ? "spectrogram (mel, low at the bottom)" : "spectrogram (not in this analysis)");
     else if (l.type === "outline") parts.push("outline: peak waveform");
-    else if (l.type === "sculpt") parts.push(has(l.curve) ? "height: " + lab(l.curve) : "height: " + lab(l.curve) + " (not in this analysis)");
+    else if (l.type === "sculpt") parts.push(!(layers || []).some(x => x.type === "wave") ? "height: " + lab(l.curve) + " (shapes the waveform; add it to see)" : has(l.curve) ? "height: " + lab(l.curve) : "height: " + lab(l.curve) + " (not in this analysis)");
     else if (l.type === "line" && has(l.curve)) parts.push("line: " + lab(l.curve));
-    else if (l.type === "lane") parts.push((form === "overlay" ? "over the waveform: " : "lane: ") + lab(l.curve) + (has(l.curve) ? (l.signed ? " (up: entry, down: drop or break, centred: same level)" : "") : " (not in this analysis)"));
+    else if (l.type === "lane") parts.push((form === "overlay" ? ((layers || []).some(x => x.type === "wave" || x.type === "spec") ? "over the waveform: " : "overlaid: ") : "lane: ") + lab(l.curve) + (has(l.curve) ? (l.signed ? " (up: entry, down: drop or break, centred: same level)" : "") : " (not in this analysis)"));
     else if (l.type === "sections" && (!doc || doc.sections)) parts.push("letters: sections");
     else if (l.type === "ticks" && l.of) {
-      const ok = r => !doc || (r === "events" ? !!doc.events : r === "onsets" ? !!doc.onsets : r === "novelty" ? !!(doc.noveltyTicks && doc.noveltyTicks.length) : !!(doc.rhythm && doc.rhythm.reliable));
-      const of = l.of.filter(ok); if (of.length) parts.push("marks: " + of.join(", "));
+      const rh = r => r === "beats" || r === "downbeats";
+      const ok = r => !doc || (r === "events" ? !!doc.events : r === "onsets" ? !!doc.onsets : r === "novelty" ? !!(doc.noveltyTicks && doc.noveltyTicks.length) : !!doc.rhythm);
+      const of = l.of.filter(ok).map(r => r === "downbeats" ? "bar lines" : r);
+      if (of.length) parts.push("marks: " + of.join(", ") + (doc && doc.rhythm && !doc.rhythm.reliable && l.of.some(rh) ? " (no steady beat: beats faint)" : ""));
+      const missing = l.of.filter(r => !ok(r)).map(r => r === "downbeats" ? "bar lines" : r);
+      if (missing.length) parts.push(missing.join(", ") + ": not in this analysis" + (missing.some(m => m === "beats" || m === "bar lines") ? " (music only)" : ""));
     }
   }
   if (lanes.length && shape !== "base") parts.push(shape === "mirror" ? "curves mirrored like a waveform" : shape === "horizon" ? "horizon charts (darker = higher)" : "curves as lines");
@@ -599,12 +608,17 @@ function drawStrip(ctx, doc, opts) {
       }
     },
     ticks(l) {
-      const of = l.of || [], Hm = mainH || H, r = doc.rhythm, ok = r && r.reliable;
+      const of = l.of || [], Hm = mainH || H, r = doc.rhythm, ok = r && r.reliable, fade = ok ? 1 : 0.35;
       ctx.fillStyle = th.tick; ctx.strokeStyle = th.tick; ctx.lineWidth = 1;
-      const vl = (ts, h, alpha) => { if (alpha != null) ctx.globalAlpha = alpha; for (const t of ts) { if (t < t0 || t > t1) continue; const x = Math.round(xOf(t)) + 0.5; ctx.beginPath(); ctx.moveTo(x, Hm - h); ctx.lineTo(x, Hm); ctx.stroke(); } if (alpha != null) ctx.globalAlpha = 1; };
-      if (of.includes("beats") && ok) vl(r.beats, 3, 0.5);
+      const vl = (ts, h, alpha, y0) => { if (alpha != null) ctx.globalAlpha = alpha; for (const t of ts) { if (t < t0 || t > t1) continue; const x = Math.round(xOf(t)) + 0.5; ctx.beginPath(); ctx.moveTo(x, y0 == null ? Hm - h : y0); ctx.lineTo(x, Hm); ctx.stroke(); } if (alpha != null) ctx.globalAlpha = 1; };
+      // the default look keeps its small downbeat ticks; other looks draw beats and faint bar lines through the strip
+      const legacyTicks = l.small === true;
+      if (of.includes("beats") && r) vl(r.beats, Math.max(3, Math.round(Hm * 0.06)), 0.55 * fade);
       if (of.includes("onsets") && doc.onsets) vl(doc.onsets, 3, 0.6);
-      if (of.includes("downbeats") && ok) vl(r.downbeats, 4);
+      if (of.includes("downbeats") && r) {
+        if (legacyTicks) { if (ok) vl(r.downbeats, 4); }
+        else { vl(r.downbeats, 0, 0.2 * fade, 0); vl(r.downbeats, Math.max(4, Math.round(Hm * 0.1)), fade); }
+      }
       if (of.includes("novelty") && doc.noveltyTicks) for (const t of doc.noveltyTicks) {     // from the top edge, like the lab's novelty ticks
         if (t < t0 || t > t1) continue; const x = xOf(t);
         ctx.beginPath(); ctx.moveTo(x, 1); ctx.lineTo(x - 3, 7); ctx.lineTo(x + 3, 7); ctx.closePath(); ctx.fill();
