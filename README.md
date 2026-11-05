@@ -77,6 +77,17 @@ a corpus result. Reverb on the tails and the drive change what no EQ can (new en
 Ring time is mostly within reach of an ideal level-driven dynamic EQ on single hits; its point is the target (a decay
 the material descriptor N9 reads), which no ordinary EQ offers.
 
+### Levelling and stereo, guided by the events
+
+| Tool | What it does | Measured |
+|---|---|---|
+| Level the events | One gain per event (footsteps, impacts, a burst of shots), held from just before its start to the end of its decay: automatic clip gain | At the evenness a compressor reaches, attacks keep their crest (the compressor takes 4–11 dB off) and the background stays still (the compressor pumps 1.5–3.8 dB). It also goes further: 2–3.5 dB spread where a 40:1 compressor stops at 5–7 dB. [experiments/compression](experiments/compression/README.md) |
+| Fold to mono | Per frequency, turns the right channel to the left's phase before summing and keeps the level per channel; each attack is folded in the time domain with its own delay and polarity, so there is no pre-echo. The report names the bands and events a plain (L+R)/2 would cancel, which doubles as a mono-compatibility check; the plain sum is rendered too | Spaced pair 2 ms apart: worst third-octave −13.5 dB with a plain sum, 0.0 dB folded. Inverted layer: −25 / −1.6 dB. Stereo reverb tails: −1.9 / −0.6 dB. Pre-echo before the attacks as in the source |
+| Widen the tails | Adds a decorrelated copy (velvet-noise decorrelator) to the side only after the attacks, at the sound's own level, with the lows centred. Only the side changes, so (L+R)/2 is the original, sample for sample | No side signal on the attacks; channel correlation where widened 0.5 at 60% width and 0 at 100% (glass, sword) |
+
+Together the last two make a round trip: widening a mono sound and folding it back returns the original exactly, and
+a stereo file that folds badly is caught by the fold's report before it ships.
+
 ## Using Playhead in other applications
 
 The analysis is also a library and a command line, so other tools can use it ([docs/INTEGRATION.md](docs/INTEGRATION.md)):
@@ -361,7 +372,7 @@ The Asset Store submission guidelines (§1.2.b) currently exclude packages carry
 - Generated test signals: CC0 1.0.
 - Audio you process with Playhead is yours; the tool claims no rights in its output.
 
-Cite the version you used. For 0.1.0, the version that produced the results reported here:
+Cite the version you used. The corpus, ESC-50 and EQ-comparison results reported here were produced with 0.1.0:
 
 > Sandner, D. (2026). *Playhead: overview curves and analysis-driven tools for music and game audio* (Version 0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23932626
 

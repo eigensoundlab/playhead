@@ -552,6 +552,220 @@ async function ringTime(src, an, opt, onProgress) {
   return { outputs: [{ suffix: "ring", buf: mkBuf(sr, outs) }], report };
 }
 
+/* ---------- 9. Level the events: compression that leaves every event's shape alone ----------
+   A compressor turns the gain down while a hit is loud and up again after it, so it flattens attacks and the
+   background pumps. This evens out the events instead: each event's loudness (K-weighted, its first 200 ms, about the
+   ear's integration time for short sounds) is moved part of the way to the median event, by one gain for the whole
+   event, from 20 ms before its start to the end of its decay; between events the gain returns to 0 dB, so the
+   background neither pumps nor jumps. Nothing inside an event changes shape. */
+function eventLoudness(zs, a, b) {
+  let s = 0; for (const z of zs) for (let i = a; i < b; i++) s += z[i] * z[i];
+  return -0.691 + 10 * Math.log10(s / Math.max(1, b - a) + 1e-20);
+}
+function kWeighted(chans, sr) {
+  const kc = WL.kFilterCoeffs(sr);
+  return chans.map(c => { const a = new Float32Array(c.length), b = new Float32Array(c.length); WL.biquadInto(c, a, kc[0]); WL.biquadInto(a, b, kc[1]); return b; });
+}
+// the gain per sample (dB) that levels the events; exported for the comparison in experiments/compression
+function eventLevelGain(chans, sr, ev, opt) {
+  const n = chans[0].length, zs = kWeighted(chans, sr), win = Math.round(0.2 * sr);
+  const L = ev.map((e, i) => eventLoudness(zs, e.a, Math.min(n, e.a + win, i + 1 < ev.length ? Math.max(e.a + 1, ev[i + 1].a) : n)));
+  const sorted = L.slice().sort((x, y) => x - y), target = opt.target === "loudest" ? sorted[sorted.length - 1] : opt.target === "quietest" ? sorted[0] : sorted[sorted.length >> 1];
+  const k = Math.max(0, Math.min(1, opt.amount / 100)), lim = opt.maxDb;
+  const g = L.map(l => Math.max(-lim, Math.min(lim, (target - l) * k)));
+  // each event's gain holds from 20 ms before its start until its decay sinks to 6 dB over the background (or 40 dB
+  // under its peak); then the gain glides back to 0 dB over 60 ms, so the background between events keeps its level
+  // instead of jumping with every event
+  const hop = Math.max(1, Math.round(0.005 * sr)), nE = Math.ceil(n / hop), env = new Float32Array(nE);
+  for (let h = 0; h < nE; h++) { let e = 0; for (const z of zs) for (let i = h * hop; i < Math.min(n, (h + 1) * hop); i++) e += z[i] * z[i]; env[h] = 10 * Math.log10(e / (hop * zs.length) + 1e-20); }
+  const bed = Array.from(env).sort((x, y) => x - y)[Math.floor(0.1 * (nE - 1))];
+  const gdb = new Float32Array(n), pre = Math.round(0.02 * sr), back = Math.round(0.06 * sr);
+  for (let i = 0; i < ev.length; i++) {
+    const a = ev[i].a, next = i + 1 < ev.length ? ev[i + 1].a - pre : n;
+    let hp = Math.floor(a / hop), top = -Infinity; for (let h = hp; h < Math.min(nE, hp + Math.round(0.2 * sr / hop)); h++) if (env[h] > top) { top = env[h]; hp = h; }
+    let he = hp; while (he < nE - 1 && he * hop < next && env[he] > Math.max(top - 40, bed + 6)) he++;
+    const hold = Math.min(next, Math.max(a, he * hop));
+    const from = i === 0 ? 0 : gdb[Math.max(0, a - pre - 1)];
+    for (let j = Math.max(0, a - pre); j < a && j < n; j++) gdb[j] = from + (g[i] - from) * (j - (a - pre)) / pre;
+    for (let j = Math.max(0, a); j < Math.min(n, hold); j++) gdb[j] = g[i];
+    for (let j = hold; j < Math.min(n, next); j++) gdb[j] = g[i] * Math.max(0, 1 - (j - hold) / back);
+  }
+  return { gdb, levels: L, gains: g, target };
+}
+async function levelEvents(src, an, opt) {
+  const sr = src.sampleRate, ch = chansOf(src), n = ch[0].length, ev = eventsOf(an, sr, n);
+  if (ev.length < 2) return { outputs: [{ suffix: "level", buf: mkBuf(sr, ch) }], report: ["Fewer than two events: nothing to even out"] };
+  const { gdb, levels, gains } = eventLevelGain(ch, sr, ev, opt);
+  const outs = ch.map(x => { const o = new Float32Array(n); for (let i = 0; i < n; i++) o[i] = x[i] * undb(gdb[i]); return o; });
+  const sd = a => { const m = a.reduce((x, y) => x + y, 0) / a.length; return Math.sqrt(a.reduce((x, y) => x + (y - m) * (y - m), 0) / a.length); };
+  const after = levels.map((l, i) => l + gains[i]);
+  const report = ["Evened out " + ev.length + " events: their loudness spread " + sd(levels).toFixed(1) + " → " + sd(after).toFixed(1) + " dB (standard deviation)",
+    "Gains from " + Math.min(...gains).toFixed(1) + " to +" + Math.max(...gains).toFixed(1) + " dB, each held for a whole event, so attacks and decays keep their shape"];
+  finish(src, outs, opt.match ? "loudness" : "none", report);
+  return { outputs: [{ suffix: "level", buf: mkBuf(sr, outs) }], report };
+}
+
+/* ---------- stereo and mono: fold with the phase lined up, widen around the attacks ---------- */
+// STFT of two channels into one: frameFn(f, centreSample, Lre, Lim, Rre, Rim, Yre, Yim) writes bins 0..N/2 of the
+// output spectrum. Hann analysis and synthesis, hop N/4, WOLA normalisation (as stftApply).
+async function stftPair(L, R, N, frameFn, onProgress) {
+  const H = N >> 2, half = N >> 1, fft = WL.getFFT(N), w = WL.hannP(N), len = L.length, pad = N;
+  const out = new Float64Array(len + 2 * pad), norm = new Float64Array(len + 2 * pad);
+  const lr = new Float64Array(N), li = new Float64Array(N), rr = new Float64Array(N), ri = new Float64Array(N), yr = new Float64Array(N), yi = new Float64Array(N);
+  const nF = Math.ceil((len + N) / H);
+  for (let f = 0; f < nF; f++) {
+    const start = f * H - half;
+    for (let i = 0; i < N; i++) { const s = start + i, ok = s >= 0 && s < len; lr[i] = ok ? L[s] * w[i] : 0; rr[i] = ok ? R[s] * w[i] : 0; li[i] = 0; ri[i] = 0; }
+    fft(lr, li); fft(rr, ri);
+    yr.fill(0); yi.fill(0);
+    frameFn(f, start + half, lr, li, rr, ri, yr, yi);
+    yi[0] = 0; yi[half] = 0;
+    for (let k = 1; k < half; k++) { yr[N - k] = yr[k]; yi[N - k] = -yi[k]; }
+    for (let i = 0; i < N; i++) yi[i] = -yi[i];
+    fft(yr, yi);
+    for (let i = 0; i < N; i++) { out[start + i + pad] += (yr[i] / N) * w[i]; norm[start + i + pad] += w[i] * w[i]; }
+    if ((f & 127) === 127) { if (onProgress) onProgress(f / nF); await tick(); }
+  }
+  const y = new Float32Array(len);
+  for (let i = 0; i < len; i++) { const nv = norm[i + pad]; y[i] = nv > 1e-6 ? out[i + pad] / nv : 0; }
+  return y;
+}
+const FOLD_BANDS = [[0, 200, "below 200 Hz"], [200, 800, "200–800 Hz"], [800, 3000, "0.8–3 kHz"], [3000, 8000, "3–8 kHz"], [8000, 1e9, "above 8 kHz"]];
+// Fold to mono. A plain sum (L+R)/2 cancels where the channels are out of phase (spaced microphones, wide synths,
+// phase-flipped layers) and drops uncorrelated content by 3 dB. Here, per frequency bin, the right channel is turned
+// to the left channel's phase (the cross-spectrum smoothed over 40 ms gives the angle) before summing, and the sum is
+// brought back to the channels' mean energy (at most maxBoostDb). Per-bin changes smear across an STFT frame, which
+// would put a faint pre-echo before each hit; so each attack the analysis finds is folded in the time domain instead,
+// with that attack's own delay and polarity between the channels (cross-correlation within ±3 ms), and cross-faded in.
+async function foldMono(src, an, opt, onProgress) {
+  const sr = src.sampleRate, ch = chansOf(src), n = ch[0].length;
+  if (ch.length < 2) return { outputs: [{ suffix: "mono", buf: mkBuf(sr, [ch[0]]) }], report: ["Already mono: nothing to fold"] };
+  const L = ch[0], R = ch[1];
+  let diff = 0; for (let i = 0; i < n; i++) diff = Math.max(diff, Math.abs(L[i] - R[i]));
+  if (diff < 1e-6) return { outputs: [{ suffix: "mono", buf: mkBuf(sr, [Float32Array.from(L)]) }], report: ["The channels are identical: the mono file is one of them, unchanged"] };
+  let sl = 0, sr2 = 0, slr = 0; for (let i = 0; i < n; i++) { sl += L[i] * L[i]; sr2 += R[i] * R[i]; slr += L[i] * R[i]; }
+  const corr = slr / Math.sqrt(sl * sr2 + 1e-30);
+  const ev = eventsOf(an, sr, n), N = sr > 60000 ? 2048 : 1024, H = N >> 2, half = N >> 1, maxG = undb(opt.maxBoostDb), a = Math.exp(-H / (0.04 * sr));
+  const Cr = new Float64Array(half + 1), Ci = new Float64Array(half + 1), Sll = new Float64Array(half + 1), Srr = new Float64Array(half + 1), Smm = new Float64Array(half + 1);
+  const band = Int8Array.from({ length: half + 1 }, (_, k) => FOLD_BANDS.findIndex(b => k * sr / N >= b[0] && k * sr / N < b[1]));
+  // energy bookkeeping for the report, per band: the channels' mean energy (target), the plain sum, this fold; also per event
+  const nb = FOLD_BANDS.length, tgt = new Float64Array(nb), pln = new Float64Array(nb);
+  const evT = ev.map(() => new Float64Array(nb)), evP = ev.map(() => new Float64Array(nb));
+  let capped = 0, bins = 0, ei = 0;
+  const y = await stftPair(L, R, N, (f, c, lr, li, rr, ri, yr, yi) => {
+    while (ei < ev.length && ev[ei].e < c) ei++;
+    const inEv = ei < ev.length && ev[ei].a <= c ? ei : -1;
+    for (let k = 0; k <= half; k++) {
+      const xr = lr[k], xi = li[k], zr = rr[k], zi = ri[k];
+      Cr[k] = a * Cr[k] + (1 - a) * (xr * zr + xi * zi); Ci[k] = a * Ci[k] + (1 - a) * (xi * zr - xr * zi);
+      Sll[k] = a * Sll[k] + (1 - a) * (xr * xr + xi * xi); Srr[k] = a * Srr[k] + (1 - a) * (zr * zr + zi * zi);
+    }
+    for (let k = 0; k <= half; k++) {
+      let ur = 1, ui = 0;
+      if (opt.align) {
+        let cr = 0, ci = 0; for (let j = Math.max(0, k - 1); j <= Math.min(half, k + 1); j++) { cr += Cr[j]; ci += Ci[j]; }
+        const m = Math.hypot(cr, ci); if (m > 1e-20) { ur = cr / m; ui = ci / m; }
+      }
+      const zr = rr[k] * ur - ri[k] * ui, zi = rr[k] * ui + ri[k] * ur, mr = 0.5 * (lr[k] + zr), mi = 0.5 * (li[k] + zi);
+      Smm[k] = a * Smm[k] + (1 - a) * (mr * mr + mi * mi);
+      let g = 1;
+      if (opt.keepEnergy) { const t = 0.5 * (Sll[k] + Srr[k]); g = Smm[k] > 1e-24 ? Math.sqrt(t / Smm[k]) : 1; if (g > maxG) { g = maxG; capped++; } if (g < 1) g = 1; }
+      bins++;
+      yr[k] = mr * g; yi[k] = mi * g;
+      const b = band[k], te = 0.5 * (lr[k] * lr[k] + li[k] * li[k] + rr[k] * rr[k] + ri[k] * ri[k]), pr = 0.5 * (lr[k] + rr[k]), pi = 0.5 * (li[k] + ri[k]), pe = pr * pr + pi * pi;
+      tgt[b] += te; pln[b] += pe;
+      if (inEv >= 0) { evT[inEv][b] += te; evP[inEv][b] += pe; }
+    }
+  }, onProgress);
+  // the attacks, in the time domain: from 15 ms before each onset to 30 ms after its peak
+  const spans = [];
+  if (opt.align) for (const e of ev) {
+    let top = 0; for (let i = e.a; i < e.e; i++) top = Math.max(top, Math.abs(L[i]), Math.abs(R[i]));
+    let on = e.a; while (on < e.e && Math.abs(L[on]) < 0.01 * top && Math.abs(R[on]) < 0.01 * top) on++;
+    const i0 = Math.max(0, on - Math.round(0.015 * sr)), i1 = Math.min(n, Math.max(e.p, on) + Math.round(0.03 * sr)), w0 = on, w1 = Math.min(n, on + Math.round(0.03 * sr)), ml = Math.round(0.003 * sr);
+    let best = 0, lag = 0;
+    for (let d = -ml; d <= ml; d++) { let c = 0; for (let i = w0; i < w1; i++) { const j = i + d; if (j >= 0 && j < n) c += L[i] * R[j]; } if (Math.abs(c) > Math.abs(best)) { best = c; lag = d; } }
+    const sg = best < 0 ? -1 : 1, seg = new Float32Array(i1 - i0);
+    let el = 0, er = 0, es = 0;
+    for (let i = i0; i < i1; i++) { const j = i + lag, rv = j >= 0 && j < n ? sg * R[j] : 0, v = 0.5 * (L[i] + rv); seg[i - i0] = v; el += L[i] * L[i]; er += R[i] * R[i]; es += v * v; }
+    const g = opt.keepEnergy && es > 0 ? Math.min(maxG, Math.max(1, Math.sqrt(0.5 * (el + er) / es))) : 1;
+    for (let k = 0; k < seg.length; k++) seg[k] *= g;
+    spans.push({ i0, i1, seg, lag, sg });
+  }
+  if (spans.length) {
+    const r = Math.round(0.005 * sr), m = spanMask(n, spans.map(q => [q.i0 + r, q.i1 - r]), r);
+    for (const q of spans) for (let i = q.i0; i < q.i1; i++) if (m[i] > 0) y[i] = (1 - m[i]) * y[i] + m[i] * q.seg[i - q.i0];
+  }
+  const plain = Float32Array.from(L, (v, i) => 0.5 * (v + R[i]));
+  const dB = (a, b) => (b > 0 && a > 0 ? 10 * Math.log10(a / b) : 0), total = a => a.reduce((x, v) => x + v, 0);
+  const lossAll = dB(total(pln), total(tgt)), worst = FOLD_BANDS.map((b, i) => [dB(pln[i], tgt[i]), b[2], tgt[i]]).filter(v => v[2] > 1e-3 * total(tgt)).sort((p, q) => p[0] - q[0])[0];
+  // how close the result is to the channels' mean energy, measured on the result itself
+  const bandE = async ch => { const { M, nF, bins } = await stftMagnitudes(ch, sr, N), E = new Float64Array(nb); for (let f = 0; f < nF; f++) for (let k = 0; k < bins; k++) E[band[k]] += M[f * bins + k] * M[f * bins + k]; return E; };
+  const eL = await bandE([L]), eR = await bandE([R]), eY = await bandE([y]), tg2 = eL.map((v, i) => 0.5 * (v + eR[i]));
+  const dev = FOLD_BANDS.map((b, i) => tg2[i] > 1e-3 * total(tg2) ? Math.abs(dB(eY[i], tg2[i])) : 0);
+  const report = ["Channel correlation " + corr.toFixed(2) + " (1 = the same, 0 = unrelated, below 0 = opposite)",
+    "A plain sum (L+R)/2 loses " + (-lossAll).toFixed(1) + " dB of the channels' energy" + (worst && worst[0] < -1 ? ", most at " + worst[1] + " (" + worst[0].toFixed(1) + " dB)" : "")];
+  const evWorst = ev.map((e, i) => { let m = 0, bn = ""; FOLD_BANDS.forEach((b, j) => { if (evT[i][j] > 1e-3 * total(evT[i])) { const l = dB(evP[i][j], evT[i][j]); if (l < m) { m = l; bn = b[2]; } } }); return [m, i, bn]; })
+    .filter(v => v[0] < -3).sort((p, q) => p[0] - q[0]).slice(0, 3);
+  if (!evWorst.length && (!worst || worst[0] > -1)) report.push("Mono-compatible: a plain sum would do as well here");
+  if (evWorst.length) report.push("Events that cancel most in a plain sum: " + evWorst.map(([m, i, bn]) => "at " + (ev[i].a / sr).toFixed(2) + " s " + m.toFixed(1) + " dB (" + bn + ")").join(", "));
+  report.push((opt.align ? "Phase lined up" : "Phase left as it is") + (opt.keepEnergy ? ", energy kept: every band within " + Math.max(...dev).toFixed(1) + " dB of the channels' mean energy" : "") +
+    (opt.keepEnergy && capped > 0.01 * bins ? " (the repair reached its " + opt.maxBoostDb + " dB limit in " + Math.round(100 * capped / bins) + "% of the bins)" : ""));
+  if (spans.length) { const lags = spans.map(q => Math.abs(q.lag) / sr * 1000), flips = spans.filter(q => q.sg < 0).length;
+    report.push(spans.length + " attack" + (spans.length === 1 ? "" : "s") + " folded in the time domain, each with its own delay between the channels (" + (Math.max(...lags) < 0.05 ? "none found" : "up to " + Math.max(...lags).toFixed(1) + " ms") + ")" + (flips ? ", " + flips + " with the polarity reversed" : "") + ": no pre-echo"); }
+  report.push("The level per channel is kept. Loudness meters read the mono file 3 dB lower than the stereo one, because they add the channels (as they do for the plain sum)");
+  const outs = [{ suffix: "mono", buf: mkBuf(sr, finish(src, [y], "none", report)) }];
+  if (opt.plain) outs.push({ suffix: "plain-sum", buf: mkBuf(sr, finish(src, [plain], "none", [])) });
+  return { outputs: outs, report };
+}
+// A velvet-noise decorrelator (Alary, Politis and Välimäki 2017): 30 ms of sparse ±1 taps with a decaying envelope,
+// unit energy. Cheap, flat on average, and it smears little because the taps decay.
+function velvet(x, sr, seed) {
+  const R = rng(seed), Td = sr / 1500, Lm = Math.round(0.03 * sr), taps = [];
+  for (let m = 0; m * Td < Lm; m++) { const d = Math.min(Lm - 1, Math.round(m * Td + R() * (Td - 1))); taps.push([d, (R() < 0.5 ? -1 : 1) * Math.exp(-3 * d / Lm)]); }
+  const e = Math.sqrt(taps.reduce((s, t) => s + t[1] * t[1], 0)); for (const t of taps) t[1] /= e;
+  const n = x.length, y = new Float32Array(n);
+  for (const [d, g] of taps) for (let i = d; i < n; i++) y[i] += g * x[i - d];
+  return y;
+}
+// Widen around the attacks. The mid (the sound itself, or (L+R)/2) stays as it is; a decorrelated copy of it is added
+// to the side only where chosen: the tails and background (default), only the tails, or everywhere for comparison.
+// Lows stay centred. Because only the side changes, (L+R)/2 gives the mid back exactly: the result folds to mono
+// without any change, and a mono sound comes back unchanged.
+async function widenTails(src, an, opt) {
+  const sr = src.sampleRate, ch = chansOf(src), n = ch[0].length, stereo = ch.length > 1;
+  const M = stereo ? Float32Array.from(ch[0], (v, i) => 0.5 * (v + ch[1][i])) : Float32Array.from(ch[0]);
+  const S = stereo ? Float32Array.from(ch[0], (v, i) => 0.5 * (v - ch[1][i])) : new Float32Array(n);
+  const ev = eventsOf(an, sr, n), hold = Math.round(opt.holdMs / 1000 * sr), r = Math.round(0.01 * sr), pre = Math.round(0.005 * sr);
+  let mask;
+  if (opt.where === "all" || (!ev.length && opt.where === "rest")) mask = new Float32Array(n).fill(1);
+  else if (opt.where === "tails") mask = spanMask(n, ev.map(e => [e.p + hold, e.e]), r);
+  else { const a = spanMask(n, ev.map(e => [e.a - pre, e.p + hold]), r); mask = a.map(v => 1 - v); }
+  let on = 0; for (let i = 0; i < n; i++) on += mask[i]; on /= n;
+  if (on < 1e-3) return { outputs: [{ suffix: "wide", buf: mkBuf(sr, stereo ? ch : [ch[0], Float32Array.from(ch[0])]) }], report: ["No events found: there are no tails to widen"] };
+  const D = velvet(M, sr, 7), Dh = new Float32Array(n), Dh2 = new Float32Array(n);
+  { const w0 = 2 * Math.PI * Math.min(opt.lowHz, 0.45 * sr) / sr, al = Math.sin(w0) / (2 * Math.SQRT1_2), cw = Math.cos(w0), a0 = 1 + al;
+    const c = [(1 + cw) / 2 / a0, -(1 + cw) / a0, (1 + cw) / 2 / a0, -2 * cw / a0, (1 - al) / a0]; WL.biquadInto(D, Dh, c); WL.biquadInto(Dh, Dh2, c);
+    // the decorrelator's response is uneven on tonal sounds (a ringing blade can come out louder than it went in), so the
+    // added side follows the high-passed sound's own level over 30 ms: width is then the same at every moment
+    const Mh = new Float32Array(n), Mh2 = new Float32Array(n); WL.biquadInto(M, Mh, c); WL.biquadInto(Mh, Mh2, c);
+    const W = Math.max(8, Math.round(0.015 * sr)), cm = new Float64Array(n + 1), cd = new Float64Array(n + 1);
+    for (let i = 0; i < n; i++) { cm[i + 1] = cm[i] + Mh2[i] * Mh2[i]; cd[i + 1] = cd[i] + Dh2[i] * Dh2[i]; }
+    for (let i = 0; i < n; i++) { const a = Math.max(0, i - W), b = Math.min(n, i + W), em = cm[b] - cm[a], ed = cd[b] - cd[a]; Dh2[i] *= ed > 1e-20 ? Math.min(4, Math.sqrt(em / ed)) : 0; } }
+  const w = opt.width / 100, Lo = new Float32Array(n), Ro = new Float32Array(n);
+  let sll = 0, srr = 0, slr = 0;
+  for (let i = 0; i < n; i++) {
+    const s = S[i] + w * Dh2[i] * mask[i]; Lo[i] = M[i] + s; Ro[i] = M[i] - s;
+    if (mask[i] > 0.5) { sll += Lo[i] * Lo[i]; srr += Ro[i] * Ro[i]; slr += Lo[i] * Ro[i]; }
+  }
+  const report = ["Width " + opt.width + "% added " + (opt.where === "tails" ? "to the tails" : opt.where === "all" ? "everywhere (attacks too, for comparison)" : "around the attacks") + ", " + Math.round(100 * on) + "% of the time; lows below " + opt.lowHz + " Hz stay centred",
+    "Channel correlation where widened: " + (slr / Math.sqrt(sll * srr + 1e-30)).toFixed(2) + " (1 = mono, 0 = unrelated)"];
+  if (opt.width > 0 && slr / Math.sqrt(sll * srr + 1e-30) > 0.9) report.push("Little changed: most of this sound outside the attacks is below " + opt.lowHz + " Hz, which stays centred. Lower \"Lows centred below\" to widen more");
+  const lowered = peakOf([Lo, Ro]) > 0.999, outs = finish(src, [Lo, Ro], "none", report);
+  report.push((stereo ? "(L+R)/2 of the result is the original's (L+R)/2" : "Folded back to mono with (L+R)/2, the result is the original sound") + (lowered ? ", lowered as noted" : ", sample for sample"));
+  return { outputs: [{ suffix: "wide", buf: mkBuf(sr, outs) }], report };
+}
+
 const TOOLS = [
   { id: "cleanup", name: "Clean up for export", kind: "Game audio",
     desc: "Fixes what the asset checks find: removes DC offset, rebuilds clipped peaks, trims silence, adds fades where the file clicks or the tail was cut, folds identical channels to mono, and normalises the peak.",
@@ -598,7 +812,22 @@ const TOOLS = [
     desc: "Changes how long each event rings, relative to its own peak: longer for metal and glass, shorter for wood and cardboard. Higher partials can ring longer or shorter than lower ones, which moves the material read by the decay descriptor (N9). An EQ sets the same gain at every level; this sets it by how far each partial has decayed since its event's peak.",
     params: [{ id: "ratio", label: "Ring time", min: 0.25, max: 4, step: 0.05, value: 2 }, { id: "tilt", label: "High partials", min: -0.5, max: 0.5, step: 0.05, value: 0 },
       { id: "maxBoostDb", label: "Largest lift", min: 6, max: 36, step: 1, value: 18, unit: "dB" }, { id: "match", label: "Keep the peak", type: "bool", value: true }],
-    run: ringTime }
+    run: ringTime },
+  { id: "level", name: "Level the events", kind: "Mixing",
+    desc: "Evens out how loud the events are (footsteps, impacts, a burst of shots, debris) with one gain per event, changed only in the moment before each event starts. A compressor reaching the same evenness turns attacks down and makes the background pump; this leaves every event's attack and decay as it was.",
+    params: [{ id: "amount", label: "Evenness", min: 0, max: 100, step: 5, value: 70, unit: "%" }, { id: "target", label: "Towards", type: "select", value: "median", options: [["median", "The middle event"], ["loudest", "The loudest event"], ["quietest", "The quietest event"]] },
+      { id: "maxDb", label: "Largest change", min: 3, max: 24, step: 1, value: 12, unit: "dB" }, { id: "match", label: "Match loudness", type: "bool", value: true }],
+    run: levelEvents },
+  { id: "mono", name: "Fold to mono", kind: "Game audio",
+    desc: "Folds stereo to mono without the losses of a plain (L+R)/2: per frequency, the right channel is turned to the left channel's phase before summing, and the sum is brought back to the channels' energy. Each attack the analysis finds is folded in the time domain with its own delay and polarity between the channels, so there is no pre-echo. The report names the bands and events that cancel in a plain sum, which doubles as a mono-compatibility check. The second result is the plain sum, for comparison.",
+    params: [{ id: "align", label: "Line up the phase", type: "bool", value: true }, { id: "keepEnergy", label: "Keep the channels' energy", type: "bool", value: true },
+      { id: "maxBoostDb", label: "Largest repair", min: 3, max: 18, step: 1, value: 9, unit: "dB" }, { id: "plain", label: "Also render the plain sum", type: "bool", value: true }],
+    run: foldMono },
+  { id: "widen", name: "Widen the tails", kind: "Sound design",
+    desc: "Makes stereo from mono (or widens stereo) by adding a decorrelated copy of the sound (a velvet-noise decorrelator) to the side, only after the attacks the analysis finds: attacks stay centred and punchy, tails and background open up, and the lows stay centred. Only the side changes, so (L+R)/2 gives back the original exactly: the result is fully mono-compatible.",
+    params: [{ id: "width", label: "Width", min: 0, max: 100, step: 5, value: 60, unit: "%" }, { id: "where", label: "Where", type: "select", value: "rest", options: [["rest", "Tails and background (not the attacks)"], ["tails", "Only the tails"], ["all", "Everywhere (attacks too, for comparison)"]] },
+      { id: "holdMs", label: "Centred after each peak", min: 0, max: 200, step: 5, value: 25, unit: "ms" }, { id: "lowHz", label: "Lows centred below", min: 40, max: 400, step: 10, value: 150, unit: "Hz" }],
+    run: widenTails }
 ];
 
 /* ---------- comparison with a static EQ ----------
@@ -687,7 +916,7 @@ function zipStore(files) {
   return out;
 }
 
-const api = { TOOLS, eqExplained, encodeWav, zipStore, crc32, mkBuf, chansOf, resample, lufsOf, stftApply, stftMagnitudes, _stftMag: stftMagnitudes, cleanup, deharsh, layerMix, hpss, tensionShape, loopMaker, variations, tailVerb, driveHits, ringTime };
+const api = { TOOLS, eqExplained, encodeWav, zipStore, crc32, mkBuf, chansOf, resample, lufsOf, stftApply, stftMagnitudes, _stftMag: stftMagnitudes, cleanup, deharsh, layerMix, hpss, tensionShape, loopMaker, variations, tailVerb, driveHits, ringTime, levelEvents, eventLevelGain, kWeighted, eventsOf, foldMono, widenTails, velvet };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.WLFX = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

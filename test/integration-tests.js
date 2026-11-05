@@ -5,7 +5,7 @@
 const fs = require("fs"), os = require("os"), path = require("path");
 const { spawnSync } = require("child_process");
 const WL = require("../src/analysis.js"), P = require("../src/probes.js"), IO = require("../tools/audio-io.js");
-require("../src/descriptors.js"); require("../src/effects.js");
+require("../src/descriptors.js"); const FX = require("../src/effects.js");
 const Playhead = require("../src/playhead.js");
 const root = path.join(__dirname, "..");
 const strip = d => { const c = JSON.parse(JSON.stringify(d)); delete c.timing; return c; };
@@ -99,6 +99,29 @@ module.exports = async function (check) {
     const [tL, tS, t1] = [await t60(rgL.outputs[0]), await t60(rgS.outputs[0]), await t60(rg1.outputs[0])];
     check("effects: reverb on the tails, drive the hits, ring time", `tail +${((to[0].length - gun.length) / sr).toFixed(1)} s; T60 ${tS.toFixed(3)} / ${t1.toFixed(3)} / ${tL.toFixed(3)} s`,
       to[0].length > gun.length && maxDiff < 1e-4 && dr.outputs[0].channels[0].length === gun.length && dr.report.length > 0 && tL > 1.5 * t1 && tS < 0.75 * t1 && Playhead.tools().some(t => t.id === "ring")); }
+  // level the events: event loudness evens out, attacks keep their shape; fold to mono: a 2 ms spaced pair and an
+  // inverted layer fold without the plain sum's comb and cancellation; widen: attacks stay centred and (L+R)/2 is the original
+  { let s7 = 7; const RR = () => (s7 = (s7 * 16807) % 2147483647) / 2147483647, n = sr * 4, x = new Float32Array(n), lv = [0.9, 0.12, 0.5, 0.06, 0.3];
+    lv.forEach((g, j) => { const i0 = Math.round((0.3 + 0.75 * j) * sr); for (let k = 0; k < 0.25 * sr; k++) x[i0 + k] += g * Math.exp(-k / (0.04 * sr)) * (0.7 * Math.sin(2 * Math.PI * 700 * k / sr) + 0.3 * (RR() * 2 - 1)); });
+    const le = await Playhead.process({ sampleRate: sr, channels: [x] }, "level", { amount: 100, maxDb: 24, match: false }), y = le.outputs[0].channels[0];
+    const pk = (z, j) => { const i0 = Math.round((0.3 + 0.75 * j) * sr); let m = 0; for (let k = 0; k < 0.2 * sr; k++) m = Math.max(m, Math.abs(z[i0 + k])); return 20 * Math.log10(m); };
+    const sd = v => { const m = v.reduce((a, b) => a + b, 0) / v.length; return Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / v.length); };
+    const before = sd(lv.map((_, j) => pk(x, j))), after = sd(lv.map((_, j) => pk(y, j)));
+    // the shape inside an event is untouched: output / input is constant over the event's first 150 ms
+    const i0 = Math.round(1.05 * sr); let rmin = Infinity, rmax = 0; for (let k = 0; k < 0.15 * sr; k += 7) if (Math.abs(x[i0 + k]) > 1e-3) { const q = y[i0 + k] / x[i0 + k]; rmin = Math.min(rmin, q); rmax = Math.max(rmax, q); }
+    const L = Float32Array.from(kit.find(b => b.name.includes("Pistol")).getChannelData(0)), d = Math.round(0.002 * sr), R = Float32Array.from(L, (_, i) => (i >= d ? L[i - d] : 0)), Ri = Float32Array.from(L, v => -0.9 * v);
+    const third = async (chs) => { const { M, nF, bins } = await FX.stftMagnitudes(chs, sr, 4096), E = new Float64Array(bins); for (let f = 0; f < nF; f++) for (let k = 0; k < bins; k++) E[k] += M[f * bins + k] ** 2 * chs.length;
+      const out = []; for (let f = 200; f < 12000; f *= Math.pow(2, 1 / 3)) { let e = 0; for (let k = Math.ceil(f * 4096 / sr); k < f * Math.pow(2, 1 / 3) * 4096 / sr; k++) e += E[k]; out.push(e); } return out; };
+    const worst = async (Lc, Rc, m) => { const a = await third([Lc]), b = await third([Rc]), o = await third([m]); return Math.min(...o.map((v, i) => 10 * Math.log10(v / (0.5 * (a[i] + b[i]))))); };
+    const f1 = await Playhead.process({ sampleRate: sr, channels: [L, R] }, "mono", {}), f2 = await Playhead.process({ sampleRate: sr, channels: [L, Ri] }, "mono", {});
+    const wA = await worst(L, R, f1.outputs[0].channels[0]), wP = await worst(L, R, f1.outputs[1].channels[0]), wI = await worst(L, Ri, f2.outputs[0].channels[0]);
+    const same = await Playhead.process({ sampleRate: sr, channels: [L, Float32Array.from(L)] }, "mono", {});
+    const wd = await Playhead.process({ sampleRate: sr, channels: [x] }, "widen", { width: 100 }), [wl, wr] = wd.outputs[0].channels;
+    let back = 0, sideAtt = 0, sideTail = 0, midTail = 0; for (let i = 0; i < n; i++) back = Math.max(back, Math.abs(0.5 * (wl[i] + wr[i]) - x[i]));
+    const a0 = Math.round(0.3 * sr); for (let k = 0; k < 0.004 * sr; k++) sideAtt = Math.max(sideAtt, Math.abs(wl[a0 + k] - wr[a0 + k]));
+    for (let k = Math.round(0.08 * sr); k < 0.2 * sr; k++) { sideTail += (wl[a0 + k] - wr[a0 + k]) ** 2 / 4; midTail += x[a0 + k] ** 2; }
+    check("effects: level the events, fold to mono, widen the tails", `spread ${before.toFixed(1)} → ${after.toFixed(1)} dB; fold worst third-octave ${wA.toFixed(1)} dB (plain ${wP.toFixed(1)}), inverted ${wI.toFixed(1)} dB; widened side ${(10 * Math.log10(sideTail / midTail)).toFixed(1)} dB`,
+      after < before / 3 && rmax / rmin < 1.001 && wA > -1 && wP < -10 && wI > -1 && same.outputs[0].channels[0].every((v, i) => v === L[i]) && back < 1e-6 && sideAtt < 1e-6 && sideTail > 0.3 * midTail && ["level", "mono", "widen"].every(id => Playhead.tools().some(t => t.id === id))); }
   const fa = await Playhead.fromAnalysis(await WL.analyse(glass), glass, { name: "glass" });
   check("api: fromAnalysis gives the analyze() document", "", JSON.stringify(strip(fa)) === JSON.stringify(strip(g1)));
   const pr = await Playhead.process(glass, "layers", { gains: [-12] });

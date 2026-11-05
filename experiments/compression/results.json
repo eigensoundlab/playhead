@@ -1,0 +1,332 @@
+[
+ {
+  "name": "Hits over a bed (synthetic)",
+  "events": 11,
+  "fast": {
+   "comp": {
+    "events": 11,
+    "spreadBefore": 8.883477872549856,
+    "spreadAfter": 5.688235652943856,
+    "attackLossDb": -10.226873579182906,
+    "shapeChangeDb": 7.8091292514105985,
+    "pumpingDb": 3.41859202915254,
+    "stepsDb": 2.0327302246976964
+   },
+   "level": {
+    "amount": 36.444091796875,
+    "events": 11,
+    "spreadBefore": 8.883477872549856,
+    "spreadAfter": 5.687878523859899,
+    "attackLossDb": -0.03427311913791959,
+    "shapeChangeDb": 1.265653638057866,
+    "pumpingDb": 0.11358688653749403,
+    "stepsDb": 0.04271573904619631
+   }
+  },
+  "slow": {
+   "comp": {
+    "events": 11,
+    "spreadBefore": 8.883477872549856,
+    "spreadAfter": 6.955449278246458,
+    "attackLossDb": -6.006753673181197,
+    "shapeChangeDb": 8.103952828881873,
+    "pumpingDb": 2.97819146768011,
+    "stepsDb": 1.910523830358418
+   },
+   "level": {
+    "amount": 22.015380859375,
+    "events": 11,
+    "spreadBefore": 8.883477872549856,
+    "spreadAfter": 6.955239642249353,
+    "attackLossDb": -0.022586811009977028,
+    "shapeChangeDb": 0.7641707326060844,
+    "pumpingDb": 0.06861629471424682,
+    "stepsDb": 0.025803997700956437
+   }
+  },
+  "furthest": {
+   "comp": {
+    "events": 11,
+    "spreadBefore": 8.883477872549856,
+    "spreadAfter": 5.692127479558573,
+    "attackLossDb": -11.502502102199335,
+    "shapeChangeDb": 10.536284251944485,
+    "pumpingDb": 4.444169638206735,
+    "stepsDb": 2.642549303366773
+   },
+   "level": {
+    "events": 11,
+    "spreadBefore": 8.883477872549856,
+    "spreadAfter": 3.4898464763513632,
+    "attackLossDb": -0.051727417514049474,
+    "shapeChangeDb": 2.276715686655431,
+    "pumpingDb": 0.2181720417097313,
+    "stepsDb": 0.0820462667712289
+   }
+  }
+ },
+ {
+  "name": "Footsteps over a bed (synthetic)",
+  "events": 15,
+  "fast": {
+   "comp": {
+    "events": 15,
+    "spreadBefore": 6.928436704842811,
+    "spreadAfter": 5.078228097338659,
+    "attackLossDb": -7.624226497692224,
+    "shapeChangeDb": 5.319547649912532,
+    "pumpingDb": 2.71523325064013,
+    "stepsDb": 1.3654667307825932
+   },
+   "level": {
+    "amount": 27.313232421875,
+    "events": 15,
+    "spreadBefore": 6.928436704842811,
+    "spreadAfter": 5.077978717725597,
+    "attackLossDb": -0.022526422490267824,
+    "shapeChangeDb": 0.7871394528584682,
+    "pumpingDb": 0.7338034552560154,
+    "stepsDb": 0.3726203255546152
+   }
+  },
+  "slow": {
+   "comp": {
+    "events": 15,
+    "spreadBefore": 6.928436704842811,
+    "spreadAfter": 5.91367477768362,
+    "attackLossDb": -3.660745937361923,
+    "shapeChangeDb": 4.385481684976434,
+    "pumpingDb": 1.8774021008107484,
+    "stepsDb": 1.0042539466460942
+   },
+   "level": {
+    "amount": 14.996337890625,
+    "events": 15,
+    "spreadBefore": 6.928436704842811,
+    "spreadAfter": 5.913916414556539,
+    "attackLossDb": -0.013318941489861421,
+    "shapeChangeDb": 0.4321768564409839,
+    "pumpingDb": 0.4028949910495925,
+    "stepsDb": 0.20458729326572475
+   }
+  },
+  "furthest": {
+   "comp": {
+    "events": 15,
+    "spreadBefore": 6.928436704842811,
+    "spreadAfter": 4.967753573069709,
+    "attackLossDb": -8.627272112788962,
+    "shapeChangeDb": 7.032665016469752,
+    "pumpingDb": 3.529803186431219,
+    "stepsDb": 1.7751067346230773
+   },
+   "level": {
+    "events": 15,
+    "spreadBefore": 6.928436704842811,
+    "spreadAfter": 2.169063258418728,
+    "attackLossDb": -0.04520942264978913,
+    "shapeChangeDb": 2.0173653602519908,
+    "pumpingDb": 1.880635807421239,
+    "stepsDb": 0.9549738703805846
+   }
+  }
+ },
+ {
+  "name": "Shots, a burst (synthetic)",
+  "events": 12,
+  "fast": {
+   "comp": {
+    "events": 12,
+    "spreadBefore": 7.986406555740545,
+    "spreadAfter": 5.068588939412831,
+    "attackLossDb": -10.636630974834432,
+    "shapeChangeDb": 8.069065807244229,
+    "pumpingDb": 3.74923108351788,
+    "stepsDb": 2.174404570859452
+   },
+   "level": {
+    "amount": 38.580322265625,
+    "events": 12,
+    "spreadBefore": 7.986406555740545,
+    "spreadAfter": 5.0682024533145595,
+    "attackLossDb": -0.0685855075550057,
+    "shapeChangeDb": 0.7590397714672266,
+    "pumpingDb": 0.657276200874839,
+    "stepsDb": 0.3226654145246303
+   }
+  },
+  "slow": {
+   "comp": {
+    "events": 12,
+    "spreadBefore": 7.986406555740545,
+    "spreadAfter": 6.096318407806674,
+    "attackLossDb": -6.1897082730215445,
+    "shapeChangeDb": 8.533537885471787,
+    "pumpingDb": 3.327369662466863,
+    "stepsDb": 1.970120195895413
+   },
+   "level": {
+    "amount": 25.189208984375,
+    "events": 12,
+    "spreadBefore": 7.986406555740545,
+    "spreadAfter": 6.096246198092243,
+    "attackLossDb": -0.0513811712853706,
+    "shapeChangeDb": 0.49451992814834617,
+    "pumpingDb": 0.4291376220694243,
+    "stepsDb": 0.2106692255668408
+   }
+  },
+  "furthest": {
+   "comp": {
+    "events": 12,
+    "spreadBefore": 7.986406555740545,
+    "spreadAfter": 4.981750589820623,
+    "attackLossDb": -11.953733191000715,
+    "shapeChangeDb": 10.929975830038616,
+    "pumpingDb": 4.874000370934413,
+    "stepsDb": 2.826725912529359
+   },
+   "level": {
+    "events": 12,
+    "spreadBefore": 7.986406555740545,
+    "spreadAfter": 2.8610673302557053,
+    "attackLossDb": -0.09008514687366394,
+    "shapeChangeDb": 1.3248685620675305,
+    "pumpingDb": 1.1925596128749243,
+    "stepsDb": 0.5854429892494577
+   }
+  }
+ },
+ {
+  "name": "Weapon_Rifle_Reload.wav",
+  "events": 5,
+  "fast": {
+   "comp": {
+    "events": 5,
+    "spreadBefore": 3.606512614388559,
+    "spreadAfter": 1.9292066923659112,
+    "attackLossDb": -0.9625933482083753,
+    "shapeChangeDb": 4.58680757288103,
+    "pumpingDb": 1.5624345965826048,
+    "stepsDb": 0.3693656122223252
+   },
+   "level": {
+    "amount": 46.502685546875,
+    "events": 5,
+    "spreadBefore": 3.606512614388559,
+    "spreadAfter": 1.9293880637624887,
+    "attackLossDb": 0.535395941810848,
+    "shapeChangeDb": 0.00012893467797180127,
+    "pumpingDb": 0.04249693895488673,
+    "stepsDb": 0.009418506569567225
+   }
+  },
+  "slow": {
+   "comp": {
+    "events": 5,
+    "spreadBefore": 3.606512614388559,
+    "spreadAfter": 2.670403564369876,
+    "attackLossDb": -0.4700052921803334,
+    "shapeChangeDb": 2.841136253142597,
+    "pumpingDb": 1.4837070847861034,
+    "stepsDb": 0.5309980908142669
+   },
+   "level": {
+    "amount": 25.958251953125,
+    "events": 5,
+    "spreadBefore": 3.606512614388559,
+    "spreadAfter": 2.6703253426468483,
+    "attackLossDb": 0.3179219506885197,
+    "shapeChangeDb": 0.000072138719747385,
+    "pumpingDb": 0.023722204932953652,
+    "stepsDb": 0.005257502041439736
+   }
+  },
+  "furthest": {
+   "comp": {
+    "events": 5,
+    "spreadBefore": 3.606512614388559,
+    "spreadAfter": 1.9135385578840294,
+    "attackLossDb": -1.1852475772513884,
+    "shapeChangeDb": 6.145301999057766,
+    "pumpingDb": 2.031164977122282,
+    "stepsDb": 0.48017530249697815
+   },
+   "level": {
+    "events": 5,
+    "spreadBefore": 3.606512614388559,
+    "spreadAfter": 1.0819548426396401,
+    "attackLossDb": 0.5820377161350585,
+    "shapeChangeDb": 0.00019358491260525838,
+    "pumpingDb": 0.06397019270686286,
+    "stepsDb": 0.014177578268572688
+   }
+  }
+ },
+ {
+  "name": "Explosion_Large_Debris.wav",
+  "events": 5,
+  "fast": {
+   "comp": {
+    "events": 5,
+    "spreadBefore": 8.88378603817892,
+    "spreadAfter": 6.668254932115619,
+    "attackLossDb": -1.9407616882026768,
+    "shapeChangeDb": 3.9269864255416564,
+    "pumpingDb": 1.6143040474148476,
+    "stepsDb": 0
+   },
+   "level": {
+    "amount": 24.896240234375,
+    "events": 5,
+    "spreadBefore": 8.88378603817892,
+    "spreadAfter": 6.668423768640532,
+    "attackLossDb": 0.03652668669022656,
+    "shapeChangeDb": 0.03887750420408401,
+    "pumpingDb": 0,
+    "stepsDb": 0
+   }
+  },
+  "slow": {
+   "comp": {
+    "events": 5,
+    "spreadBefore": 8.88378603817892,
+    "spreadAfter": 9.229474766193412,
+    "attackLossDb": -1.2963154081009374,
+    "shapeChangeDb": 4.456184505911597,
+    "pumpingDb": 1.5395230621202314,
+    "stepsDb": 0
+   },
+   "level": {
+    "amount": 0.006103515625,
+    "events": 5,
+    "spreadBefore": 8.88378603817892,
+    "spreadAfter": 8.883243015848395,
+    "attackLossDb": 0.000008582728877293277,
+    "shapeChangeDb": 0.000009542579995240728,
+    "pumpingDb": 0,
+    "stepsDb": 0
+   }
+  },
+  "furthest": {
+   "comp": {
+    "events": 5,
+    "spreadBefore": 8.88378603817892,
+    "spreadAfter": 7.324063362178052,
+    "attackLossDb": -1.9063145713448697,
+    "shapeChangeDb": 5.179377749872858,
+    "pumpingDb": 2.0985952630009126,
+    "stepsDb": 0
+   },
+   "level": {
+    "events": 5,
+    "spreadBefore": 8.88378603817892,
+    "spreadAfter": 3.4369479420117375,
+    "attackLossDb": 0.11087151472460607,
+    "shapeChangeDb": 0.10942666379218895,
+    "pumpingDb": 0,
+    "stepsDb": 0
+   }
+  }
+ }
+]

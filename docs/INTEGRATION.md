@@ -101,8 +101,12 @@ Ready-made looks (`Playhead.looks`): `auto` (the default: by profile), the two r
 `spectrum` (spectrogram), `structure` (`wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats`),
 `rhythm`, `tension`, `events`, `lanes` (three separate lanes, no colour mixing), `shapes` (curves mirrored like
 waveforms, no waveform), `overlay` (curves drawn on the waveform), `horizon` (horizon lanes) and `specstructure`
-(spectrogram with sections and structural change), and `sculpted` (`sculpt:loudness,wave:harshness,outline,ticks:events+novelty`:
-the waveform as loud as it sounds, coloured by harshness, over the ordinary peak outline).
+(spectrogram with sections and structural change), `overview` (music: curves only, overlaid and mirrored, with
+sections, bar lines and novelty marks), `hits` (onset strength and local pulse under the waveform), two sound-effect
+looks suggested by testing, `character` (`form:overlay,shape:mirror,lane:onsetStrength,lane:harshness,lane:n1Kurtosis,ticks:onsets`:
+where the hits are, how harsh, how impulsive) and `surprise` (the same with spectral surprise in place of
+impulsiveness), and `sculpted` (`sculpt:loudness,wave:harshness,outline,ticks:events+novelty`: the waveform as loud as
+it sounds, coloured by harshness, over the ordinary peak outline).
 `Playhead.lookFits(doc, look)` says whether a look shows something for a document (every curve it uses is there and not
 empty), for menus that hide looks a file cannot use. A layer whose curve is not in the document is left out and the
 legend says so (`structure` and `rhythm` need the music profile).
