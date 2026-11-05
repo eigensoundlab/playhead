@@ -165,7 +165,7 @@ a.pcolormesh(tt, fq[keep], S[:, keep].T, cmap="magma", vmin=-80, vmax=0, shading
 a.set_yscale("log"); a.set_ylim(40, 16000); a.set_yticks([100, 1000, 10000]); a.set_yticklabels(["100 Hz", "1 kHz", "10 kHz"], fontsize=5.8)
 a.minorticks_off(); label(a, "(b) spectrogram, 80 dB range")
 # (c), (d) the looks: curves mirrored like a waveform and overlaid, scaled as Playhead draws them, onsets marked below
-SER = {"onsetStrength": ("onset strength", BLUE, "-"), "harshness": ("harshness", AQUA, "--"), "n1Kurtosis": ("impulsiveness (N1)", ORANGE, "-"), "n7Surprisal": ("surprise (N7)", PURPLE, "-.")}
+SER = {"onsetStrength": ("onset strength", BLUE, "-"), "harshness": ("harshness", AQUA, "--"), "n1Kurtosis": ("impulsiveness (N1)", ORANGE, "-"), "n7Surprisal": ("surprisal (N7)", PURPLE, "-.")}
 LOOKS = [("(c)", "(c) look: Sound character", ["onsetStrength", "harshness", "n1Kurtosis"]), ("(d)", "(d) look: Hits and surprise", ["onsetStrength", "harshness", "n7Surprisal"])]
 handles = {}
 for k, (tg, name, keys) in enumerate(LOOKS):

@@ -16,6 +16,8 @@ cd "$T/src"
 [ -d sonic-pi ] || { git clone --depth 1 --filter=blob:none --sparse https://github.com/sonic-pi-net/sonic-pi.git sonic-pi && (cd sonic-pi && git sparse-checkout set etc/samples); }
 [ -d librosa-data ] || git clone --depth 1 https://github.com/librosa/data.git librosa-data
 cd ../..
-for f in "$T"/src/sonic-pi/etc/samples/*.flac; do ln -sf "$(cd "$(dirname "$f")" && pwd)/$(basename "$f")" "$T/sfx/"; done
-for f in "$T"/src/librosa-data/audio/*.hq.ogg; do b=$(basename "$f" .hq.ogg); ln -sf "$(cd "$(dirname "$f")" && pwd)/$(basename "$f")" "$T/music/$b.ogg"; done
+# only the 73 files of the published results (experiments/corpus/summary.csv): both sources have grown since
+LIST="$(cd "$(dirname "$0")/.." && pwd)/experiments/corpus/summary.csv"
+for f in "$T"/src/sonic-pi/etc/samples/*.flac; do b=$(basename "$f"); grep -q "^sfx/$b," "$LIST" || continue; ln -sf "$(cd "$(dirname "$f")" && pwd)/$b" "$T/sfx/"; done
+for f in "$T"/src/librosa-data/audio/*.hq.ogg; do b=$(basename "$f" .hq.ogg); grep -q "^music/$b.ogg," "$LIST" || continue; ln -sf "$(cd "$(dirname "$f")" && pwd)/$(basename "$f")" "$T/music/$b.ogg"; done
 echo "sound effects: $(ls "$T/sfx" | wc -l)   music, speech and nature: $(ls "$T/music" | wc -l)"

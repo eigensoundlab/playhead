@@ -16,7 +16,7 @@ Playhead is a research prototype. It runs entirely in the browser: audio you dro
 | C2 Activity | How busy the sound is: onsets and spectral change, not level | Log-mel spectral flux (SuperFlux-style) plus event density |
 | C3 Arousal | Energy and excitement composite | Loudness, activity, sharpness |
 | C4 Harshness | Loudness weighted by how unpleasant it is | Zwicker psychoacoustic annoyance: DIN 45692 sharpness, roughness, fluctuation strength |
-| C5 Tension | Build-ups and releases | Farbood-style trend salience of loudness, activity and harmony |
+| C5 Tension | Build-ups and releases | Farbood-style trend salience of loudness, sharpness, roughness and (music) harmonic tension, mixed with loudness |
 | C6 Harmonic tension | Dissonance and distance from key | Tonal interval vectors (TIV) |
 | C7 Surprise | How unexpected each moment is | Feature novelty against recent context |
 | Rhythm | Tempo, beats, downbeats, pulse clarity | Autocorrelation tempogram, Ellis dynamic-programming beats, predominant local pulse |
@@ -34,7 +34,7 @@ Nine further rows borrow measures from other fields (`src/descriptors.js`). Most
 | N1 Impulsiveness | Spectral kurtosis, per band | Machine diagnostics | 0 for Gaussian noise, −1 for a steady tone |
 | N2 Repetition rate | Squared-envelope spectrum, confirmed by autocorrelation; experimental speech-rate modulation (3–7 Hz vs 0.5–2.5 Hz per octave, which did not separate single speech clips from music) | Machine diagnostics; speech science | rate of an amplitude-modulated noise; ×1.06 when played 6 % faster; none for noise or a tone |
 | N3 Event statistics | STA/LTA trigger, burstiness, Gutenberg–Richter b-value, temporal entropy | Seismology; ecoacoustics | burstiness −1 periodic, ≈0 Poisson, > 0 clustered; Aki b-value of a known distribution |
-| N4 Spectral motion | Wasserstein-1 (1-D optimal transport) velocity on a log-frequency axis | Applied mathematics | a 2 oct/s sweep reads 2.00 oct/s, its reverse −2.00 |
+| N4 Spectral motion | Signed 1-D Wasserstein velocity on a log-frequency axis (the rate of change of the spectral centroid there); the unsigned remainder shows reshaping | Applied mathematics | a 2 oct/s sweep reads 2.00 oct/s, its reverse −2.00 |
 | N5 Periodicity | Cepstral peak prominence; magnitude-weighted phase coherence | Voice science | phase coherence 1 for a tone, ≈0 for noise |
 | N6 Arrow of time | Third-moment asymmetry of the log envelope | Statistical physics | ≈0 for Gaussian noise; exact sign flip under reversal |
 | N7 Interest | Predictive information rate and learning of an online Markov model on timbre symbols | Information dynamics | 0 for iid and deterministic sequences; h(a²) − h(a) for a known chain |

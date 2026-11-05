@@ -1,0 +1,1143 @@
+{
+ "generated": "node tools/batch.js corpus/sfx corpus/music --max-dur 60 (Playhead 0.2.0)",
+ "what": "per file and curve: median absolute correlation between the column-to-column changes (400 display columns) of the curve and of loudness, sounding columns only (tools/selfchecks.js independence())",
+ "medians": {
+  "c2": {
+   "median": 0.08,
+   "files": 73
+  },
+  "c5": {
+   "median": 0.765,
+   "files": 28
+  },
+  "c7": {
+   "median": 0.1,
+   "files": 28
+  },
+  "n1": {
+   "median": 0.17,
+   "files": 71
+  },
+  "n2": {
+   "median": 0.045,
+   "files": 24
+  },
+  "n4": {
+   "median": 0.06,
+   "files": 73
+  },
+  "n5": {
+   "median": 0.11,
+   "files": 73
+  },
+  "n6": {
+   "median": 0.1,
+   "files": 50
+  },
+  "n7": {
+   "median": 0.08,
+   "files": 51
+  },
+  "n8": {
+   "median": 0.09,
+   "files": 35
+  }
+ },
+ "files": [
+  {
+   "name": "sfx/ambi_choir.flac",
+   "independence": {
+    "c2": 0.08,
+    "c5": null,
+    "c7": null,
+    "n1": 0.04,
+    "n2": null,
+    "n4": 0.01,
+    "n5": 0.13,
+    "n6": 0.05,
+    "n7": 0.08,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/ambi_dark_woosh.flac",
+   "independence": {
+    "c2": 0.05,
+    "c5": null,
+    "c7": null,
+    "n1": 0.13,
+    "n2": null,
+    "n4": 0.03,
+    "n5": 0.05,
+    "n6": 0.12,
+    "n7": 0.16,
+    "n8": 0.01
+   }
+  },
+  {
+   "name": "sfx/ambi_drone.flac",
+   "independence": {
+    "c2": 0,
+    "c5": null,
+    "c7": null,
+    "n1": 0.18,
+    "n2": null,
+    "n4": 0.01,
+    "n5": 0.3,
+    "n6": 0.25,
+    "n7": 0.08,
+    "n8": 0.1
+   }
+  },
+  {
+   "name": "sfx/ambi_glass_hum.flac",
+   "independence": {
+    "c2": 0.03,
+    "c5": 0.73,
+    "c7": 0.05,
+    "n1": 0.13,
+    "n2": 0.05,
+    "n4": 0.08,
+    "n5": 0.01,
+    "n6": 0.1,
+    "n7": 0.01,
+    "n8": 0.11
+   }
+  },
+  {
+   "name": "sfx/ambi_glass_rub.flac",
+   "independence": {
+    "c2": 0.13,
+    "c5": null,
+    "c7": null,
+    "n1": 0.27,
+    "n2": null,
+    "n4": 0.03,
+    "n5": 0.39,
+    "n6": 0.22,
+    "n7": 0.09,
+    "n8": 0.04
+   }
+  },
+  {
+   "name": "sfx/ambi_haunted_hum.flac",
+   "independence": {
+    "c2": 0.1,
+    "c5": 0.78,
+    "c7": 0.07,
+    "n1": 0.04,
+    "n2": 0,
+    "n4": 0.01,
+    "n5": 0.07,
+    "n6": 0.24,
+    "n7": 0.04,
+    "n8": 0.12
+   }
+  },
+  {
+   "name": "sfx/ambi_lunar_land.flac",
+   "independence": {
+    "c2": 0.03,
+    "c5": 0.09,
+    "c7": 0.06,
+    "n1": 0.16,
+    "n2": 0.1,
+    "n4": 0.02,
+    "n5": 0.04,
+    "n6": 0.03,
+    "n7": 0.01,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/ambi_piano.flac",
+   "independence": {
+    "c2": 0.13,
+    "c5": null,
+    "c7": null,
+    "n1": 0.24,
+    "n2": null,
+    "n4": 0.01,
+    "n5": 0.2,
+    "n6": 0.14,
+    "n7": 0.04,
+    "n8": 0.22
+   }
+  },
+  {
+   "name": "sfx/ambi_sauna.flac",
+   "independence": {
+    "c2": 0.12,
+    "c5": 0.67,
+    "c7": 0.06,
+    "n1": 0.21,
+    "n2": 0.25,
+    "n4": 0.03,
+    "n5": 0.01,
+    "n6": 0.11,
+    "n7": 0.39,
+    "n8": 0.12
+   }
+  },
+  {
+   "name": "sfx/ambi_soft_buzz.flac",
+   "independence": {
+    "c2": 0.16,
+    "c5": null,
+    "c7": null,
+    "n1": 0.44,
+    "n2": null,
+    "n4": 0.01,
+    "n5": 0.49,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/ambi_swoosh.flac",
+   "independence": {
+    "c2": 0.04,
+    "c5": null,
+    "c7": null,
+    "n1": 0.26,
+    "n2": null,
+    "n4": 0.02,
+    "n5": 0.12,
+    "n6": 0.04,
+    "n7": 0.33,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/bass_drop_c.flac",
+   "independence": {
+    "c2": 0.11,
+    "c5": null,
+    "c7": null,
+    "n1": 0.12,
+    "n2": null,
+    "n4": 0.03,
+    "n5": 0.1,
+    "n6": 0.36,
+    "n7": 0.1,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/bass_hit_c.flac",
+   "independence": {
+    "c2": 0.36,
+    "c5": null,
+    "c7": null,
+    "n1": 0.06,
+    "n2": null,
+    "n4": 0.03,
+    "n5": 0.1,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/bass_woodsy_c.flac",
+   "independence": {
+    "c2": 0.06,
+    "c5": null,
+    "c7": null,
+    "n1": 0.13,
+    "n2": null,
+    "n4": 0.08,
+    "n5": 0.1,
+    "n6": 0.02,
+    "n7": 0.08,
+    "n8": 0.14
+   }
+  },
+  {
+   "name": "sfx/drum_cymbal_open.flac",
+   "independence": {
+    "c2": 0.06,
+    "c5": null,
+    "c7": null,
+    "n1": 0.15,
+    "n2": null,
+    "n4": 0.06,
+    "n5": 0.1,
+    "n6": 0.18,
+    "n7": 0.14,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/drum_heavy_kick.flac",
+   "independence": {
+    "c2": 0.22,
+    "c5": null,
+    "c7": null,
+    "n1": 0.62,
+    "n2": null,
+    "n4": 0.07,
+    "n5": 0.18,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/drum_roll.flac",
+   "independence": {
+    "c2": 0.04,
+    "c5": 0.77,
+    "c7": 0.16,
+    "n1": 0.04,
+    "n2": null,
+    "n4": 0.02,
+    "n5": 0.01,
+    "n6": 0.19,
+    "n7": 0.33,
+    "n8": 0.08
+   }
+  },
+  {
+   "name": "sfx/drum_snare_hard.flac",
+   "independence": {
+    "c2": 0.16,
+    "c5": null,
+    "c7": null,
+    "n1": 0.01,
+    "n2": null,
+    "n4": 0.03,
+    "n5": 0.17,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/drum_splash_hard.flac",
+   "independence": {
+    "c2": 0.33,
+    "c5": null,
+    "c7": null,
+    "n1": 0.07,
+    "n2": null,
+    "n4": 0.08,
+    "n5": 0.06,
+    "n6": 0.27,
+    "n7": 0.12,
+    "n8": 0.1
+   }
+  },
+  {
+   "name": "sfx/drum_tom_lo_hard.flac",
+   "independence": {
+    "c2": 0.06,
+    "c5": null,
+    "c7": null,
+    "n1": 0.09,
+    "n2": null,
+    "n4": 0.02,
+    "n5": 0.1,
+    "n6": null,
+    "n7": 0.07,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/elec_bell.flac",
+   "independence": {
+    "c2": 0.18,
+    "c5": null,
+    "c7": null,
+    "n1": 0.48,
+    "n2": null,
+    "n4": 0.05,
+    "n5": 0.15,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/elec_blip.flac",
+   "independence": {
+    "c2": 0.06,
+    "c5": null,
+    "c7": null,
+    "n1": null,
+    "n2": null,
+    "n4": 0.08,
+    "n5": 0.11,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/elec_chime.flac",
+   "independence": {
+    "c2": 0.11,
+    "c5": null,
+    "c7": null,
+    "n1": 0.15,
+    "n2": null,
+    "n4": 0.26,
+    "n5": 0.21,
+    "n6": 0.05,
+    "n7": 0.03,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/elec_cymbal.flac",
+   "independence": {
+    "c2": 0.11,
+    "c5": null,
+    "c7": null,
+    "n1": 0.34,
+    "n2": null,
+    "n4": 0.04,
+    "n5": 0.03,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/elec_fuzz_tom.flac",
+   "independence": {
+    "c2": 0.31,
+    "c5": null,
+    "c7": null,
+    "n1": 0.21,
+    "n2": null,
+    "n4": 0.27,
+    "n5": 0.29,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/elec_ping.flac",
+   "independence": {
+    "c2": 0.4,
+    "c5": null,
+    "c7": null,
+    "n1": null,
+    "n2": null,
+    "n4": 0.09,
+    "n5": 0.22,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/elec_twang.flac",
+   "independence": {
+    "c2": 0.04,
+    "c5": null,
+    "c7": null,
+    "n1": 0.14,
+    "n2": null,
+    "n4": 0.07,
+    "n5": 0.22,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/elec_wood.flac",
+   "independence": {
+    "c2": 0.07,
+    "c5": null,
+    "c7": null,
+    "n1": 0.47,
+    "n2": null,
+    "n4": 0.04,
+    "n5": 0.35,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/glitch_bass_g.flac",
+   "independence": {
+    "c2": 0.04,
+    "c5": null,
+    "c7": null,
+    "n1": 0.11,
+    "n2": null,
+    "n4": 0.02,
+    "n5": 0.1,
+    "n6": 0.04,
+    "n7": 0.3,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/glitch_perc1.flac",
+   "independence": {
+    "c2": 0.06,
+    "c5": null,
+    "c7": null,
+    "n1": 0.11,
+    "n2": null,
+    "n4": 0.08,
+    "n5": 0.06,
+    "n6": 0.15,
+    "n7": 0.07,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/glitch_perc2.flac",
+   "independence": {
+    "c2": 0.01,
+    "c5": null,
+    "c7": null,
+    "n1": 0.19,
+    "n2": null,
+    "n4": 0.08,
+    "n5": 0.36,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/glitch_perc3.flac",
+   "independence": {
+    "c2": 0.09,
+    "c5": null,
+    "c7": null,
+    "n1": 0.06,
+    "n2": null,
+    "n4": 0.09,
+    "n5": 0.34,
+    "n6": 0.03,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/glitch_perc4.flac",
+   "independence": {
+    "c2": 0.21,
+    "c5": null,
+    "c7": null,
+    "n1": 0.04,
+    "n2": null,
+    "n4": 0.1,
+    "n5": 0.17,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/glitch_perc5.flac",
+   "independence": {
+    "c2": 0.28,
+    "c5": null,
+    "c7": null,
+    "n1": 0.07,
+    "n2": null,
+    "n4": 0.01,
+    "n5": 0.55,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/glitch_robot1.flac",
+   "independence": {
+    "c2": 0.25,
+    "c5": null,
+    "c7": null,
+    "n1": 0.17,
+    "n2": null,
+    "n4": 0,
+    "n5": 0.08,
+    "n6": null,
+    "n7": 0.1,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/glitch_robot2.flac",
+   "independence": {
+    "c2": 0.08,
+    "c5": null,
+    "c7": null,
+    "n1": 0.17,
+    "n2": null,
+    "n4": 0.15,
+    "n5": 0.03,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/guit_e_fifths.flac",
+   "independence": {
+    "c2": 0.09,
+    "c5": 0.75,
+    "c7": 0.08,
+    "n1": 0.08,
+    "n2": null,
+    "n4": 0.01,
+    "n5": 0.05,
+    "n6": 0.01,
+    "n7": 0.08,
+    "n8": 0.01
+   }
+  },
+  {
+   "name": "sfx/guit_e_slide.flac",
+   "independence": {
+    "c2": 0.28,
+    "c5": null,
+    "c7": null,
+    "n1": 0.18,
+    "n2": null,
+    "n4": 0.02,
+    "n5": 0.03,
+    "n6": 0.06,
+    "n7": 0.07,
+    "n8": 0.06
+   }
+  },
+  {
+   "name": "sfx/guit_em9.flac",
+   "independence": {
+    "c2": 0,
+    "c5": 0.78,
+    "c7": 0.06,
+    "n1": 0.17,
+    "n2": 0.43,
+    "n4": 0.07,
+    "n5": 0.08,
+    "n6": 0.01,
+    "n7": 0.03,
+    "n8": 0.09
+   }
+  },
+  {
+   "name": "sfx/guit_harmonics.flac",
+   "independence": {
+    "c2": 0.05,
+    "c5": null,
+    "c7": null,
+    "n1": 0.14,
+    "n2": null,
+    "n4": 0.13,
+    "n5": 0.36,
+    "n6": 0.22,
+    "n7": 0.01,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/loop_amen.flac",
+   "independence": {
+    "c2": 0.04,
+    "c5": null,
+    "c7": null,
+    "n1": 0.13,
+    "n2": null,
+    "n4": 0.06,
+    "n5": 0.2,
+    "n6": 0.32,
+    "n7": 0.05,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/loop_breakbeat.flac",
+   "independence": {
+    "c2": 0.07,
+    "c5": null,
+    "c7": null,
+    "n1": 0.12,
+    "n2": null,
+    "n4": 0.08,
+    "n5": 0.34,
+    "n6": 0.41,
+    "n7": 0.17,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/loop_garzul.flac",
+   "independence": {
+    "c2": 0.13,
+    "c5": 0.9,
+    "c7": 0.05,
+    "n1": 0.08,
+    "n2": 0.04,
+    "n4": 0.13,
+    "n5": 0.17,
+    "n6": 0.12,
+    "n7": 0.04,
+    "n8": 0.01
+   }
+  },
+  {
+   "name": "sfx/loop_industrial.flac",
+   "independence": {
+    "c2": 0.02,
+    "c5": null,
+    "c7": null,
+    "n1": 0,
+    "n2": null,
+    "n4": 0.02,
+    "n5": 0.05,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/loop_mika.flac",
+   "independence": {
+    "c2": 0.01,
+    "c5": 0.84,
+    "c7": 0.31,
+    "n1": 0.05,
+    "n2": 0.18,
+    "n4": 0,
+    "n5": 0.2,
+    "n6": 0.03,
+    "n7": 0.14,
+    "n8": 0.44
+   }
+  },
+  {
+   "name": "sfx/misc_burp.flac",
+   "independence": {
+    "c2": 0.03,
+    "c5": null,
+    "c7": null,
+    "n1": 0.18,
+    "n2": null,
+    "n4": 0.02,
+    "n5": 0.21,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/misc_cineboom.flac",
+   "independence": {
+    "c2": 0.05,
+    "c5": 0.79,
+    "c7": 0.36,
+    "n1": 0.09,
+    "n2": 0.04,
+    "n4": 0.08,
+    "n5": 0.01,
+    "n6": 0.02,
+    "n7": 0.07,
+    "n8": 0.06
+   }
+  },
+  {
+   "name": "sfx/misc_crow.flac",
+   "independence": {
+    "c2": 0.5,
+    "c5": null,
+    "c7": null,
+    "n1": 0.59,
+    "n2": null,
+    "n4": 0.08,
+    "n5": 0.56,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/perc_bell.flac",
+   "independence": {
+    "c2": 0.02,
+    "c5": 0.37,
+    "c7": 0.17,
+    "n1": 0.12,
+    "n2": null,
+    "n4": 0.01,
+    "n5": 0.01,
+    "n6": 0.2,
+    "n7": 0.03,
+    "n8": 0.04
+   }
+  },
+  {
+   "name": "sfx/perc_snap.flac",
+   "independence": {
+    "c2": 0.17,
+    "c5": null,
+    "c7": null,
+    "n1": 0.27,
+    "n2": null,
+    "n4": 0.21,
+    "n5": 0.1,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/perc_swash.flac",
+   "independence": {
+    "c2": 0.11,
+    "c5": null,
+    "c7": null,
+    "n1": 0.26,
+    "n2": null,
+    "n4": 0.1,
+    "n5": 0.41,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/perc_till.flac",
+   "independence": {
+    "c2": 0.1,
+    "c5": null,
+    "c7": null,
+    "n1": 0.09,
+    "n2": null,
+    "n4": 0.05,
+    "n5": 0.11,
+    "n6": 0.03,
+    "n7": 0.11,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/vinyl_backspin.flac",
+   "independence": {
+    "c2": 0.07,
+    "c5": null,
+    "c7": null,
+    "n1": 0.21,
+    "n2": null,
+    "n4": 0.2,
+    "n5": 0.03,
+    "n6": 0.21,
+    "n7": 0.14,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/vinyl_hiss.flac",
+   "independence": {
+    "c2": 0.07,
+    "c5": 0.76,
+    "c7": 0.14,
+    "n1": 0.04,
+    "n2": 0.15,
+    "n4": 0.07,
+    "n5": 0.01,
+    "n6": 0.1,
+    "n7": 0.1,
+    "n8": 0
+   }
+  },
+  {
+   "name": "sfx/vinyl_rewind.flac",
+   "independence": {
+    "c2": 0.27,
+    "c5": null,
+    "c7": null,
+    "n1": 0.73,
+    "n2": null,
+    "n4": 0.06,
+    "n5": 0.29,
+    "n6": 0.16,
+    "n7": 0.07,
+    "n8": null
+   }
+  },
+  {
+   "name": "sfx/vinyl_scratch.flac",
+   "independence": {
+    "c2": 0.17,
+    "c5": null,
+    "c7": null,
+    "n1": 0.46,
+    "n2": null,
+    "n4": 0.11,
+    "n5": 0.45,
+    "n6": null,
+    "n7": null,
+    "n8": null
+   }
+  },
+  {
+   "name": "music/147793__setuniman__sweet-waltz-0i-22mi.ogg",
+   "independence": {
+    "c2": 0.04,
+    "c5": 0.63,
+    "c7": 0.09,
+    "n1": 0.12,
+    "n2": 0.03,
+    "n4": 0.11,
+    "n5": 0.02,
+    "n6": 0.04,
+    "n7": 0.18,
+    "n8": 0.02
+   }
+  },
+  {
+   "name": "music/198-209-0000.ogg",
+   "independence": {
+    "c2": 0.07,
+    "c5": 0.77,
+    "c7": 0.14,
+    "n1": 0.23,
+    "n2": 0.15,
+    "n4": 0.02,
+    "n5": 0.04,
+    "n6": 0.03,
+    "n7": 0.05,
+    "n8": 0.09
+   }
+  },
+  {
+   "name": "music/3436-172162-0000.ogg",
+   "independence": {
+    "c2": 0.09,
+    "c5": 0.82,
+    "c7": 0.06,
+    "n1": 0.22,
+    "n2": 0.18,
+    "n4": 0.21,
+    "n5": 0.03,
+    "n6": 0.14,
+    "n7": 0.02,
+    "n8": 0
+   }
+  },
+  {
+   "name": "music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg",
+   "independence": {
+    "c2": 0.08,
+    "c5": 0.52,
+    "c7": 0.12,
+    "n1": 0.2,
+    "n2": 0.02,
+    "n4": 0.02,
+    "n5": 0.11,
+    "n6": 0.11,
+    "n7": 0,
+    "n8": 0.09
+   }
+  },
+  {
+   "name": "music/456440__inspectorj__bird-whistling-robin-single-13.ogg",
+   "independence": {
+    "c2": 0.12,
+    "c5": null,
+    "c7": null,
+    "n1": 0.36,
+    "n2": null,
+    "n4": 0.04,
+    "n5": 0.14,
+    "n6": 0.03,
+    "n7": 0.13,
+    "n8": 0.23
+   }
+  },
+  {
+   "name": "music/5703-47212-0000.ogg",
+   "independence": {
+    "c2": 0.07,
+    "c5": 0.82,
+    "c7": 0.07,
+    "n1": 0.21,
+    "n2": 0.04,
+    "n4": 0.09,
+    "n5": 0.1,
+    "n6": 0.02,
+    "n7": 0.04,
+    "n8": 0.04
+   }
+  },
+  {
+   "name": "music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg",
+   "independence": {
+    "c2": 0.05,
+    "c5": 0.79,
+    "c7": 0.11,
+    "n1": 0.4,
+    "n2": 0.03,
+    "n4": 0.11,
+    "n5": 0.1,
+    "n6": 0.12,
+    "n7": 0.07,
+    "n8": 0.07
+   }
+  },
+  {
+   "name": "music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg",
+   "independence": {
+    "c2": 0.01,
+    "c5": 0.64,
+    "c7": 0.05,
+    "n1": 0.06,
+    "n2": 0.05,
+    "n4": 0.04,
+    "n5": 0.17,
+    "n6": 0.05,
+    "n7": 0.14,
+    "n8": 0.22
+   }
+  },
+  {
+   "name": "music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg",
+   "independence": {
+    "c2": 0.09,
+    "c5": 0.75,
+    "c7": 0.14,
+    "n1": 0.67,
+    "n2": 0,
+    "n4": 0.09,
+    "n5": 0.14,
+    "n6": 0.02,
+    "n7": 0.04,
+    "n8": 0
+   }
+  },
+  {
+   "name": "music/Kevin_MacLeod_-_Vibe_Ace.ogg",
+   "independence": {
+    "c2": 0.02,
+    "c5": 0.66,
+    "c7": 0.06,
+    "n1": 0.24,
+    "n2": 0.01,
+    "n4": 0.02,
+    "n5": 0.07,
+    "n6": 0.06,
+    "n7": 0.01,
+    "n8": 0.25
+   }
+  },
+  {
+   "name": "music/admiralbob77_-_Choice_-_Drum-bass.ogg",
+   "independence": {
+    "c2": 0.01,
+    "c5": 0.83,
+    "c7": 0.2,
+    "n1": 0.06,
+    "n2": 0.07,
+    "n4": 0.08,
+    "n5": 0.02,
+    "n6": 0.13,
+    "n7": 0.01,
+    "n8": 0.06
+   }
+  },
+  {
+   "name": "music/drese-midi.ogg",
+   "independence": {
+    "c2": 0.19,
+    "c5": 0.65,
+    "c7": 0.03,
+    "n1": 0.28,
+    "n2": 0.12,
+    "n4": 0.05,
+    "n5": 0.09,
+    "n6": 0.09,
+    "n7": 0.08,
+    "n8": 0.13
+   }
+  },
+  {
+   "name": "music/drese-tempo.ogg",
+   "independence": {
+    "c2": 0.03,
+    "c5": 0.77,
+    "c7": 0.2,
+    "n1": 0.57,
+    "n2": 0.02,
+    "n4": 0.16,
+    "n5": 0.27,
+    "n6": 0.04,
+    "n7": 0.14,
+    "n8": 0.09
+   }
+  },
+  {
+   "name": "music/glacier-bay-humpback.ogg",
+   "independence": {
+    "c2": 0.02,
+    "c5": 0.81,
+    "c7": 0.44,
+    "n1": 0.19,
+    "n2": 0.01,
+    "n4": 0.07,
+    "n5": 0.2,
+    "n6": 0.33,
+    "n7": 0.2,
+    "n8": 0.58
+   }
+  },
+  {
+   "name": "music/pibble.ogg",
+   "independence": {
+    "c2": 0.35,
+    "c5": 0.6,
+    "c7": 0.44,
+    "n1": 0.31,
+    "n2": 0.04,
+    "n4": 0.23,
+    "n5": 0.08,
+    "n6": 0.1,
+    "n7": 0.11,
+    "n8": 0.18
+   }
+  },
+  {
+   "name": "music/snare-accelerate.ogg",
+   "independence": {
+    "c2": 0.18,
+    "c5": 0.74,
+    "c7": 0.54,
+    "n1": 0.22,
+    "n2": 0.16,
+    "n4": 0.01,
+    "n5": 0.21,
+    "n6": 0.02,
+    "n7": 0.04,
+    "n8": 0.18
+   }
+  },
+  {
+   "name": "music/sorohanro_-_solo-trumpet-06.ogg",
+   "independence": {
+    "c2": 0.01,
+    "c5": 0.78,
+    "c7": 0.01,
+    "n1": 0.02,
+    "n2": null,
+    "n4": 0,
+    "n5": 0.01,
+    "n6": 0.03,
+    "n7": 0.25,
+    "n8": 0.09
+   }
+  }
+ ]
+}
