@@ -34,6 +34,27 @@ module.exports = async function (check) {
   const calls = {}; const ctx = new Proxy({ canvas: { width: 400, height: 48 } }, { get: (t, k) => k in t ? t[k] : (calls[k] = (calls[k] || 0), (...a) => { calls[k]++; }), set: (t, k, v) => { t[k] = v; return true; } });
   let drew = true; try { Playhead.drawStrip(ctx, m, {}); Playhead.drawStrip(ctx, g1, { from: 0.1, to: 0.5, curve: "n1Kurtosis", colour: null }); } catch (e) { drew = false; }
   check("api: strip renderer draws on any 2D context", (calls.fillRect || 0) + " columns", drew && calls.fillRect >= 800 && calls.stroke > 0);
+  // looks: the automatic look and its explicit code draw the same; codes round-trip; every look draws with a legend
+  const logOf = (doc, opts) => { const log = []; const c = new Proxy({ canvas: { width: 500, height: 80 } }, { get: (t, k) => k in t ? t[k] : (...a) => { log.push(k + JSON.stringify(a)); }, set: (t, k, v) => { log.push(k + "=" + JSON.stringify(v)); return true; } }); const r = Playhead.drawStrip(c, doc, opts); return { log: log.join("\n"), r }; };
+  const same = logOf(m, {}).log === logOf(m, { look: "wave:activity,sections,line:tension,ticks:downbeats+events" }).log && logOf(g1, {}).log === logOf(g1, { look: "wave:harshness,sections,line:activity,ticks:downbeats+events" }).log;
+  const codes = Object.values(Playhead.looks).filter(L => L.code);
+  const trip = codes.every(L => Playhead.lookCode(Playhead.parseLook(L.code)) === L.code) && Playhead.lookCode(Playhead.parseLook("wave:loudness,bogus,lane:activity~signed,ticks:events+nope")) === "wave:loudness,lane:activity~signed,ticks:events";
+  const drawn = [m, g1].every(d => Object.keys(Playhead.looks).every(k => { const o = logOf(d, { look: k }); return o.log.length > 0 && typeof o.r.legend === "string" && o.r.legend.length > 0; }));
+  const missing = logOf(g1, { look: "structure" }).r.legend.includes("not in this analysis");
+  check("looks: automatic look = its code, codes round-trip, every look draws with a legend", codes.length + " looks", same && trip && drawn && missing);
+  const nov = m.curves.structureNovelty, pulse = m.curves.localPulse;
+  check("api: music documents carry structural change and local pulse", Math.max(...nov).toFixed(2) + " / " + Math.max(...pulse).toFixed(2),
+    nov.length === m.curves.loudness.length && pulse.length === nov.length && nov.every(v => v >= 0 && v <= 1) && Math.max(...pulse) > 0.5 && g1.curves.structureNovelty === undefined);
+  // a change into silence is drawn below the lane's midline, a change into sound above it: a break never reads as "more"
+  const stepDoc = up => { const rate = 20, n = 200, lo = Array.from({ length: n }, (_, i) => (i < 100) === up ? 0.05 : 0.9), nv = Array.from({ length: n }, (_, i) => Math.exp(-Math.pow((i - 100) / 6, 2)));
+    return { profile: "music", source: { duration: 10 }, curves: { rate, loudness: lo, structureNovelty: nv }, wave: { columns: 10, min: Array(10).fill(-0.5), max: Array(10).fill(0.5) }, events: null, sections: null, rhythm: null }; };
+  const bars = doc => { const out = []; let style = null; const c = new Proxy({ canvas: { width: 200, height: 100 } }, { get: (t, k) => k in t ? t[k] : (...a) => { if (k === "fillRect" && a[0] >= 95 && a[0] <= 105 && a[1] >= 72) out.push({ y: a[1], h: a[3], style }); }, set: (t, k, v) => { if (k === "fillStyle") style = v; return true; } });
+    Playhead.drawStrip(c, doc, { layers: "wave,lane:structureNovelty~signed", theme: { lane: "UP", laneDown: "DOWN" } }); return out; };
+  const intoSound = bars(stepDoc(true)), intoSilence = bars(stepDoc(false)), mid = 72 + 1 + (100 - 72 - 1) / 2;
+  check("looks: signed change lane: up into sound, down into silence", `${intoSound.length} / ${intoSilence.length} columns`,
+    intoSound.length > 0 && intoSilence.length > 0 && intoSound.every(b => b.style === "UP" && b.y + b.h <= mid + 0.01) && intoSilence.every(b => b.style === "DOWN" && b.y >= mid - 0.01));
+  const fa = await Playhead.fromAnalysis(await WL.analyse(glass), glass, { name: "glass" });
+  check("api: fromAnalysis gives the analyze() document", "", JSON.stringify(strip(fa)) === JSON.stringify(strip(g1)));
   const pr = await Playhead.process(glass, "layers", { gains: [-12] });
   check("api: process() runs a tool and returns channels", pr.outputs.map(o => o.suffix).join(", "), pr.outputs.length === 1 && pr.outputs[0].channels[0].length === glass.length && pr.report.length > 0);
   // bundles give the same document as the sources

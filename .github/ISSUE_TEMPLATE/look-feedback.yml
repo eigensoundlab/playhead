@@ -1,0 +1,62 @@
+name: Look feedback
+description: Tell us whether a Playhead look helps your work, and what you would change.
+title: "Look feedback: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. A look is a combination of curves, lanes and marks on one strip. Your answers decide which looks
+        become defaults in Playhead, SFX Workbench and kurator. Please do not attach audio you are not allowed to share.
+  - type: input
+    id: look
+    attributes:
+      label: Look code
+      description: Copied from the composer or the app, for example wave,sections,lane:structureNovelty~signed,lane:localPulse
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: Where you used it
+      placeholder: Playhead app, SFX Workbench, kurator, your own tool...
+  - type: dropdown
+    id: material
+    attributes:
+      label: What kind of sound
+      options:
+        - Short sound effects
+        - Ambiences and textures
+        - Music
+        - Dialogue or voice
+        - Mixed
+  - type: textarea
+    id: task
+    attributes:
+      label: What were you trying to do?
+      placeholder: Find the hit in a long take, check a mix for harsh moments, find the drop, compare before and after an effect...
+  - type: dropdown
+    id: helped
+    attributes:
+      label: Compared with a normal waveform or spectrogram, did the look help?
+      options:
+        - Much better
+        - A little better
+        - About the same
+        - Worse
+        - Not sure
+    validations:
+      required: true
+  - type: textarea
+    id: misleading
+    attributes:
+      label: Did anything mislead you?
+      placeholder: For example a curve rising where the sound went quiet, colours you read the wrong way, too much at once...
+  - type: textarea
+    id: change
+    attributes:
+      label: What would you change or add?
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: Screenshot (optional)
+      description: Paste or drag an image here.

@@ -73,6 +73,12 @@ playhead markers song.wav --kinds sections,downbeats   # tab-separated regions a
 playhead process shot.wav --tool layers --param gains=-12
 ```
 
+**Looks.** What goes on the strip is a list of layers (a coloured or plain waveform, a line, up to three lanes such
+as structural change and the local pulse, sections and marks), written as a short look code such as
+`wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats`. The app's **Compose your own** section
+builds one and previews it; the same code works in every host that draws with `drawStrip`, and the feedback link sends
+it with your notes. Structural change is drawn signed: up for an entry, down for a drop or a break into silence.
+
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
 
 ## Batch analysis and self-checks
@@ -311,6 +317,9 @@ paper/                outline and licence of the accompanying paper (CC BY 4.0);
 - Optional WebGPU path for batched FFTs and NMF, behind the CPU reference implementation and its tests, once a pilot shows it is the bottleneck.
 - Fallback decoder for Ogg/Opus where the browser can't decode them.
 - Unity editor package: `[CustomPreview(typeof(AudioClip))]` with `ObjectPreview`, analysis cached by asset GUID through `AssetPostprocessor`.
+- Looks: an objective comparison on the built-in signals (does the strongest visible change land on the true event,
+  boundary or harshest moment, also at thumbnail size), then a task study with sound designers; feedback from the
+  composer, SFX Workbench and kurator decides the defaults.
 - Validation on real material: DEAM continuous arousal ratings, beat and structure datasets, and a short user study comparing the preview designs at 48, 24 and 12 px height.
 - Second tier of descriptors from the research notes: DMD/ESPRIT modal decomposition, texture statistics, horizontal visibility graphs, detrended fluctuation analysis, a phasegram for growls.
 - More calibrated parameters (structure noise floors, STA/LTA trigger, repetition thresholds) in the joint grid, and a larger, more varied calibration library.

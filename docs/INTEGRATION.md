@@ -31,7 +31,10 @@ const r = await Playhead.process(sound, "deharsh", { amount: 0.6 });   // r.outp
 | Function | Returns |
 |---|---|
 | `analyze(input, opts)` | a JSON document (below). `input` is an `AudioBuffer` or `{ sampleRate, channels: [Float32Array, ...] }` (mono or stereo). `opts`: `profile`, `name`, `curveRate` (curve samples per second; default 100 up to 10 s, 20 above), `waveColumns` (default 1000), `assetClass` (override the guess), `onProgress(p)` |
-| `drawStrip(ctx, doc, opts)` | draws a strip into any Canvas 2D context, including an `OffscreenCanvas` in a worker. `opts`: `width`, `height`, `from`, `to` (seconds), `curve` (the line), `colour` (the curve that colours the waveform, `null` for none), `lineRange`, `events`, `sections`, `beats`, `theme` |
+| `drawStrip(ctx, doc, opts)` | draws a strip into any Canvas 2D context, including an `OffscreenCanvas` in a worker, and returns `{ code, layers, legend }`. `opts`: `width`, `height`, `from`, `to` (seconds), `theme`, and `look` (a look name or look code, see [Looks](#looks)) or `layers`; without them the automatic look, which the older options `curve`, `colour`, `lineRange`, `events`, `sections`, `beats` still adjust |
+| `fromAnalysis(F, input, opts)` | the document for an existing `WL.analyse()` result, without analysing again |
+| `parseLook(code)`, `lookCode(layers)`, `describeLook(layers, doc)` | look code to layers and back; a plain-language legend |
+| `looks`, `curveLabels` | the ready-made looks (`name`, `desc`, `code`) and readable names of the curves, for menus |
 | `toMarkers(doc, { kinds })` | `[{ kind: "region" | "marker", start, end?, name }]` from `sections`, `events`, `downbeats`, `onsets` |
 | `curveAt(doc, name, t, fallback)` | a curve's value at time `t`, interpolated: for driving generator and effect parameters |
 | `process(input, toolId, params)` | runs one of the effects bench tools: `{ outputs: [{ suffix, sampleRate, channels }], report }` |
@@ -56,7 +59,7 @@ The first analysis at a new sample rate adds about 0.25 s of one-time calibratio
 | `source` | `name`, `sampleRate`, `channels`, `duration` (s); the command line adds `path` |
 | `profile`, `assetClass`, `guessedClass` | what was computed; the class used for the curves (`sfx`, `rhythmic`, `orchestral`, `ambience`…) |
 | `summary` | `peakLufs`, `loudnessRange`, `soundStart`, `soundEnd`; with events also `peakDb`, `attack` |
-| `curves` | `rate` (samples per second), `start` (0), then one array per curve, `null` where silent. 0–1 on fixed library-wide scales: `loudness`, `activity`, `arousal`, `harshness`, `tension`, `harmonicTension`, `surprise`; in LUFS: `lufs`; with descriptors also `n1Kurtosis`, `n2RepetitionHz`, `n4Velocity` (oct/s), `n5Cpp` (dB), `n5Coherence`, `n6Arrow`, `n7Surprisal`, `n8Recurrence` |
+| `curves` | `rate` (samples per second), `start` (0), then one array per curve, `null` where silent. 0–1 on fixed library-wide scales: `loudness`, `activity`, `arousal`, `harshness`, `tension`, `harmonicTension`, `surprise`; in LUFS: `lufs`; with descriptors also `n1Kurtosis`, `n2RepetitionHz`, `n4Velocity` (oct/s), `n5Cpp` (dB), `n5Coherence`, `n6Arrow`, `n7Surprisal`, `n8Recurrence`; music profile also `structureNovelty` (Foote novelty, 0–1, values in silence too) and `localPulse` (PLP scaled by its clarity, 0–1). New curves are added without changing the schema version: read the ones you know and ignore the rest |
 | `wave` | `columns`, `min`, `max`, `rms`: a waveform overview for thumbnails without decoding again |
 | `onsets` | onset times (s) |
 | `events` | `start`, `end`, `decayEnd`, `peak`, `peakDb`, `tag` (Schaeffer-style, e.g. `N′`), `word` (e.g. `tonal hit`), `facture`, `mass`, `direction`, `f0`, `grains` |
@@ -67,6 +70,34 @@ The first analysis at a new sample rate adds about 0.25 s of one-time calibratio
 | `timing` | `ms` taken |
 
 Fields not computed by a profile are `null`. Version 1 may gain fields; a change that removes or redefines one raises `schemaVersion`.
+
+## Looks
+
+A strip is a list of layers on one time axis; a **look** is a named list, and a **look code** is the same list as short
+text that hosts can store, offer in a menu, paste between apps and send with feedback.
+
+| Layer | Code | Draws |
+|---|---|---|
+| waveform | `wave` or `wave:<curve>` | the waveform, plain or tinted along the theme's ramp (`waveLow` → `waveHigh`) by a 0–1 curve |
+| line | `line:<curve>` | a curve over the waveform (descriptor curves on their 5th–95th percentile) |
+| lane | `lane:<curve>` or `lane:<curve>~signed` | a curve in its own lane under the waveform (up to three lanes share about half the height). `~signed` is for change curves such as `structureNovelty`: drawn up where the level rises across the change (an entry), down where it falls (a drop, a break into silence) and centred where only the material changes, so a break never reads as "more" |
+| sections | `sections` | boundaries and letters (music profile) |
+| marks | `ticks:<kinds>` | `events`, `onsets`, `beats`, `downbeats`, joined with `+` |
+
+Ready-made looks (`Playhead.looks`): `auto` (the default: by profile), `plain` (waveform only), `structure`
+(`wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats`), `rhythm`, `tension`, `events` and
+`lanes` (three separate lanes, no colour mixing). A layer whose curve is not in the document is left out and the
+legend says so (`structure` and `rhythm` need the music profile).
+
+```js
+const r = Playhead.drawStrip(g, doc, { look: "wave:harshness,lane:activity,ticks:events", theme });
+legendElement.textContent = r.legend;      // "colour: harshness · lane: activity · marks: events"
+```
+
+Hosts should draw only through `drawStrip` and take the legend from its return value, so a new Playhead build
+changes the look everywhere by replacing one file. The Playhead app's composer ("Compose your own") builds look codes
+and links to a feedback form (`.github/ISSUE_TEMPLATE/look-feedback.yml`, prefilled with the code); hosts can link to
+`https://github.com/eigensoundlab/playhead/issues/new?template=look-feedback.yml&look=<code>&app=<host name>`.
 
 ## Recipes
 

@@ -146,6 +146,7 @@ function buildRows() {
   STR.forEach(s => mkRow($("rows-structure"), s, "structure"));
   DESCROWS.forEach(s => mkRow($("rows-desc"), s, "desc"));
   DESIGNS.forEach(s => mkRow($("rows-design"), s, "design"));
+  if ($("rows-compose")) mkRow($("rows-compose"), { id: "compose", name: "Your combination", desc: "" }, "compose");
 }
 
 /* ---------------- files ---------------- */
@@ -630,6 +631,7 @@ function drawStripFor(cv, spec, f, cols, h, P, opts) {
   const g = prep(cv, h), x = g.x, w = g.w;
   x.fillStyle = P.bg; x.fillRect(0, 0, w, h);
   if (!f || !f.F) return;
+  if (spec.id === "compose") { drawCompose(x, P, w, h, f); return; }
   const v = viewOf(f, cols);
   const C = WL.CLASSES[v.cls];
   if (!opts.thumb) drawSegLines(x, P, segCols(f, cols), h);
@@ -652,6 +654,130 @@ function drawStripFor(cv, spec, f, cols, h, P, opts) {
   }
   if (ticks && C.surprise) drawTicks(x, P, w, h, v.ticks, cols);
 }
+/* ---------------- composer: the user's own combination, drawn by Playhead.drawStrip ----------------
+   The same renderer and look codes are used by SFX Workbench and kurator, so a combination found here can be
+   pasted there, and sent with feedback. */
+const PHAPI = window.Playhead || null;
+const CMP_COLOURS = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise"];
+const CMP_LINES = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "structureNovelty", "localPulse", "n1Kurtosis", "n4Velocity", "n6Arrow", "n7Surprisal"];
+const CMP_LANES = ["structureNovelty", "localPulse", "loudness", "activity", "arousal", "harshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
+const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Downbeats"], ["beats", "Beats"], ["onsets", "Onsets"], ["events", "Events"]];
+const CMP_MAX_LANES = 3, CMP_H = 112;
+const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : "") };
+const cmpLabel = k => k ? (PHAPI && PHAPI.curveLabels[k]) || k : "None";
+// look code <-> control state
+function cmpState(code) {
+  const st = { colour: "", line: "", lanes: [], signed: true, marks: new Set() };
+  for (const l of (PHAPI && PHAPI.parseLook(code)) || []) {
+    if (l.type === "wave") st.colour = l.colour || "";
+    else if (l.type === "line") st.line = l.curve;
+    else if (l.type === "lane" && st.lanes.length < CMP_MAX_LANES) { st.lanes.push(l.curve); if (l.curve === "structureNovelty") st.signed = !!l.signed; }
+    else if (l.type === "sections") st.marks.add("sections");
+    else if (l.type === "ticks") for (const k of l.of) st.marks.add(k);
+  }
+  return st;
+}
+function cmpCode(st) {
+  const parts = ["wave" + (st.colour ? ":" + st.colour : "")];
+  if (st.marks.has("sections")) parts.push("sections");
+  if (st.line) parts.push("line:" + st.line);
+  for (const k of st.lanes) parts.push("lane:" + k + (k === "structureNovelty" && st.signed ? "~signed" : ""));
+  const ticks = CMP_MARKS.map(m => m[0]).filter(k => k !== "sections" && st.marks.has(k));
+  if (ticks.length) parts.push("ticks:" + ticks.join("+"));
+  return parts.join(",");
+}
+function themeOf(P) {
+  return { background: null, wave: P.ink, waveLow: P.ramp[0], waveHigh: P.ramp[P.ramp.length - 1], line: P.line, tick: P.tick, text: P.rulerInk, rule: P.off,
+    lane: P.cat[0], laneDown: P.cat[1], laneFlat: P.off };
+}
+// the Playhead document for a file, built once per asset class from the analysis the lab already has
+function composeDoc(f) {
+  const key = effClass(f);
+  f.phDocs = f.phDocs || {};
+  const have = f.phDocs[key];
+  if (have) return have;
+  const ent = f.phDocs[key] = { doc: null, err: null };
+  PHAPI.fromAnalysis(f.F, f.buf, { profile: f.dur > 6 ? "music" : "sfx", assetClass: key, name: f.name })
+    .then(d => { ent.doc = d; if (S.sel === f) redrawCompose(); })
+    .catch(e => { ent.err = e && e.message || String(e); console.error(e); if (S.sel === f) redrawCompose(); });
+  return ent;
+}
+function drawCompose(x, P, w, h, f) {
+  if (!PHAPI) { drawOff(x, P, w, h, "The Playhead API (src/playhead.js) is not loaded"); return; }
+  const ent = composeDoc(f);
+  if (!ent.doc) { drawOff(x, P, w, h, ent.err ? "Could not prepare this file: " + ent.err : "Preparing…"); return; }
+  const r = PHAPI.drawStrip(x, ent.doc, { width: w, height: h, look: CMP.code, theme: themeOf(P) });
+  const ds = $("ds-compose"); if (ds) ds.textContent = r.legend;
+}
+function redrawCompose() {
+  const sc = scopes.find(s => s.spec.id === "compose"), ruler = scopes.find(s => s.spec.id === "ruler");
+  if (!sc) return;
+  drawStripFor(sc.cv, sc.spec, S.sel && S.sel.F ? S.sel : null, Math.max(50, Math.floor(ruler.cv.clientWidth || 800)), CMP_H, PANELS[S.panel]);
+}
+function buildComposer() {
+  const box = $("composer");
+  if (!box) return;
+  if (!PHAPI) { box.textContent = "The composer needs src/playhead.js."; return; }
+  const sel = (id, label, opts, title) => {
+    const l = el("label", "ctl"); l.htmlFor = id; l.appendChild(document.createTextNode(label + " "));
+    const s = el("select"); s.id = id; if (title) l.title = title;
+    for (const [v, t] of opts) { const o = el("option", "", t); o.value = v; s.appendChild(o); }
+    l.appendChild(s); return [l, s];
+  };
+  const lookOpts = [["", "Your own"]].concat(Object.entries(PHAPI.looks).map(([k, L]) => [k, L.name]));
+  const [lLook, sLook] = sel("cmp-look", "Start from", lookOpts, "Ready-made looks; changing anything below makes it your own");
+  const [lCol, sCol] = sel("cmp-colour", "Waveform colour", CMP_COLOURS.map(k => [k, cmpLabel(k)]), "A curve that tints the waveform, from the low to the high end of the colour ramp");
+  const [lLine, sLine] = sel("cmp-line", "Line", CMP_LINES.map(k => [k, cmpLabel(k)]), "A curve drawn over the waveform");
+  const lanes = el("fieldset"); lanes.appendChild(el("legend", "", "Lanes under the waveform (up to " + CMP_MAX_LANES + ")"));
+  const laneBoxes = CMP_LANES.map(k => { const l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.value = k; l.appendChild(c); l.appendChild(document.createTextNode(" " + cmpLabel(k))); lanes.appendChild(l); return c; });
+  const sl = el("label", "chk"), signed = el("input"); signed.type = "checkbox"; sl.appendChild(signed);
+  sl.appendChild(document.createTextNode(" Structural change: up for an entry, down for a drop or break"));
+  sl.title = "Change curves are direction-free: a break into silence is as new as a drop. With this on, the lane shows which way the level goes, so a break never reads as more.";
+  lanes.appendChild(sl);
+  const marks = el("fieldset"); marks.appendChild(el("legend", "", "Marks"));
+  const markBoxes = CMP_MARKS.map(([k, t]) => { const l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.value = k; l.appendChild(c); l.appendChild(document.createTextNode(" " + t)); marks.appendChild(l); return c; });
+  const codeRow = el("div", "cmp-code");
+  const cl = el("label", "ctl"); cl.htmlFor = "cmp-code"; cl.appendChild(document.createTextNode("Look code "));
+  const code = el("input"); code.id = "cmp-code"; code.spellcheck = false; code.title = "Paste a look code and press Enter. The same codes work in SFX Workbench and kurator.";
+  cl.appendChild(code);
+  const copy = el("button", "", "Copy"); copy.type = "button";
+  const fb = el("a", "", "Tell us if this helps"); fb.target = "_blank"; fb.rel = "noopener";
+  codeRow.append(cl, copy, fb);
+  box.append(lLook, lCol, lLine, lanes, marks, codeRow);
+
+  const show = () => {
+    const st = cmpState(CMP.code);
+    sCol.value = st.colour; sLine.value = st.line; signed.checked = st.signed;
+    laneBoxes.forEach(c => { c.checked = st.lanes.includes(c.value); c.disabled = !c.checked && st.lanes.length >= CMP_MAX_LANES; });
+    signed.disabled = !st.lanes.includes("structureNovelty");
+    markBoxes.forEach(c => { c.checked = st.marks.has(c.value); });
+    const named = Object.entries(PHAPI.looks).find(([, L]) => L.code === CMP.code);
+    sLook.value = named ? named[0] : "";
+    code.value = CMP.code;
+    fb.href = "https://github.com/eigensoundlab/playhead/issues/new?template=look-feedback.yml&title=" + encodeURIComponent("Look feedback: " + CMP.code) + "&look=" + encodeURIComponent(CMP.code) + "&app=" + encodeURIComponent("Playhead app");
+  };
+  const set = c => { CMP.code = c; store.set("look", c); show(); redrawCompose(); };
+  const fromControls = () => {
+    const st = { colour: sCol.value, line: sLine.value, signed: signed.checked, lanes: CMP_LANES.filter(k => laneBoxes.find(c => c.value === k).checked).slice(0, CMP_MAX_LANES), marks: new Set(markBoxes.filter(c => c.checked).map(c => c.value)) };
+    set(cmpCode(st));
+  };
+  sLook.addEventListener("change", () => {
+    const L = PHAPI.looks[sLook.value];
+    if (!L) return;
+    // the automatic look depends on the file: take what it draws for the selected one (or for music when none is open)
+    const f = S.sel, ent = f && f.F && f.phDocs && f.phDocs[effClass(f)];
+    set(L.code || PHAPI.lookCode(PHAPI.parseLook(ent && ent.doc && (ent.doc.profile === "sfx") ? "wave:harshness,line:activity,ticks:events" : "wave:activity,sections,line:tension,ticks:downbeats+events")));
+  });
+  [sCol, sLine, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
+  code.addEventListener("change", () => { const ls = PHAPI.parseLook(code.value); if (ls && ls.length) set(PHAPI.lookCode(ls)); else show(); });
+  copy.addEventListener("click", async () => {
+    try { await navigator.clipboard.writeText(CMP.code); copy.textContent = "Copied"; }
+    catch (e) { code.focus(); code.select(); copy.textContent = "Selected, now copy it"; }
+    setTimeout(() => { copy.textContent = "Copy"; }, 2000);
+  });
+  show();
+}
+
 function fmtT(t, fine) {
   if (!isFinite(t)) return "0:00";
   const m = Math.floor(t / 60), s = t - m * 60;
@@ -937,7 +1063,7 @@ function render() {
   const ready = f && f.F;
   for (const s of scopes) {
     if (s.group === "ruler") continue;
-    drawStripFor(s.cv, s.spec, ready ? f : null, cols, S.height, P);
+    drawStripFor(s.cv, s.spec, ready ? f : null, cols, s.spec.id === "compose" ? CMP_H : S.height, P);
   }
   updateLabels();
   renderMatrix();
@@ -1583,6 +1709,7 @@ window.addEventListener("resize", () => {
 });
 
 buildRows();
+buildComposer();
 hookScopes();
 render();
 (async () => {
