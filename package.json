@@ -1,6 +1,6 @@
 {
   "name": "playhead",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Playhead waveforms: a waveform plus one or two feature lines that show intensity, rhythm, structure and event type at a glance, with analysis-driven audio tools.",
   "license": "Apache-2.0",
   "author": "Daniel Sandner",

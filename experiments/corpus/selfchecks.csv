@@ -1,0 +1,1437 @@
+file,cls,check,what,value,pass
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,loudness −12.0 LU,-12.1,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,activity unchanged,0,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.192,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,same events,90 vs 90,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,same tempo,149.8,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,same sections,1,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,N2 same repetition rate,0.84 → 0.84,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,N5 CPP unchanged,0,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,N7 interest unchanged,0,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,shift,events move +0.5 s,0.78,false
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,shift,beats move +0.5 s,1,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,shift,sections move +0.5 s,1,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,clip,clipping flagged,yes,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,cut,abrupt end flagged,yes,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,reverse,N6 arrow of time flips sign,0.55 → -0.57,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,reverse,N1 kurtosis unchanged,0,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,reverse,N8 recurrence unchanged,-0.002,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,reverse,N2 same repetition rate,0.84 → 0.84,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,speed,N2 repetition rate ×1.06,1.06,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,speed,N9 ring time ÷1.06,0.949,false
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,speed,tempo ×1.06,1.061,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,speed,pitch +1.0 semitone,-0.84,false
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.97,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,noise,same tempo,149.8,true
+music/147793__setuniman__sweet-waltz-0i-22mi.ogg,rhythmic,join,section boundary at the join (±2 s),0.1 s,true
+music/198-209-0000.ogg,rhythmic,level,loudness −12.0 LU,-12,true
+music/198-209-0000.ogg,rhythmic,level,activity unchanged,0,true
+music/198-209-0000.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.171,true
+music/198-209-0000.ogg,rhythmic,level,same events,51 vs 51,true
+music/198-209-0000.ogg,rhythmic,level,same sections,1,true
+music/198-209-0000.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/198-209-0000.ogg,rhythmic,level,N5 CPP unchanged,0,true
+music/198-209-0000.ogg,rhythmic,level,N7 interest unchanged,0,true
+music/198-209-0000.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/198-209-0000.ogg,rhythmic,shift,events move +0.5 s,0.94,true
+music/198-209-0000.ogg,rhythmic,shift,sections move +0.5 s,0.78,false
+music/198-209-0000.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/198-209-0000.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/198-209-0000.ogg,rhythmic,clip,clipping flagged,yes,true
+music/198-209-0000.ogg,rhythmic,reverse,N1 kurtosis unchanged,-0.49,true
+music/198-209-0000.ogg,rhythmic,reverse,N8 recurrence unchanged,-0.001,true
+music/198-209-0000.ogg,rhythmic,speed,N9 ring time ÷1.06,3.05,false
+music/198-209-0000.ogg,rhythmic,speed,pitch +1.0 semitone,0.77,true
+music/198-209-0000.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/198-209-0000.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+music/198-209-0000.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.98,true
+music/3436-172162-0000.ogg,rhythmic,level,loudness −12.0 LU,-12.1,true
+music/3436-172162-0000.ogg,rhythmic,level,activity unchanged,0.01,true
+music/3436-172162-0000.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.169,true
+music/3436-172162-0000.ogg,rhythmic,level,same events,40 vs 40,true
+music/3436-172162-0000.ogg,rhythmic,level,same sections,1,true
+music/3436-172162-0000.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/3436-172162-0000.ogg,rhythmic,level,N5 CPP unchanged,0.1,true
+music/3436-172162-0000.ogg,rhythmic,level,N7 interest unchanged,-0.009,true
+music/3436-172162-0000.ogg,rhythmic,level,N8 recurrence unchanged,0.002,true
+music/3436-172162-0000.ogg,rhythmic,shift,events move +0.5 s,0.95,true
+music/3436-172162-0000.ogg,rhythmic,shift,sections move +0.5 s,0.8,true
+music/3436-172162-0000.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/3436-172162-0000.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/3436-172162-0000.ogg,rhythmic,clip,clipping flagged,yes,true
+music/3436-172162-0000.ogg,rhythmic,cut,abrupt end flagged,yes,true
+music/3436-172162-0000.ogg,rhythmic,reverse,N1 kurtosis unchanged,0.04,true
+music/3436-172162-0000.ogg,rhythmic,reverse,N8 recurrence unchanged,-0.003,true
+music/3436-172162-0000.ogg,rhythmic,speed,N9 ring time ÷1.06,0.235,false
+music/3436-172162-0000.ogg,rhythmic,speed,pitch +1.0 semitone,1.06,true
+music/3436-172162-0000.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/3436-172162-0000.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),0.99,true
+music/3436-172162-0000.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.93,true
+music/3436-172162-0000.ogg,rhythmic,join,section boundary at the join (±2 s),0.32 s,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,loudness −12.0 LU,-12,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,activity unchanged,0,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.191,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,same events,112 vs 112,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,same tempo,144.1,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,same sections,1,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,N5 CPP unchanged,0,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,N7 interest unchanged,0,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,shift,events move +0.5 s,0.96,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,shift,beats move +0.5 s,1,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,shift,sections move +0.5 s,0.9,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,clip,clipping flagged,yes,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,cut,abrupt end flagged,yes,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,reverse,N6 arrow of time flips sign,0.83 → -0.82,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,reverse,N1 kurtosis unchanged,0.01,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,reverse,N8 recurrence unchanged,0,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,speed,N9 ring time ÷1.06,1.087,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,speed,tempo ×1.06,1.06,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,speed,pitch +1.0 semitone,-1.02,false
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.96,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,noise,same tempo,144.2,true
+music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg,rhythmic,join,section boundary at the join (±2 s),0.29 s,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,level,loudness −12.0 LU,-12,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,level,activity unchanged,0.01,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,level,harshness-weighted loudness (C4) lower,-0.078,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,level,same events,2 vs 2,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,level,N1 kurtosis unchanged,0,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,level,N5 CPP unchanged,0,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,level,N7 interest unchanged,0,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,level,N8 recurrence unchanged,0,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,shift,events move +0.5 s,1,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,hit,new event or onset at the hit (±25 ms),missed,false
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,dc,DC offset flagged,yes,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,clip,clipping flagged,yes,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,reverse,N6 arrow of time flips sign,1.37 → -1.38,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,reverse,N1 kurtosis unchanged,0.53,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,reverse,N8 recurrence unchanged,0,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,speed,N9 material unchanged (log τd),-0.02,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,speed,N9 ring time ÷1.06,1.086,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,speed,pitch +1.0 semitone,0.94,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,speed,length ÷1.06,1.06,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+music/456440__inspectorj__bird-whistling-robin-single-13.ogg,sfx,noise,activity curve holds (r ≥ 0.8),0.96,true
+music/5703-47212-0000.ogg,rhythmic,level,loudness −12.0 LU,-12.1,true
+music/5703-47212-0000.ogg,rhythmic,level,activity unchanged,0,true
+music/5703-47212-0000.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.178,true
+music/5703-47212-0000.ogg,rhythmic,level,same events,42 vs 42,true
+music/5703-47212-0000.ogg,rhythmic,level,same sections,1,true
+music/5703-47212-0000.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/5703-47212-0000.ogg,rhythmic,level,N5 CPP unchanged,0,true
+music/5703-47212-0000.ogg,rhythmic,level,N7 interest unchanged,0,true
+music/5703-47212-0000.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/5703-47212-0000.ogg,rhythmic,shift,events move +0.5 s,0.95,true
+music/5703-47212-0000.ogg,rhythmic,shift,sections move +0.5 s,0.5,false
+music/5703-47212-0000.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/5703-47212-0000.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/5703-47212-0000.ogg,rhythmic,clip,clipping flagged,yes,true
+music/5703-47212-0000.ogg,rhythmic,cut,abrupt end flagged,yes,true
+music/5703-47212-0000.ogg,rhythmic,reverse,N1 kurtosis unchanged,-0.01,true
+music/5703-47212-0000.ogg,rhythmic,reverse,N8 recurrence unchanged,-0.003,true
+music/5703-47212-0000.ogg,rhythmic,speed,N9 ring time ÷1.06,0.828,false
+music/5703-47212-0000.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/5703-47212-0000.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),0.99,true
+music/5703-47212-0000.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.96,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,loudness −12.0 LU,-12,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,activity unchanged,0,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,harshness-weighted loudness (C4) lower,-0.195,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,same events,21 vs 21,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,same tempo,145.6,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,same sections,1,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,N1 kurtosis unchanged,0,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,N5 CPP unchanged,0,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,N7 interest unchanged,0.013,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,level,N8 recurrence unchanged,0,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,shift,events move +0.5 s,0.86,false
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,shift,beats move +0.5 s,0.84,false
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,shift,sections move +0.5 s,1,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,dc,DC offset flagged,yes,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,clip,clipping flagged,yes,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,cut,abrupt end flagged,yes,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,reverse,N4 net glide flips sign,0.68 → -0.68,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,reverse,N1 kurtosis unchanged,0,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,reverse,N8 recurrence unchanged,0,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,speed,N9 ring time ÷1.06,1.069,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,speed,tempo ×1.06,0.559,false
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,speed,pitch +1.0 semitone,0.9,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,speed,length ÷1.06,1.06,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,noise,activity curve holds (r ≥ 0.8),0.95,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,noise,same tempo,145.6,true
+music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg,orchestral,join,section boundary at the join (±2 s),0.09 s,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,loudness −12.0 LU,-12.1,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,activity unchanged,0,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.198,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,same events,102 vs 102,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,same tempo,88.7,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,same sections,1,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,N5 CPP unchanged,0,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,N7 interest unchanged,0,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,shift,events move +0.5 s,0.91,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,shift,beats move +0.5 s,1,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,shift,sections move +0.5 s,0.78,false
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,clip,clipping flagged,yes,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,cut,abrupt end flagged,yes,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,reverse,N1 kurtosis unchanged,0,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,reverse,N8 recurrence unchanged,0,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,speed,tempo ×1.06,1.06,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,speed,pitch +1.0 semitone,-0.68,false
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.99,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,noise,same tempo,88.7,true
+music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg,rhythmic,join,section boundary at the join (±2 s),0.28 s,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,loudness −12.0 LU,-12,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,activity unchanged,0,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,harshness-weighted loudness (C4) lower,-0.195,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,same events,53 vs 53,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,same tempo,110.6,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,same sections,1,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,N1 kurtosis unchanged,0,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,N5 CPP unchanged,0,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,N7 interest unchanged,0,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,level,N8 recurrence unchanged,0,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,shift,events move +0.5 s,0.96,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,shift,beats move +0.5 s,1,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,shift,sections move +0.5 s,1,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,dc,DC offset flagged,yes,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,clip,clipping flagged,yes,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,cut,abrupt end flagged,yes,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,reverse,N4 net glide flips sign,1.08 → -1.08,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,reverse,N1 kurtosis unchanged,0,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,reverse,N8 recurrence unchanged,0,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,speed,N9 ring time ÷1.06,1.017,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,speed,tempo ×1.06,1.057,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,speed,pitch +1.0 semitone,0.98,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,speed,length ÷1.06,1.06,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,noise,activity curve holds (r ≥ 0.8),0.92,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,noise,same tempo,110.5,true
+music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg,orchestral,join,section boundary at the join (±2 s),0.59 s,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,loudness −12.0 LU,-12,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,activity unchanged,0,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.192,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,same events,120 vs 120,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,same sections,1,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,N2 same repetition rate,1.09 → 1.09,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,N5 CPP unchanged,0,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,N7 interest unchanged,0,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,shift,events move +0.5 s,0.79,false
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,shift,sections move +0.5 s,0.75,false
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,clip,clipping flagged,yes,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,cut,abrupt end flagged,yes,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,reverse,N1 kurtosis unchanged,0,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,reverse,N8 recurrence unchanged,0,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,reverse,N2 same repetition rate,1.09 → 1.09,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,speed,N2 repetition rate ×1.06,0.523,false
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.89,true
+music/Kevin_MacLeod_-_Vibe_Ace.ogg,rhythmic,join,section boundary at the join (±2 s),0.09 s,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,loudness −12.0 LU,-12.1,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,activity unchanged,0,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.18,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,same events,70 vs 70,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,same tempo,68.1,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,same sections,1,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,N2 same repetition rate,2.27 → 2.27,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,N5 CPP unchanged,0.1,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,N7 interest unchanged,-0.011,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,shift,events move +0.5 s,0.86,false
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,shift,beats move +0.5 s,1,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,shift,sections move +0.5 s,0.67,false
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-23 ms,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,clip,clipping flagged,yes,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,cut,abrupt end flagged,yes,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,reverse,N6 arrow of time flips sign,1.22 → -1.22,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,reverse,N1 kurtosis unchanged,0.45,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,reverse,N8 recurrence unchanged,0,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,reverse,N2 same repetition rate,2.27 → 2.27,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,speed,N2 repetition rate ×1.06,1.057,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,speed,N9 ring time ÷1.06,1.198,false
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,speed,tempo ×1.06,1.062,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.96,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,noise,same tempo,68.1,true
+music/admiralbob77_-_Choice_-_Drum-bass.ogg,rhythmic,join,section boundary at the join (±2 s),0.31 s,true
+music/drese-midi.ogg,orchestral,level,loudness −12.0 LU,-12.1,true
+music/drese-midi.ogg,orchestral,level,activity unchanged,0,true
+music/drese-midi.ogg,orchestral,level,harshness-weighted loudness (C4) lower,-0.199,true
+music/drese-midi.ogg,orchestral,level,same events,8 vs 8,true
+music/drese-midi.ogg,orchestral,level,same sections,1,true
+music/drese-midi.ogg,orchestral,level,N1 kurtosis unchanged,0,true
+music/drese-midi.ogg,orchestral,level,N5 CPP unchanged,0,true
+music/drese-midi.ogg,orchestral,level,N7 interest unchanged,0,true
+music/drese-midi.ogg,orchestral,level,N8 recurrence unchanged,0,true
+music/drese-midi.ogg,orchestral,shift,events move +0.5 s,1,true
+music/drese-midi.ogg,orchestral,shift,sections move +0.5 s,0.9,true
+music/drese-midi.ogg,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/drese-midi.ogg,orchestral,dc,DC offset flagged,yes,true
+music/drese-midi.ogg,orchestral,clip,clipping flagged,yes,true
+music/drese-midi.ogg,orchestral,cut,abrupt end flagged,yes,true
+music/drese-midi.ogg,orchestral,reverse,N6 arrow of time flips sign,1.06 → -1.1,true
+music/drese-midi.ogg,orchestral,reverse,N1 kurtosis unchanged,0,true
+music/drese-midi.ogg,orchestral,reverse,N8 recurrence unchanged,0,true
+music/drese-midi.ogg,orchestral,speed,pitch +1.0 semitone,1.08,true
+music/drese-midi.ogg,orchestral,speed,length ÷1.06,1.06,true
+music/drese-midi.ogg,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+music/drese-midi.ogg,orchestral,noise,activity curve holds (r ≥ 0.8),0.9,true
+music/drese-midi.ogg,orchestral,join,section boundary at the join (±2 s),0.09 s,true
+music/drese-tempo.ogg,orchestral,level,loudness −12.0 LU,-12,true
+music/drese-tempo.ogg,orchestral,level,activity unchanged,-0.01,true
+music/drese-tempo.ogg,orchestral,level,harshness-weighted loudness (C4) lower,-0.183,true
+music/drese-tempo.ogg,orchestral,level,same events,30 vs 30,true
+music/drese-tempo.ogg,orchestral,level,same sections,1,true
+music/drese-tempo.ogg,orchestral,level,N1 kurtosis unchanged,0,true
+music/drese-tempo.ogg,orchestral,level,N5 CPP unchanged,0,true
+music/drese-tempo.ogg,orchestral,level,N7 interest unchanged,-0.002,true
+music/drese-tempo.ogg,orchestral,level,N8 recurrence unchanged,0,true
+music/drese-tempo.ogg,orchestral,shift,events move +0.5 s,0.97,true
+music/drese-tempo.ogg,orchestral,shift,sections move +0.5 s,1,true
+music/drese-tempo.ogg,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/drese-tempo.ogg,orchestral,dc,DC offset flagged,yes,true
+music/drese-tempo.ogg,orchestral,clip,clipping flagged,yes,true
+music/drese-tempo.ogg,orchestral,cut,abrupt end flagged,yes,true
+music/drese-tempo.ogg,orchestral,reverse,N6 arrow of time flips sign,3.25 → -3.2,true
+music/drese-tempo.ogg,orchestral,reverse,N1 kurtosis unchanged,0,true
+music/drese-tempo.ogg,orchestral,reverse,N8 recurrence unchanged,0,true
+music/drese-tempo.ogg,orchestral,speed,pitch +1.0 semitone,1.01,true
+music/drese-tempo.ogg,orchestral,speed,length ÷1.06,1.06,true
+music/drese-tempo.ogg,orchestral,noise,loudness curve holds (r ≥ 0.9),0.99,true
+music/drese-tempo.ogg,orchestral,noise,activity curve holds (r ≥ 0.8),0.94,true
+music/drese-tempo.ogg,orchestral,join,section boundary at the join (±2 s),0.02 s,true
+music/glacier-bay-humpback.ogg,orchestral,level,loudness −12.0 LU,-12.1,true
+music/glacier-bay-humpback.ogg,orchestral,level,activity unchanged,0,true
+music/glacier-bay-humpback.ogg,orchestral,level,harshness-weighted loudness (C4) lower,-0.195,true
+music/glacier-bay-humpback.ogg,orchestral,level,same events,5 vs 5,true
+music/glacier-bay-humpback.ogg,orchestral,level,same sections,1,true
+music/glacier-bay-humpback.ogg,orchestral,level,N1 kurtosis unchanged,0,true
+music/glacier-bay-humpback.ogg,orchestral,level,N5 CPP unchanged,0,true
+music/glacier-bay-humpback.ogg,orchestral,level,N7 interest unchanged,-0.03,true
+music/glacier-bay-humpback.ogg,orchestral,level,N8 recurrence unchanged,0,true
+music/glacier-bay-humpback.ogg,orchestral,shift,events move +0.5 s,1,true
+music/glacier-bay-humpback.ogg,orchestral,shift,sections move +0.5 s,1,true
+music/glacier-bay-humpback.ogg,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/glacier-bay-humpback.ogg,orchestral,dc,DC offset flagged,yes,true
+music/glacier-bay-humpback.ogg,orchestral,clip,clipping flagged,yes,true
+music/glacier-bay-humpback.ogg,orchestral,cut,abrupt end flagged,no,false
+music/glacier-bay-humpback.ogg,orchestral,reverse,N6 arrow of time flips sign,-18.79 → 18.58,true
+music/glacier-bay-humpback.ogg,orchestral,reverse,N1 kurtosis unchanged,0,true
+music/glacier-bay-humpback.ogg,orchestral,reverse,N8 recurrence unchanged,-0.002,true
+music/glacier-bay-humpback.ogg,orchestral,speed,length ÷1.06,1.06,true
+music/glacier-bay-humpback.ogg,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+music/glacier-bay-humpback.ogg,orchestral,noise,activity curve holds (r ≥ 0.8),0.97,true
+music/glacier-bay-humpback.ogg,orchestral,join,section boundary at the join (±2 s),0.09 s,true
+music/pibble.ogg,orchestral,level,loudness −12.0 LU,-11.6,false
+music/pibble.ogg,orchestral,level,activity unchanged,0.01,true
+music/pibble.ogg,orchestral,level,harshness-weighted loudness (C4) lower,-0.127,true
+music/pibble.ogg,orchestral,level,same events,35 vs 35,true
+music/pibble.ogg,orchestral,level,same sections,0.83,true
+music/pibble.ogg,orchestral,level,N1 kurtosis unchanged,0,true
+music/pibble.ogg,orchestral,level,N5 CPP unchanged,0.1,true
+music/pibble.ogg,orchestral,level,N7 interest unchanged,0.036,true
+music/pibble.ogg,orchestral,level,N8 recurrence unchanged,0.016,true
+music/pibble.ogg,orchestral,shift,events move +0.5 s,0.86,false
+music/pibble.ogg,orchestral,shift,sections move +0.5 s,0.83,true
+music/pibble.ogg,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/pibble.ogg,orchestral,dc,DC offset flagged,yes,true
+music/pibble.ogg,orchestral,clip,clipping flagged,yes,true
+music/pibble.ogg,orchestral,reverse,N6 arrow of time flips sign,0.77 → -0.76,true
+music/pibble.ogg,orchestral,reverse,N4 net glide flips sign,-0.58 → 0.5,true
+music/pibble.ogg,orchestral,reverse,N1 kurtosis unchanged,0.06,true
+music/pibble.ogg,orchestral,reverse,N8 recurrence unchanged,0,true
+music/pibble.ogg,orchestral,speed,N9 ring time ÷1.06,0.981,true
+music/pibble.ogg,orchestral,speed,pitch +1.0 semitone,0.61,false
+music/pibble.ogg,orchestral,speed,length ÷1.06,1.06,true
+music/pibble.ogg,orchestral,noise,loudness curve holds (r ≥ 0.9),0.6,false
+music/pibble.ogg,orchestral,noise,activity curve holds (r ≥ 0.8),0.94,true
+music/pibble.ogg,orchestral,join,section boundary at the join (±2 s),0.09 s,true
+music/snare-accelerate.ogg,rhythmic,level,loudness −12.0 LU,-12,true
+music/snare-accelerate.ogg,rhythmic,level,activity unchanged,0.01,true
+music/snare-accelerate.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.163,true
+music/snare-accelerate.ogg,rhythmic,level,same events,32 vs 32,true
+music/snare-accelerate.ogg,rhythmic,level,same tempo,104.4,true
+music/snare-accelerate.ogg,rhythmic,level,same sections,1,true
+music/snare-accelerate.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/snare-accelerate.ogg,rhythmic,level,N5 CPP unchanged,0,true
+music/snare-accelerate.ogg,rhythmic,level,N7 interest unchanged,0,true
+music/snare-accelerate.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/snare-accelerate.ogg,rhythmic,shift,events move +0.5 s,0.94,true
+music/snare-accelerate.ogg,rhythmic,shift,beats move +0.5 s,0.81,false
+music/snare-accelerate.ogg,rhythmic,shift,sections move +0.5 s,0.5,false
+music/snare-accelerate.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+music/snare-accelerate.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/snare-accelerate.ogg,rhythmic,clip,clipping flagged,yes,true
+music/snare-accelerate.ogg,rhythmic,reverse,N6 arrow of time flips sign,2.96 → -2.96,true
+music/snare-accelerate.ogg,rhythmic,reverse,N1 kurtosis unchanged,-0.05,true
+music/snare-accelerate.ogg,rhythmic,reverse,N8 recurrence unchanged,0.023,true
+music/snare-accelerate.ogg,rhythmic,speed,N9 ring time ÷1.06,1.032,true
+music/snare-accelerate.ogg,rhythmic,speed,tempo ×1.06,1.042,true
+music/snare-accelerate.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/snare-accelerate.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),0.67,false
+music/snare-accelerate.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.99,true
+music/snare-accelerate.ogg,rhythmic,noise,same tempo,104.4,true
+music/snare-accelerate.ogg,rhythmic,join,section boundary at the join (±2 s),0.22 s,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,level,loudness −12.0 LU,-12,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,level,activity unchanged,0.03,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,level,harshness-weighted loudness (C4) lower,-0.16,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,level,same events,3 vs 3,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,level,N1 kurtosis unchanged,0,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,level,N5 CPP unchanged,0,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,level,N7 interest unchanged,0,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,level,N8 recurrence unchanged,0,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,shift,events move +0.5 s,1,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,hit,new event or onset at the hit (±25 ms),-6 ms,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,dc,DC offset flagged,yes,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,clip,clipping flagged,yes,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,reverse,N6 arrow of time flips sign,2.17 → -2.21,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,reverse,N4 net glide flips sign,-0.58 → 0.58,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,reverse,N1 kurtosis unchanged,-0.04,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,reverse,N8 recurrence unchanged,-0.002,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,speed,pitch +1.0 semitone,1,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,speed,length ÷1.06,1.06,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+music/sorohanro_-_solo-trumpet-06.ogg,rhythmic,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/ambi_choir.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/ambi_choir.flac,sfx,level,activity unchanged,0,true
+sfx/ambi_choir.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.199,true
+sfx/ambi_choir.flac,sfx,level,same events,1 vs 1,true
+sfx/ambi_choir.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/ambi_choir.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/ambi_choir.flac,sfx,level,N7 interest unchanged,0,true
+sfx/ambi_choir.flac,sfx,shift,events move +0.5 s,1,true
+sfx/ambi_choir.flac,sfx,hit,new event or onset at the hit (±25 ms),-9 ms,true
+sfx/ambi_choir.flac,sfx,dc,DC offset flagged,yes,true
+sfx/ambi_choir.flac,sfx,clip,clipping flagged,yes,true
+sfx/ambi_choir.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/ambi_choir.flac,sfx,reverse,N6 arrow of time flips sign,0.52 → -0.51,true
+sfx/ambi_choir.flac,sfx,reverse,N1 kurtosis unchanged,0.01,true
+sfx/ambi_choir.flac,sfx,speed,pitch +1.0 semitone,0.98,true
+sfx/ambi_choir.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/ambi_choir.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_choir.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/ambi_dark_woosh.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/ambi_dark_woosh.flac,sfx,level,activity unchanged,0,true
+sfx/ambi_dark_woosh.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.193,true
+sfx/ambi_dark_woosh.flac,sfx,level,same events,1 vs 1,true
+sfx/ambi_dark_woosh.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/ambi_dark_woosh.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/ambi_dark_woosh.flac,sfx,level,N7 interest unchanged,0,true
+sfx/ambi_dark_woosh.flac,sfx,level,N8 recurrence unchanged,0.003,true
+sfx/ambi_dark_woosh.flac,sfx,shift,events move +0.5 s,1,true
+sfx/ambi_dark_woosh.flac,sfx,hit,new event or onset at the hit (±25 ms),-15 ms,true
+sfx/ambi_dark_woosh.flac,sfx,dc,DC offset flagged,yes,true
+sfx/ambi_dark_woosh.flac,sfx,clip,clipping flagged,yes,true
+sfx/ambi_dark_woosh.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/ambi_dark_woosh.flac,sfx,reverse,N1 kurtosis unchanged,-0.36,true
+sfx/ambi_dark_woosh.flac,sfx,reverse,N8 recurrence unchanged,0,true
+sfx/ambi_dark_woosh.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/ambi_dark_woosh.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_dark_woosh.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.18,false
+sfx/ambi_drone.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/ambi_drone.flac,sfx,level,activity unchanged,0,true
+sfx/ambi_drone.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.198,true
+sfx/ambi_drone.flac,sfx,level,same events,3 vs 3,true
+sfx/ambi_drone.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/ambi_drone.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/ambi_drone.flac,sfx,level,N7 interest unchanged,0,true
+sfx/ambi_drone.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/ambi_drone.flac,sfx,shift,events move +0.5 s,1,true
+sfx/ambi_drone.flac,sfx,hit,new event or onset at the hit (±25 ms),-9 ms,true
+sfx/ambi_drone.flac,sfx,dc,DC offset flagged,yes,true
+sfx/ambi_drone.flac,sfx,clip,clipping flagged,yes,true
+sfx/ambi_drone.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/ambi_drone.flac,sfx,reverse,N1 kurtosis unchanged,0,true
+sfx/ambi_drone.flac,sfx,reverse,N8 recurrence unchanged,-0.018,true
+sfx/ambi_drone.flac,sfx,speed,pitch +1.0 semitone,1.01,true
+sfx/ambi_drone.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/ambi_drone.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_drone.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.85,true
+sfx/ambi_glass_hum.flac,orchestral,level,loudness −12.0 LU,-12,true
+sfx/ambi_glass_hum.flac,orchestral,level,activity unchanged,0,true
+sfx/ambi_glass_hum.flac,orchestral,level,harshness-weighted loudness (C4) lower,-0.189,true
+sfx/ambi_glass_hum.flac,orchestral,level,same events,1 vs 1,true
+sfx/ambi_glass_hum.flac,orchestral,level,same sections,1,true
+sfx/ambi_glass_hum.flac,orchestral,level,N1 kurtosis unchanged,0,true
+sfx/ambi_glass_hum.flac,orchestral,level,N2 same repetition rate,3.59 → 3.59,true
+sfx/ambi_glass_hum.flac,orchestral,level,N5 CPP unchanged,0.1,true
+sfx/ambi_glass_hum.flac,orchestral,level,N7 interest unchanged,0.004,true
+sfx/ambi_glass_hum.flac,orchestral,level,N8 recurrence unchanged,0,true
+sfx/ambi_glass_hum.flac,orchestral,shift,events move +0.5 s,1,true
+sfx/ambi_glass_hum.flac,orchestral,shift,sections move +0.5 s,0.33,false
+sfx/ambi_glass_hum.flac,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/ambi_glass_hum.flac,orchestral,dc,DC offset flagged,yes,true
+sfx/ambi_glass_hum.flac,orchestral,clip,clipping flagged,yes,true
+sfx/ambi_glass_hum.flac,orchestral,cut,abrupt end flagged,yes,true
+sfx/ambi_glass_hum.flac,orchestral,reverse,N1 kurtosis unchanged,0,true
+sfx/ambi_glass_hum.flac,orchestral,reverse,N8 recurrence unchanged,0,true
+sfx/ambi_glass_hum.flac,orchestral,reverse,N2 same repetition rate,3.59 → 3.59,true
+sfx/ambi_glass_hum.flac,orchestral,speed,N2 repetition rate ×1.06,1.061,true
+sfx/ambi_glass_hum.flac,orchestral,speed,pitch +1.0 semitone,1,true
+sfx/ambi_glass_hum.flac,orchestral,speed,length ÷1.06,1.06,true
+sfx/ambi_glass_hum.flac,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_glass_hum.flac,orchestral,noise,activity curve holds (r ≥ 0.8),0.3,false
+sfx/ambi_glass_rub.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/ambi_glass_rub.flac,sfx,level,activity unchanged,0,true
+sfx/ambi_glass_rub.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.198,true
+sfx/ambi_glass_rub.flac,sfx,level,same events,3 vs 3,true
+sfx/ambi_glass_rub.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/ambi_glass_rub.flac,sfx,level,N2 same repetition rate,1.48 → 1.48,true
+sfx/ambi_glass_rub.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/ambi_glass_rub.flac,sfx,level,N7 interest unchanged,0,true
+sfx/ambi_glass_rub.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/ambi_glass_rub.flac,sfx,shift,events move +0.5 s,1,true
+sfx/ambi_glass_rub.flac,sfx,hit,new event or onset at the hit (±25 ms),-9 ms,true
+sfx/ambi_glass_rub.flac,sfx,dc,DC offset flagged,yes,true
+sfx/ambi_glass_rub.flac,sfx,clip,clipping flagged,yes,true
+sfx/ambi_glass_rub.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/ambi_glass_rub.flac,sfx,reverse,N6 arrow of time flips sign,1.79 → -1.94,true
+sfx/ambi_glass_rub.flac,sfx,reverse,N1 kurtosis unchanged,0,true
+sfx/ambi_glass_rub.flac,sfx,reverse,N8 recurrence unchanged,-0.028,true
+sfx/ambi_glass_rub.flac,sfx,reverse,N2 same repetition rate,1.48 → 1.45,false
+sfx/ambi_glass_rub.flac,sfx,speed,N2 repetition rate ×1.06,1.068,true
+sfx/ambi_glass_rub.flac,sfx,speed,pitch +1.0 semitone,1.01,true
+sfx/ambi_glass_rub.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/ambi_glass_rub.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_glass_rub.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.81,true
+sfx/ambi_haunted_hum.flac,orchestral,level,loudness −12.0 LU,-12,true
+sfx/ambi_haunted_hum.flac,orchestral,level,activity unchanged,0,true
+sfx/ambi_haunted_hum.flac,orchestral,level,harshness-weighted loudness (C4) lower,-0.196,true
+sfx/ambi_haunted_hum.flac,orchestral,level,same events,1 vs 1,true
+sfx/ambi_haunted_hum.flac,orchestral,level,N1 kurtosis unchanged,0,true
+sfx/ambi_haunted_hum.flac,orchestral,level,N5 CPP unchanged,0,true
+sfx/ambi_haunted_hum.flac,orchestral,level,N7 interest unchanged,0.009,true
+sfx/ambi_haunted_hum.flac,orchestral,level,N8 recurrence unchanged,0.003,true
+sfx/ambi_haunted_hum.flac,orchestral,shift,events move +0.5 s,1,true
+sfx/ambi_haunted_hum.flac,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/ambi_haunted_hum.flac,orchestral,dc,DC offset flagged,yes,true
+sfx/ambi_haunted_hum.flac,orchestral,clip,clipping flagged,yes,true
+sfx/ambi_haunted_hum.flac,orchestral,cut,abrupt end flagged,yes,true
+sfx/ambi_haunted_hum.flac,orchestral,reverse,N1 kurtosis unchanged,-0.01,true
+sfx/ambi_haunted_hum.flac,orchestral,reverse,N8 recurrence unchanged,0.003,true
+sfx/ambi_haunted_hum.flac,orchestral,speed,length ÷1.06,1.06,true
+sfx/ambi_haunted_hum.flac,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_haunted_hum.flac,orchestral,noise,activity curve holds (r ≥ 0.8),0.51,false
+sfx/ambi_lunar_land.flac,orchestral,level,loudness −12.0 LU,-12,true
+sfx/ambi_lunar_land.flac,orchestral,level,activity unchanged,0,true
+sfx/ambi_lunar_land.flac,orchestral,level,harshness-weighted loudness (C4) lower,-0.199,true
+sfx/ambi_lunar_land.flac,orchestral,level,same events,1 vs 1,true
+sfx/ambi_lunar_land.flac,orchestral,level,N1 kurtosis unchanged,0,true
+sfx/ambi_lunar_land.flac,orchestral,level,N5 CPP unchanged,0,true
+sfx/ambi_lunar_land.flac,orchestral,level,N7 interest unchanged,0,true
+sfx/ambi_lunar_land.flac,orchestral,level,N8 recurrence unchanged,0,true
+sfx/ambi_lunar_land.flac,orchestral,shift,events move +0.5 s,1,true
+sfx/ambi_lunar_land.flac,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/ambi_lunar_land.flac,orchestral,dc,DC offset flagged,yes,true
+sfx/ambi_lunar_land.flac,orchestral,clip,clipping flagged,yes,true
+sfx/ambi_lunar_land.flac,orchestral,cut,abrupt end flagged,no,false
+sfx/ambi_lunar_land.flac,orchestral,reverse,N4 net glide flips sign,-3.5 → 3.51,true
+sfx/ambi_lunar_land.flac,orchestral,reverse,N1 kurtosis unchanged,0.72,true
+sfx/ambi_lunar_land.flac,orchestral,reverse,N8 recurrence unchanged,0,true
+sfx/ambi_lunar_land.flac,orchestral,speed,N9 ring time ÷1.06,0.998,true
+sfx/ambi_lunar_land.flac,orchestral,speed,length ÷1.06,1.06,true
+sfx/ambi_lunar_land.flac,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_lunar_land.flac,orchestral,noise,activity curve holds (r ≥ 0.8),0.95,true
+sfx/ambi_piano.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/ambi_piano.flac,sfx,level,activity unchanged,0,true
+sfx/ambi_piano.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.2,true
+sfx/ambi_piano.flac,sfx,level,same events,2 vs 2,true
+sfx/ambi_piano.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/ambi_piano.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/ambi_piano.flac,sfx,level,N7 interest unchanged,0,true
+sfx/ambi_piano.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/ambi_piano.flac,sfx,shift,events move +0.5 s,1,true
+sfx/ambi_piano.flac,sfx,hit,new event or onset at the hit (±25 ms),-15 ms,true
+sfx/ambi_piano.flac,sfx,dc,DC offset flagged,yes,true
+sfx/ambi_piano.flac,sfx,clip,clipping flagged,yes,true
+sfx/ambi_piano.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/ambi_piano.flac,sfx,reverse,N4 net glide flips sign,0.76 → -0.76,true
+sfx/ambi_piano.flac,sfx,reverse,N1 kurtosis unchanged,0,true
+sfx/ambi_piano.flac,sfx,reverse,N8 recurrence unchanged,0.016,true
+sfx/ambi_piano.flac,sfx,speed,pitch +1.0 semitone,0.99,true
+sfx/ambi_piano.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/ambi_piano.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_piano.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/ambi_sauna.flac,ambience,level,loudness −12.0 LU,-12.1,true
+sfx/ambi_sauna.flac,ambience,level,activity unchanged,0.01,true
+sfx/ambi_sauna.flac,ambience,level,harshness-weighted loudness (C4) lower,-0.208,true
+sfx/ambi_sauna.flac,ambience,level,same events,1 vs 1,true
+sfx/ambi_sauna.flac,ambience,level,N1 kurtosis unchanged,0,true
+sfx/ambi_sauna.flac,ambience,level,N5 CPP unchanged,0,true
+sfx/ambi_sauna.flac,ambience,level,N7 interest unchanged,0,true
+sfx/ambi_sauna.flac,ambience,level,N8 recurrence unchanged,0,true
+sfx/ambi_sauna.flac,ambience,shift,events move +0.5 s,1,true
+sfx/ambi_sauna.flac,ambience,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/ambi_sauna.flac,ambience,dc,DC offset flagged,yes,true
+sfx/ambi_sauna.flac,ambience,clip,clipping flagged,yes,true
+sfx/ambi_sauna.flac,ambience,cut,abrupt end flagged,yes,true
+sfx/ambi_sauna.flac,ambience,reverse,N6 arrow of time flips sign,4.06 → -4.15,true
+sfx/ambi_sauna.flac,ambience,reverse,N1 kurtosis unchanged,0.01,true
+sfx/ambi_sauna.flac,ambience,reverse,N8 recurrence unchanged,0,true
+sfx/ambi_sauna.flac,ambience,speed,length ÷1.06,1.06,true
+sfx/ambi_sauna.flac,ambience,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_sauna.flac,ambience,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/ambi_soft_buzz.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/ambi_soft_buzz.flac,sfx,level,activity unchanged,0,true
+sfx/ambi_soft_buzz.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.195,true
+sfx/ambi_soft_buzz.flac,sfx,level,same events,1 vs 1,true
+sfx/ambi_soft_buzz.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/ambi_soft_buzz.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/ambi_soft_buzz.flac,sfx,shift,events move +0.5 s,1,true
+sfx/ambi_soft_buzz.flac,sfx,dc,DC offset flagged,yes,true
+sfx/ambi_soft_buzz.flac,sfx,clip,clipping flagged,yes,true
+sfx/ambi_soft_buzz.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/ambi_soft_buzz.flac,sfx,reverse,N1 kurtosis unchanged,0.14,true
+sfx/ambi_soft_buzz.flac,sfx,speed,pitch +1.0 semitone,0.6,false
+sfx/ambi_soft_buzz.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/ambi_soft_buzz.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_soft_buzz.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.92,true
+sfx/ambi_swoosh.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/ambi_swoosh.flac,sfx,level,activity unchanged,0,true
+sfx/ambi_swoosh.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.193,true
+sfx/ambi_swoosh.flac,sfx,level,same events,1 vs 1,true
+sfx/ambi_swoosh.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/ambi_swoosh.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/ambi_swoosh.flac,sfx,level,N7 interest unchanged,0,true
+sfx/ambi_swoosh.flac,sfx,shift,events move +0.5 s,1,true
+sfx/ambi_swoosh.flac,sfx,hit,new event or onset at the hit (±25 ms),missed,false
+sfx/ambi_swoosh.flac,sfx,dc,DC offset flagged,yes,true
+sfx/ambi_swoosh.flac,sfx,clip,clipping flagged,yes,true
+sfx/ambi_swoosh.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/ambi_swoosh.flac,sfx,reverse,N1 kurtosis unchanged,-0.11,true
+sfx/ambi_swoosh.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/ambi_swoosh.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/ambi_swoosh.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.69,false
+sfx/bass_drop_c.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/bass_drop_c.flac,sfx,level,activity unchanged,0,true
+sfx/bass_drop_c.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.198,true
+sfx/bass_drop_c.flac,sfx,level,same events,1 vs 1,true
+sfx/bass_drop_c.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/bass_drop_c.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/bass_drop_c.flac,sfx,level,N7 interest unchanged,0,true
+sfx/bass_drop_c.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/bass_drop_c.flac,sfx,shift,events move +0.5 s,1,true
+sfx/bass_drop_c.flac,sfx,hit,new event or onset at the hit (±25 ms),-9 ms,true
+sfx/bass_drop_c.flac,sfx,dc,DC offset flagged,yes,true
+sfx/bass_drop_c.flac,sfx,clip,clipping flagged,yes,true
+sfx/bass_drop_c.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/bass_drop_c.flac,sfx,reverse,N4 net glide flips sign,-2.03 → 2.03,true
+sfx/bass_drop_c.flac,sfx,reverse,N1 kurtosis unchanged,-0.08,true
+sfx/bass_drop_c.flac,sfx,reverse,N8 recurrence unchanged,0,true
+sfx/bass_drop_c.flac,sfx,speed,pitch +1.0 semitone,1.02,true
+sfx/bass_drop_c.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/bass_drop_c.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/bass_drop_c.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.97,true
+sfx/bass_hit_c.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/bass_hit_c.flac,sfx,level,activity unchanged,0,true
+sfx/bass_hit_c.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.185,true
+sfx/bass_hit_c.flac,sfx,level,same events,4 vs 4,true
+sfx/bass_hit_c.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/bass_hit_c.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/bass_hit_c.flac,sfx,shift,events move +0.5 s,0.75,false
+sfx/bass_hit_c.flac,sfx,dc,DC offset flagged,yes,true
+sfx/bass_hit_c.flac,sfx,clip,clipping flagged,yes,true
+sfx/bass_hit_c.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/bass_hit_c.flac,sfx,reverse,N4 net glide flips sign,-1.04 → 1.03,true
+sfx/bass_hit_c.flac,sfx,reverse,N1 kurtosis unchanged,0.73,true
+sfx/bass_hit_c.flac,sfx,speed,N9 material unchanged (log τd),0.01,true
+sfx/bass_hit_c.flac,sfx,speed,N9 ring time ÷1.06,1.061,true
+sfx/bass_hit_c.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/bass_hit_c.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/bass_hit_c.flac,sfx,noise,activity curve holds (r ≥ 0.8),-0.26,false
+sfx/bass_woodsy_c.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/bass_woodsy_c.flac,sfx,level,activity unchanged,0,true
+sfx/bass_woodsy_c.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.198,true
+sfx/bass_woodsy_c.flac,sfx,level,same events,1 vs 1,true
+sfx/bass_woodsy_c.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/bass_woodsy_c.flac,sfx,level,N2 same repetition rate,65.18 → 65.18,true
+sfx/bass_woodsy_c.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/bass_woodsy_c.flac,sfx,level,N7 interest unchanged,0,true
+sfx/bass_woodsy_c.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/bass_woodsy_c.flac,sfx,shift,events move +0.5 s,1,true
+sfx/bass_woodsy_c.flac,sfx,hit,new event or onset at the hit (±25 ms),-6 ms,true
+sfx/bass_woodsy_c.flac,sfx,dc,DC offset flagged,yes,true
+sfx/bass_woodsy_c.flac,sfx,clip,clipping flagged,yes,true
+sfx/bass_woodsy_c.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/bass_woodsy_c.flac,sfx,reverse,N4 net glide flips sign,-0.92 → 0.92,true
+sfx/bass_woodsy_c.flac,sfx,reverse,N1 kurtosis unchanged,0,true
+sfx/bass_woodsy_c.flac,sfx,reverse,N8 recurrence unchanged,0.003,true
+sfx/bass_woodsy_c.flac,sfx,reverse,N2 same repetition rate,65.18 → 65.18,true
+sfx/bass_woodsy_c.flac,sfx,speed,N2 repetition rate ×1.06,1.059,true
+sfx/bass_woodsy_c.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/bass_woodsy_c.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/bass_woodsy_c.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.98,true
+sfx/drum_cymbal_open.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/drum_cymbal_open.flac,sfx,level,activity unchanged,0,true
+sfx/drum_cymbal_open.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.207,true
+sfx/drum_cymbal_open.flac,sfx,level,same events,2 vs 2,true
+sfx/drum_cymbal_open.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/drum_cymbal_open.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/drum_cymbal_open.flac,sfx,level,N7 interest unchanged,0,true
+sfx/drum_cymbal_open.flac,sfx,shift,events move +0.5 s,1,true
+sfx/drum_cymbal_open.flac,sfx,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/drum_cymbal_open.flac,sfx,dc,DC offset flagged,yes,true
+sfx/drum_cymbal_open.flac,sfx,clip,clipping flagged,yes,true
+sfx/drum_cymbal_open.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/drum_cymbal_open.flac,sfx,reverse,N6 arrow of time flips sign,6.44 → -6.39,true
+sfx/drum_cymbal_open.flac,sfx,reverse,N1 kurtosis unchanged,-0.39,true
+sfx/drum_cymbal_open.flac,sfx,speed,N9 ring time ÷1.06,1.057,true
+sfx/drum_cymbal_open.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/drum_cymbal_open.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/drum_cymbal_open.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.78,false
+sfx/drum_heavy_kick.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/drum_heavy_kick.flac,sfx,level,activity unchanged,0,true
+sfx/drum_heavy_kick.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.197,true
+sfx/drum_heavy_kick.flac,sfx,level,same events,1 vs 1,true
+sfx/drum_heavy_kick.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/drum_heavy_kick.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/drum_heavy_kick.flac,sfx,shift,events move +0.5 s,1,true
+sfx/drum_heavy_kick.flac,sfx,dc,DC offset flagged,yes,true
+sfx/drum_heavy_kick.flac,sfx,clip,clipping flagged,yes,true
+sfx/drum_heavy_kick.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/drum_heavy_kick.flac,sfx,reverse,N6 arrow of time flips sign,1.3 → -1.29,true
+sfx/drum_heavy_kick.flac,sfx,reverse,N4 net glide flips sign,-0.91 → 1.07,true
+sfx/drum_heavy_kick.flac,sfx,reverse,N1 kurtosis unchanged,-0.01,true
+sfx/drum_heavy_kick.flac,sfx,speed,N9 ring time ÷1.06,1.068,true
+sfx/drum_heavy_kick.flac,sfx,speed,length ÷1.06,1.0601,true
+sfx/drum_heavy_kick.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/drum_heavy_kick.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.61,false
+sfx/drum_roll.flac,orchestral,level,loudness −12.0 LU,-12.1,true
+sfx/drum_roll.flac,orchestral,level,activity unchanged,0,true
+sfx/drum_roll.flac,orchestral,level,harshness-weighted loudness (C4) lower,-0.196,true
+sfx/drum_roll.flac,orchestral,level,same events,2 vs 2,true
+sfx/drum_roll.flac,orchestral,level,N1 kurtosis unchanged,0,true
+sfx/drum_roll.flac,orchestral,level,N5 CPP unchanged,0,true
+sfx/drum_roll.flac,orchestral,level,N7 interest unchanged,0,true
+sfx/drum_roll.flac,orchestral,level,N8 recurrence unchanged,0,true
+sfx/drum_roll.flac,orchestral,shift,events move +0.5 s,1,true
+sfx/drum_roll.flac,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/drum_roll.flac,orchestral,dc,DC offset flagged,yes,true
+sfx/drum_roll.flac,orchestral,clip,clipping flagged,yes,true
+sfx/drum_roll.flac,orchestral,cut,abrupt end flagged,yes,true
+sfx/drum_roll.flac,orchestral,reverse,N6 arrow of time flips sign,0.5 → -0.47,true
+sfx/drum_roll.flac,orchestral,reverse,N1 kurtosis unchanged,-0.09,true
+sfx/drum_roll.flac,orchestral,reverse,N8 recurrence unchanged,-0.018,true
+sfx/drum_roll.flac,orchestral,speed,length ÷1.06,1.06,true
+sfx/drum_roll.flac,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/drum_roll.flac,orchestral,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/drum_snare_hard.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/drum_snare_hard.flac,sfx,level,activity unchanged,0,true
+sfx/drum_snare_hard.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.19,true
+sfx/drum_snare_hard.flac,sfx,level,same events,1 vs 1,true
+sfx/drum_snare_hard.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/drum_snare_hard.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/drum_snare_hard.flac,sfx,shift,events move +0.5 s,1,true
+sfx/drum_snare_hard.flac,sfx,dc,DC offset flagged,yes,true
+sfx/drum_snare_hard.flac,sfx,clip,clipping flagged,yes,true
+sfx/drum_snare_hard.flac,sfx,reverse,N6 arrow of time flips sign,3.19 → -3.08,true
+sfx/drum_snare_hard.flac,sfx,reverse,N4 net glide flips sign,-2.42 → 2.35,true
+sfx/drum_snare_hard.flac,sfx,reverse,N1 kurtosis unchanged,0.38,true
+sfx/drum_snare_hard.flac,sfx,speed,N9 ring time ÷1.06,1.053,true
+sfx/drum_snare_hard.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/drum_snare_hard.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/drum_snare_hard.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/drum_splash_hard.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/drum_splash_hard.flac,sfx,level,activity unchanged,0,true
+sfx/drum_splash_hard.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.156,true
+sfx/drum_splash_hard.flac,sfx,level,same events,1 vs 1,true
+sfx/drum_splash_hard.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/drum_splash_hard.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/drum_splash_hard.flac,sfx,level,N7 interest unchanged,0,true
+sfx/drum_splash_hard.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/drum_splash_hard.flac,sfx,shift,events move +0.5 s,1,true
+sfx/drum_splash_hard.flac,sfx,hit,new event or onset at the hit (±25 ms),-15 ms,true
+sfx/drum_splash_hard.flac,sfx,dc,DC offset flagged,yes,true
+sfx/drum_splash_hard.flac,sfx,clip,clipping flagged,yes,true
+sfx/drum_splash_hard.flac,sfx,reverse,N6 arrow of time flips sign,6.25 → -6.21,true
+sfx/drum_splash_hard.flac,sfx,reverse,N4 net glide flips sign,-0.84 → 0.85,true
+sfx/drum_splash_hard.flac,sfx,reverse,N1 kurtosis unchanged,0.19,true
+sfx/drum_splash_hard.flac,sfx,reverse,N8 recurrence unchanged,0,true
+sfx/drum_splash_hard.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/drum_splash_hard.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/drum_splash_hard.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/drum_tom_lo_hard.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/drum_tom_lo_hard.flac,sfx,level,activity unchanged,0,true
+sfx/drum_tom_lo_hard.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.199,true
+sfx/drum_tom_lo_hard.flac,sfx,level,same events,1 vs 1,true
+sfx/drum_tom_lo_hard.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/drum_tom_lo_hard.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/drum_tom_lo_hard.flac,sfx,level,N7 interest unchanged,0,true
+sfx/drum_tom_lo_hard.flac,sfx,shift,events move +0.5 s,1,true
+sfx/drum_tom_lo_hard.flac,sfx,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/drum_tom_lo_hard.flac,sfx,dc,DC offset flagged,yes,true
+sfx/drum_tom_lo_hard.flac,sfx,clip,clipping flagged,yes,true
+sfx/drum_tom_lo_hard.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/drum_tom_lo_hard.flac,sfx,reverse,N6 arrow of time flips sign,1.1 → -1.07,true
+sfx/drum_tom_lo_hard.flac,sfx,reverse,N4 net glide flips sign,-1.38 → 1.38,true
+sfx/drum_tom_lo_hard.flac,sfx,reverse,N1 kurtosis unchanged,-0.78,true
+sfx/drum_tom_lo_hard.flac,sfx,speed,N9 ring time ÷1.06,1.061,true
+sfx/drum_tom_lo_hard.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/drum_tom_lo_hard.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/drum_tom_lo_hard.flac,sfx,noise,activity curve holds (r ≥ 0.8),-0.12,false
+sfx/elec_bell.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/elec_bell.flac,sfx,level,activity unchanged,0,true
+sfx/elec_bell.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.198,true
+sfx/elec_bell.flac,sfx,level,same events,1 vs 1,true
+sfx/elec_bell.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/elec_bell.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/elec_bell.flac,sfx,shift,events move +0.5 s,1,true
+sfx/elec_bell.flac,sfx,dc,DC offset flagged,yes,true
+sfx/elec_bell.flac,sfx,clip,clipping flagged,yes,true
+sfx/elec_bell.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/elec_bell.flac,sfx,reverse,N6 arrow of time flips sign,1.02 → -1.02,true
+sfx/elec_bell.flac,sfx,reverse,N1 kurtosis unchanged,-0.02,true
+sfx/elec_bell.flac,sfx,speed,N9 material unchanged (log τd),-0.02,true
+sfx/elec_bell.flac,sfx,speed,N9 ring time ÷1.06,1.052,true
+sfx/elec_bell.flac,sfx,speed,pitch +1.0 semitone,1.01,true
+sfx/elec_bell.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/elec_bell.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/elec_bell.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.78,false
+sfx/elec_blip.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/elec_blip.flac,sfx,level,activity unchanged,0,true
+sfx/elec_blip.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.205,true
+sfx/elec_blip.flac,sfx,level,same events,1 vs 1,true
+sfx/elec_blip.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/elec_blip.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/elec_blip.flac,sfx,shift,events move +0.5 s,1,true
+sfx/elec_blip.flac,sfx,dc,DC offset flagged,yes,true
+sfx/elec_blip.flac,sfx,clip,clipping flagged,yes,true
+sfx/elec_blip.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/elec_blip.flac,sfx,reverse,N1 kurtosis unchanged,1.84,false
+sfx/elec_blip.flac,sfx,speed,pitch +1.0 semitone,1.01,true
+sfx/elec_blip.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/elec_blip.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/elec_blip.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.98,true
+sfx/elec_chime.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/elec_chime.flac,sfx,level,activity unchanged,0,true
+sfx/elec_chime.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.2,true
+sfx/elec_chime.flac,sfx,level,same events,1 vs 1,true
+sfx/elec_chime.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/elec_chime.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/elec_chime.flac,sfx,level,N7 interest unchanged,0,true
+sfx/elec_chime.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/elec_chime.flac,sfx,shift,events move +0.5 s,1,true
+sfx/elec_chime.flac,sfx,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/elec_chime.flac,sfx,dc,DC offset flagged,yes,true
+sfx/elec_chime.flac,sfx,clip,clipping flagged,yes,true
+sfx/elec_chime.flac,sfx,reverse,N6 arrow of time flips sign,3.05 → -3.1,true
+sfx/elec_chime.flac,sfx,reverse,N4 net glide flips sign,-1.24 → 1.24,true
+sfx/elec_chime.flac,sfx,reverse,N1 kurtosis unchanged,0.27,true
+sfx/elec_chime.flac,sfx,reverse,N8 recurrence unchanged,0,true
+sfx/elec_chime.flac,sfx,speed,N9 ring time ÷1.06,1.023,true
+sfx/elec_chime.flac,sfx,speed,pitch +1.0 semitone,1.01,true
+sfx/elec_chime.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/elec_chime.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/elec_chime.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.81,true
+sfx/elec_cymbal.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/elec_cymbal.flac,sfx,level,activity unchanged,0,true
+sfx/elec_cymbal.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.185,true
+sfx/elec_cymbal.flac,sfx,level,same events,1 vs 1,true
+sfx/elec_cymbal.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/elec_cymbal.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/elec_cymbal.flac,sfx,shift,events move +0.5 s,1,true
+sfx/elec_cymbal.flac,sfx,dc,DC offset flagged,yes,true
+sfx/elec_cymbal.flac,sfx,clip,clipping flagged,yes,true
+sfx/elec_cymbal.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/elec_cymbal.flac,sfx,reverse,N6 arrow of time flips sign,4.03 → -4.03,true
+sfx/elec_cymbal.flac,sfx,reverse,N1 kurtosis unchanged,0,true
+sfx/elec_cymbal.flac,sfx,speed,N9 ring time ÷1.06,1.066,true
+sfx/elec_cymbal.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/elec_cymbal.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/elec_cymbal.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.76,false
+sfx/elec_fuzz_tom.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/elec_fuzz_tom.flac,sfx,level,activity unchanged,0,true
+sfx/elec_fuzz_tom.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.203,true
+sfx/elec_fuzz_tom.flac,sfx,level,same events,1 vs 1,true
+sfx/elec_fuzz_tom.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/elec_fuzz_tom.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/elec_fuzz_tom.flac,sfx,shift,events move +0.5 s,1,true
+sfx/elec_fuzz_tom.flac,sfx,dc,DC offset flagged,yes,true
+sfx/elec_fuzz_tom.flac,sfx,clip,clipping flagged,yes,true
+sfx/elec_fuzz_tom.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/elec_fuzz_tom.flac,sfx,reverse,N4 net glide flips sign,-1.67 → 1.65,true
+sfx/elec_fuzz_tom.flac,sfx,reverse,N1 kurtosis unchanged,0.02,true
+sfx/elec_fuzz_tom.flac,sfx,speed,length ÷1.06,1.0601,true
+sfx/elec_fuzz_tom.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/elec_fuzz_tom.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/elec_ping.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/elec_ping.flac,sfx,level,activity unchanged,0,true
+sfx/elec_ping.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.195,true
+sfx/elec_ping.flac,sfx,level,same events,1 vs 1,true
+sfx/elec_ping.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/elec_ping.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/elec_ping.flac,sfx,shift,events move +0.5 s,1,true
+sfx/elec_ping.flac,sfx,dc,DC offset flagged,yes,true
+sfx/elec_ping.flac,sfx,clip,clipping flagged,yes,true
+sfx/elec_ping.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/elec_ping.flac,sfx,reverse,N6 arrow of time flips sign,2.86 → -2.84,true
+sfx/elec_ping.flac,sfx,reverse,N1 kurtosis unchanged,-0.01,true
+sfx/elec_ping.flac,sfx,speed,N9 ring time ÷1.06,1.084,true
+sfx/elec_ping.flac,sfx,speed,pitch +1.0 semitone,1.01,true
+sfx/elec_ping.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/elec_ping.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/elec_ping.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.85,true
+sfx/elec_twang.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/elec_twang.flac,sfx,level,activity unchanged,0,true
+sfx/elec_twang.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.193,true
+sfx/elec_twang.flac,sfx,level,same events,1 vs 1,true
+sfx/elec_twang.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/elec_twang.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/elec_twang.flac,sfx,shift,events move +0.5 s,1,true
+sfx/elec_twang.flac,sfx,dc,DC offset flagged,yes,true
+sfx/elec_twang.flac,sfx,clip,clipping flagged,yes,true
+sfx/elec_twang.flac,sfx,cut,abrupt end flagged,no,false
+sfx/elec_twang.flac,sfx,reverse,N1 kurtosis unchanged,-0.14,true
+sfx/elec_twang.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/elec_twang.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/elec_twang.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.98,true
+sfx/elec_wood.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/elec_wood.flac,sfx,level,activity unchanged,0,true
+sfx/elec_wood.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.19,true
+sfx/elec_wood.flac,sfx,level,same events,3 vs 3,true
+sfx/elec_wood.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/elec_wood.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/elec_wood.flac,sfx,shift,events move +0.5 s,1,true
+sfx/elec_wood.flac,sfx,dc,DC offset flagged,yes,true
+sfx/elec_wood.flac,sfx,clip,clipping flagged,yes,true
+sfx/elec_wood.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/elec_wood.flac,sfx,reverse,N6 arrow of time flips sign,1.06 → -1.07,true
+sfx/elec_wood.flac,sfx,reverse,N4 net glide flips sign,-0.92 → 0.93,true
+sfx/elec_wood.flac,sfx,reverse,N1 kurtosis unchanged,0.91,true
+sfx/elec_wood.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/elec_wood.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/elec_wood.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/glitch_bass_g.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/glitch_bass_g.flac,sfx,level,activity unchanged,0,true
+sfx/glitch_bass_g.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.191,true
+sfx/glitch_bass_g.flac,sfx,level,same events,8 vs 8,true
+sfx/glitch_bass_g.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/glitch_bass_g.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/glitch_bass_g.flac,sfx,level,N7 interest unchanged,0,true
+sfx/glitch_bass_g.flac,sfx,shift,events move +0.5 s,0.5,false
+sfx/glitch_bass_g.flac,sfx,hit,new event or onset at the hit (±25 ms),missed,false
+sfx/glitch_bass_g.flac,sfx,dc,DC offset flagged,yes,true
+sfx/glitch_bass_g.flac,sfx,clip,clipping flagged,yes,true
+sfx/glitch_bass_g.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/glitch_bass_g.flac,sfx,reverse,N6 arrow of time flips sign,1.02 → -1.08,true
+sfx/glitch_bass_g.flac,sfx,reverse,N4 net glide flips sign,-0.71 → 0.72,true
+sfx/glitch_bass_g.flac,sfx,reverse,N1 kurtosis unchanged,-0.03,true
+sfx/glitch_bass_g.flac,sfx,speed,N9 ring time ÷1.06,1.01,true
+sfx/glitch_bass_g.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/glitch_bass_g.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/glitch_bass_g.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.96,true
+sfx/glitch_perc1.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/glitch_perc1.flac,sfx,level,activity unchanged,0.02,true
+sfx/glitch_perc1.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.149,true
+sfx/glitch_perc1.flac,sfx,level,same events,9 vs 9,true
+sfx/glitch_perc1.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/glitch_perc1.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/glitch_perc1.flac,sfx,level,N7 interest unchanged,0,true
+sfx/glitch_perc1.flac,sfx,shift,events move +0.5 s,0.78,false
+sfx/glitch_perc1.flac,sfx,hit,new event or onset at the hit (±25 ms),-9 ms,true
+sfx/glitch_perc1.flac,sfx,dc,DC offset flagged,yes,true
+sfx/glitch_perc1.flac,sfx,clip,clipping flagged,yes,true
+sfx/glitch_perc1.flac,sfx,reverse,N6 arrow of time flips sign,3.15 → -3.18,true
+sfx/glitch_perc1.flac,sfx,reverse,N4 net glide flips sign,-1.2 → 1.17,true
+sfx/glitch_perc1.flac,sfx,reverse,N1 kurtosis unchanged,0.57,true
+sfx/glitch_perc1.flac,sfx,speed,N9 ring time ÷1.06,1.051,true
+sfx/glitch_perc1.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/glitch_perc1.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/glitch_perc1.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.93,true
+sfx/glitch_perc2.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/glitch_perc2.flac,sfx,level,activity unchanged,0.01,true
+sfx/glitch_perc2.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.11,true
+sfx/glitch_perc2.flac,sfx,level,same events,2 vs 2,true
+sfx/glitch_perc2.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/glitch_perc2.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/glitch_perc2.flac,sfx,shift,events move +0.5 s,1,true
+sfx/glitch_perc2.flac,sfx,dc,DC offset flagged,yes,true
+sfx/glitch_perc2.flac,sfx,clip,clipping flagged,yes,true
+sfx/glitch_perc2.flac,sfx,reverse,N6 arrow of time flips sign,0.78 → -0.8,true
+sfx/glitch_perc2.flac,sfx,reverse,N4 net glide flips sign,-1.26 → 1.24,true
+sfx/glitch_perc2.flac,sfx,reverse,N1 kurtosis unchanged,0.74,true
+sfx/glitch_perc2.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/glitch_perc2.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/glitch_perc2.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/glitch_perc3.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/glitch_perc3.flac,sfx,level,activity unchanged,0.01,true
+sfx/glitch_perc3.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.136,true
+sfx/glitch_perc3.flac,sfx,level,same events,2 vs 2,true
+sfx/glitch_perc3.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/glitch_perc3.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/glitch_perc3.flac,sfx,shift,events move +0.5 s,1,true
+sfx/glitch_perc3.flac,sfx,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/glitch_perc3.flac,sfx,dc,DC offset flagged,yes,true
+sfx/glitch_perc3.flac,sfx,clip,clipping flagged,yes,true
+sfx/glitch_perc3.flac,sfx,reverse,N6 arrow of time flips sign,3.52 → -3.4,true
+sfx/glitch_perc3.flac,sfx,reverse,N4 net glide flips sign,-0.88 → 0.84,true
+sfx/glitch_perc3.flac,sfx,reverse,N1 kurtosis unchanged,0.03,true
+sfx/glitch_perc3.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/glitch_perc3.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/glitch_perc3.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.97,true
+sfx/glitch_perc4.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/glitch_perc4.flac,sfx,level,activity unchanged,0,true
+sfx/glitch_perc4.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.097,true
+sfx/glitch_perc4.flac,sfx,level,same events,1 vs 1,true
+sfx/glitch_perc4.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/glitch_perc4.flac,sfx,level,N5 CPP unchanged,-0.2,true
+sfx/glitch_perc4.flac,sfx,shift,events move +0.5 s,1,true
+sfx/glitch_perc4.flac,sfx,dc,DC offset flagged,yes,true
+sfx/glitch_perc4.flac,sfx,clip,clipping flagged,yes,true
+sfx/glitch_perc4.flac,sfx,reverse,N6 arrow of time flips sign,5.07 → -5.04,true
+sfx/glitch_perc4.flac,sfx,reverse,N4 net glide flips sign,-1.45 → 1.44,true
+sfx/glitch_perc4.flac,sfx,reverse,N1 kurtosis unchanged,-0.26,true
+sfx/glitch_perc4.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/glitch_perc4.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/glitch_perc4.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/glitch_perc5.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/glitch_perc5.flac,sfx,level,activity unchanged,0.01,true
+sfx/glitch_perc5.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.097,true
+sfx/glitch_perc5.flac,sfx,level,same events,1 vs 1,true
+sfx/glitch_perc5.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/glitch_perc5.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/glitch_perc5.flac,sfx,shift,events move +0.5 s,1,true
+sfx/glitch_perc5.flac,sfx,dc,DC offset flagged,yes,true
+sfx/glitch_perc5.flac,sfx,clip,clipping flagged,yes,true
+sfx/glitch_perc5.flac,sfx,reverse,N6 arrow of time flips sign,5.14 → -5.09,true
+sfx/glitch_perc5.flac,sfx,reverse,N4 net glide flips sign,-1.75 → 1.75,true
+sfx/glitch_perc5.flac,sfx,reverse,N1 kurtosis unchanged,-0.02,true
+sfx/glitch_perc5.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/glitch_perc5.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/glitch_perc5.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/glitch_robot1.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/glitch_robot1.flac,sfx,level,activity unchanged,0,true
+sfx/glitch_robot1.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.195,true
+sfx/glitch_robot1.flac,sfx,level,same events,1 vs 1,true
+sfx/glitch_robot1.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/glitch_robot1.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/glitch_robot1.flac,sfx,level,N7 interest unchanged,0,true
+sfx/glitch_robot1.flac,sfx,shift,events move +0.5 s,1,true
+sfx/glitch_robot1.flac,sfx,hit,new event or onset at the hit (±25 ms),-9 ms,true
+sfx/glitch_robot1.flac,sfx,dc,DC offset flagged,yes,true
+sfx/glitch_robot1.flac,sfx,clip,clipping flagged,yes,true
+sfx/glitch_robot1.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/glitch_robot1.flac,sfx,reverse,N6 arrow of time flips sign,0.8 → -0.86,true
+sfx/glitch_robot1.flac,sfx,reverse,N4 net glide flips sign,-1.21 → 1.12,true
+sfx/glitch_robot1.flac,sfx,reverse,N1 kurtosis unchanged,-0.37,true
+sfx/glitch_robot1.flac,sfx,speed,N9 ring time ÷1.06,1.044,true
+sfx/glitch_robot1.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/glitch_robot1.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/glitch_robot1.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/glitch_robot2.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/glitch_robot2.flac,sfx,level,activity unchanged,0,true
+sfx/glitch_robot2.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.198,true
+sfx/glitch_robot2.flac,sfx,level,same events,1 vs 1,true
+sfx/glitch_robot2.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/glitch_robot2.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/glitch_robot2.flac,sfx,shift,events move +0.5 s,1,true
+sfx/glitch_robot2.flac,sfx,dc,DC offset flagged,yes,true
+sfx/glitch_robot2.flac,sfx,clip,clipping flagged,yes,true
+sfx/glitch_robot2.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/glitch_robot2.flac,sfx,reverse,N6 arrow of time flips sign,0.85 → -0.85,true
+sfx/glitch_robot2.flac,sfx,reverse,N4 net glide flips sign,-0.73 → 0.59,true
+sfx/glitch_robot2.flac,sfx,reverse,N1 kurtosis unchanged,0.15,true
+sfx/glitch_robot2.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/glitch_robot2.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/glitch_robot2.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/guit_e_fifths.flac,orchestral,level,loudness −12.0 LU,-12,true
+sfx/guit_e_fifths.flac,orchestral,level,activity unchanged,0,true
+sfx/guit_e_fifths.flac,orchestral,level,harshness-weighted loudness (C4) lower,-0.198,true
+sfx/guit_e_fifths.flac,orchestral,level,same events,6 vs 6,true
+sfx/guit_e_fifths.flac,orchestral,level,N1 kurtosis unchanged,0,true
+sfx/guit_e_fifths.flac,orchestral,level,N5 CPP unchanged,0,true
+sfx/guit_e_fifths.flac,orchestral,level,N7 interest unchanged,0,true
+sfx/guit_e_fifths.flac,orchestral,level,N8 recurrence unchanged,0,true
+sfx/guit_e_fifths.flac,orchestral,shift,events move +0.5 s,0.33,false
+sfx/guit_e_fifths.flac,orchestral,hit,new event or onset at the hit (±25 ms),-6 ms,true
+sfx/guit_e_fifths.flac,orchestral,dc,DC offset flagged,yes,true
+sfx/guit_e_fifths.flac,orchestral,clip,clipping flagged,yes,true
+sfx/guit_e_fifths.flac,orchestral,cut,abrupt end flagged,yes,true
+sfx/guit_e_fifths.flac,orchestral,reverse,N4 net glide flips sign,-0.53 → 0.53,true
+sfx/guit_e_fifths.flac,orchestral,reverse,N1 kurtosis unchanged,0,true
+sfx/guit_e_fifths.flac,orchestral,reverse,N8 recurrence unchanged,0.004,true
+sfx/guit_e_fifths.flac,orchestral,speed,pitch +1.0 semitone,0.98,true
+sfx/guit_e_fifths.flac,orchestral,speed,length ÷1.06,1.06,true
+sfx/guit_e_fifths.flac,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/guit_e_fifths.flac,orchestral,noise,activity curve holds (r ≥ 0.8),0.95,true
+sfx/guit_e_slide.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/guit_e_slide.flac,sfx,level,activity unchanged,0.01,true
+sfx/guit_e_slide.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.068,true
+sfx/guit_e_slide.flac,sfx,level,same events,1 vs 1,true
+sfx/guit_e_slide.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/guit_e_slide.flac,sfx,level,N2 same repetition rate,1.98 → 1.98,true
+sfx/guit_e_slide.flac,sfx,level,N5 CPP unchanged,-0.1,true
+sfx/guit_e_slide.flac,sfx,level,N7 interest unchanged,-0.005,true
+sfx/guit_e_slide.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/guit_e_slide.flac,sfx,shift,events move +0.5 s,1,true
+sfx/guit_e_slide.flac,sfx,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/guit_e_slide.flac,sfx,dc,DC offset flagged,yes,true
+sfx/guit_e_slide.flac,sfx,clip,clipping flagged,yes,true
+sfx/guit_e_slide.flac,sfx,reverse,N6 arrow of time flips sign,2.81 → -2.81,true
+sfx/guit_e_slide.flac,sfx,reverse,N4 net glide flips sign,-0.54 → 0.55,true
+sfx/guit_e_slide.flac,sfx,reverse,N1 kurtosis unchanged,0,true
+sfx/guit_e_slide.flac,sfx,reverse,N8 recurrence unchanged,0.007,true
+sfx/guit_e_slide.flac,sfx,reverse,N2 same repetition rate,1.98 → 1.94,false
+sfx/guit_e_slide.flac,sfx,speed,N2 repetition rate ×1.06,1.061,true
+sfx/guit_e_slide.flac,sfx,speed,pitch +1.0 semitone,0.94,true
+sfx/guit_e_slide.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/guit_e_slide.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/guit_e_slide.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.82,true
+sfx/guit_em9.flac,orchestral,level,loudness −12.0 LU,-12.1,true
+sfx/guit_em9.flac,orchestral,level,activity unchanged,0,true
+sfx/guit_em9.flac,orchestral,level,harshness-weighted loudness (C4) lower,-0.174,true
+sfx/guit_em9.flac,orchestral,level,same events,6 vs 6,true
+sfx/guit_em9.flac,orchestral,level,N1 kurtosis unchanged,0,true
+sfx/guit_em9.flac,orchestral,level,N2 same repetition rate,82.01 → 82.01,true
+sfx/guit_em9.flac,orchestral,level,N5 CPP unchanged,0,true
+sfx/guit_em9.flac,orchestral,level,N7 interest unchanged,0,true
+sfx/guit_em9.flac,orchestral,level,N8 recurrence unchanged,0,true
+sfx/guit_em9.flac,orchestral,shift,events move +0.5 s,0.67,false
+sfx/guit_em9.flac,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/guit_em9.flac,orchestral,dc,DC offset flagged,yes,true
+sfx/guit_em9.flac,orchestral,clip,clipping flagged,yes,true
+sfx/guit_em9.flac,orchestral,cut,abrupt end flagged,yes,true
+sfx/guit_em9.flac,orchestral,reverse,N4 net glide flips sign,-1.78 → 1.78,true
+sfx/guit_em9.flac,orchestral,reverse,N1 kurtosis unchanged,-0.03,true
+sfx/guit_em9.flac,orchestral,reverse,N8 recurrence unchanged,0.002,true
+sfx/guit_em9.flac,orchestral,reverse,N2 same repetition rate,82.01 → 82.01,true
+sfx/guit_em9.flac,orchestral,speed,N2 repetition rate ×1.06,1.06,true
+sfx/guit_em9.flac,orchestral,speed,length ÷1.06,1.06,true
+sfx/guit_em9.flac,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/guit_em9.flac,orchestral,noise,activity curve holds (r ≥ 0.8),0.96,true
+sfx/guit_harmonics.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/guit_harmonics.flac,sfx,level,activity unchanged,0.02,true
+sfx/guit_harmonics.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.136,true
+sfx/guit_harmonics.flac,sfx,level,same events,1 vs 1,true
+sfx/guit_harmonics.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/guit_harmonics.flac,sfx,level,N5 CPP unchanged,0.1,true
+sfx/guit_harmonics.flac,sfx,level,N7 interest unchanged,-0.001,true
+sfx/guit_harmonics.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/guit_harmonics.flac,sfx,shift,events move +0.5 s,1,true
+sfx/guit_harmonics.flac,sfx,hit,new event or onset at the hit (±25 ms),-9 ms,true
+sfx/guit_harmonics.flac,sfx,dc,DC offset flagged,yes,true
+sfx/guit_harmonics.flac,sfx,clip,clipping flagged,yes,true
+sfx/guit_harmonics.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/guit_harmonics.flac,sfx,reverse,N6 arrow of time flips sign,3.25 → -3.18,true
+sfx/guit_harmonics.flac,sfx,reverse,N1 kurtosis unchanged,0.31,true
+sfx/guit_harmonics.flac,sfx,reverse,N8 recurrence unchanged,0,true
+sfx/guit_harmonics.flac,sfx,speed,N9 material unchanged (log τd),-0.09,true
+sfx/guit_harmonics.flac,sfx,speed,pitch +1.0 semitone,1.01,true
+sfx/guit_harmonics.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/guit_harmonics.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/guit_harmonics.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/loop_amen.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/loop_amen.flac,sfx,level,activity unchanged,0,true
+sfx/loop_amen.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.207,true
+sfx/loop_amen.flac,sfx,level,same events,10 vs 10,true
+sfx/loop_amen.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/loop_amen.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/loop_amen.flac,sfx,level,N7 interest unchanged,0,true
+sfx/loop_amen.flac,sfx,shift,events move +0.5 s,0.8,false
+sfx/loop_amen.flac,sfx,hit,new event or onset at the hit (±25 ms),missed,false
+sfx/loop_amen.flac,sfx,dc,DC offset flagged,yes,true
+sfx/loop_amen.flac,sfx,clip,clipping flagged,yes,true
+sfx/loop_amen.flac,sfx,cut,abrupt end flagged,no,false
+sfx/loop_amen.flac,sfx,reverse,N6 arrow of time flips sign,0.9 → -0.91,true
+sfx/loop_amen.flac,sfx,reverse,N4 net glide flips sign,1.55 → -1.54,true
+sfx/loop_amen.flac,sfx,reverse,N1 kurtosis unchanged,0.09,true
+sfx/loop_amen.flac,sfx,speed,N9 material unchanged (log τd),-0.05,true
+sfx/loop_amen.flac,sfx,speed,N9 ring time ÷1.06,1.158,true
+sfx/loop_amen.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/loop_amen.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/loop_amen.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/loop_breakbeat.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/loop_breakbeat.flac,sfx,level,activity unchanged,0,true
+sfx/loop_breakbeat.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.191,true
+sfx/loop_breakbeat.flac,sfx,level,same events,10 vs 10,true
+sfx/loop_breakbeat.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/loop_breakbeat.flac,sfx,level,N2 same repetition rate,4.2 → 4.2,true
+sfx/loop_breakbeat.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/loop_breakbeat.flac,sfx,level,N7 interest unchanged,0,true
+sfx/loop_breakbeat.flac,sfx,shift,events move +0.5 s,0.9,true
+sfx/loop_breakbeat.flac,sfx,hit,new event or onset at the hit (±25 ms),missed,false
+sfx/loop_breakbeat.flac,sfx,dc,DC offset flagged,yes,true
+sfx/loop_breakbeat.flac,sfx,clip,clipping flagged,yes,true
+sfx/loop_breakbeat.flac,sfx,cut,abrupt end flagged,no,false
+sfx/loop_breakbeat.flac,sfx,reverse,N1 kurtosis unchanged,0.1,true
+sfx/loop_breakbeat.flac,sfx,reverse,N2 same repetition rate,4.2 → 4.2,true
+sfx/loop_breakbeat.flac,sfx,speed,N2 repetition rate ×1.06,1.06,true
+sfx/loop_breakbeat.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/loop_breakbeat.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/loop_breakbeat.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.91,true
+sfx/loop_garzul.flac,rhythmic,level,loudness −12.0 LU,-12,true
+sfx/loop_garzul.flac,rhythmic,level,activity unchanged,0,true
+sfx/loop_garzul.flac,rhythmic,level,harshness-weighted loudness (C4) lower,-0.191,true
+sfx/loop_garzul.flac,rhythmic,level,same events,23 vs 23,true
+sfx/loop_garzul.flac,rhythmic,level,N1 kurtosis unchanged,0,true
+sfx/loop_garzul.flac,rhythmic,level,N2 same repetition rate,1.98 → 1.98,true
+sfx/loop_garzul.flac,rhythmic,level,N5 CPP unchanged,0,true
+sfx/loop_garzul.flac,rhythmic,level,N7 interest unchanged,0,true
+sfx/loop_garzul.flac,rhythmic,level,N8 recurrence unchanged,0,true
+sfx/loop_garzul.flac,rhythmic,shift,events move +0.5 s,0.91,true
+sfx/loop_garzul.flac,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/loop_garzul.flac,rhythmic,dc,DC offset flagged,yes,true
+sfx/loop_garzul.flac,rhythmic,clip,clipping flagged,yes,true
+sfx/loop_garzul.flac,rhythmic,cut,abrupt end flagged,no,false
+sfx/loop_garzul.flac,rhythmic,reverse,N1 kurtosis unchanged,0.03,true
+sfx/loop_garzul.flac,rhythmic,reverse,N8 recurrence unchanged,0,true
+sfx/loop_garzul.flac,rhythmic,reverse,N2 same repetition rate,1.98 → 1.98,true
+sfx/loop_garzul.flac,rhythmic,speed,N2 repetition rate ×1.06,1.061,true
+sfx/loop_garzul.flac,rhythmic,speed,N9 ring time ÷1.06,0.874,false
+sfx/loop_garzul.flac,rhythmic,speed,length ÷1.06,1.06,true
+sfx/loop_garzul.flac,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/loop_garzul.flac,rhythmic,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/loop_industrial.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/loop_industrial.flac,sfx,level,activity unchanged,0,true
+sfx/loop_industrial.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.191,true
+sfx/loop_industrial.flac,sfx,level,same events,3 vs 3,true
+sfx/loop_industrial.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/loop_industrial.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/loop_industrial.flac,sfx,shift,events move +0.5 s,0.33,false
+sfx/loop_industrial.flac,sfx,dc,DC offset flagged,yes,true
+sfx/loop_industrial.flac,sfx,clip,clipping flagged,yes,true
+sfx/loop_industrial.flac,sfx,cut,abrupt end flagged,no,false
+sfx/loop_industrial.flac,sfx,reverse,N6 arrow of time flips sign,2.01 → -2.03,true
+sfx/loop_industrial.flac,sfx,reverse,N4 net glide flips sign,1.69 → -1.66,true
+sfx/loop_industrial.flac,sfx,reverse,N1 kurtosis unchanged,-1.42,false
+sfx/loop_industrial.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/loop_industrial.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/loop_industrial.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.97,true
+sfx/loop_mika.flac,rhythmic,level,loudness −12.0 LU,-12,true
+sfx/loop_mika.flac,rhythmic,level,activity unchanged,0,true
+sfx/loop_mika.flac,rhythmic,level,harshness-weighted loudness (C4) lower,-0.189,true
+sfx/loop_mika.flac,rhythmic,level,same events,19 vs 19,true
+sfx/loop_mika.flac,rhythmic,level,N1 kurtosis unchanged,0,true
+sfx/loop_mika.flac,rhythmic,level,N5 CPP unchanged,0,true
+sfx/loop_mika.flac,rhythmic,level,N7 interest unchanged,0,true
+sfx/loop_mika.flac,rhythmic,level,N8 recurrence unchanged,0,true
+sfx/loop_mika.flac,rhythmic,shift,events move +0.5 s,0.84,false
+sfx/loop_mika.flac,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/loop_mika.flac,rhythmic,dc,DC offset flagged,yes,true
+sfx/loop_mika.flac,rhythmic,clip,clipping flagged,yes,true
+sfx/loop_mika.flac,rhythmic,cut,abrupt end flagged,no,false
+sfx/loop_mika.flac,rhythmic,reverse,N6 arrow of time flips sign,0.63 → -0.63,true
+sfx/loop_mika.flac,rhythmic,reverse,N1 kurtosis unchanged,0.06,true
+sfx/loop_mika.flac,rhythmic,reverse,N8 recurrence unchanged,-0.004,true
+sfx/loop_mika.flac,rhythmic,speed,N9 ring time ÷1.06,8.213,false
+sfx/loop_mika.flac,rhythmic,speed,length ÷1.06,1.06,true
+sfx/loop_mika.flac,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/loop_mika.flac,rhythmic,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/misc_burp.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/misc_burp.flac,sfx,level,activity unchanged,0.01,true
+sfx/misc_burp.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.096,true
+sfx/misc_burp.flac,sfx,level,same events,1 vs 1,true
+sfx/misc_burp.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/misc_burp.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/misc_burp.flac,sfx,shift,events move +0.5 s,1,true
+sfx/misc_burp.flac,sfx,dc,DC offset flagged,yes,true
+sfx/misc_burp.flac,sfx,clip,clipping flagged,yes,true
+sfx/misc_burp.flac,sfx,reverse,N6 arrow of time flips sign,0.95 → -0.97,true
+sfx/misc_burp.flac,sfx,reverse,N1 kurtosis unchanged,-0.51,true
+sfx/misc_burp.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/misc_burp.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/misc_burp.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/misc_cineboom.flac,orchestral,level,loudness −12.0 LU,-11.9,true
+sfx/misc_cineboom.flac,orchestral,level,activity unchanged,0,true
+sfx/misc_cineboom.flac,orchestral,level,harshness-weighted loudness (C4) lower,-0.175,true
+sfx/misc_cineboom.flac,orchestral,level,same events,1 vs 1,true
+sfx/misc_cineboom.flac,orchestral,level,N1 kurtosis unchanged,0,true
+sfx/misc_cineboom.flac,orchestral,level,N5 CPP unchanged,0,true
+sfx/misc_cineboom.flac,orchestral,level,N7 interest unchanged,0,true
+sfx/misc_cineboom.flac,orchestral,level,N8 recurrence unchanged,0,true
+sfx/misc_cineboom.flac,orchestral,shift,events move +0.5 s,1,true
+sfx/misc_cineboom.flac,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/misc_cineboom.flac,orchestral,dc,DC offset flagged,yes,true
+sfx/misc_cineboom.flac,orchestral,clip,clipping flagged,yes,true
+sfx/misc_cineboom.flac,orchestral,cut,abrupt end flagged,yes,true
+sfx/misc_cineboom.flac,orchestral,reverse,N4 net glide flips sign,-2.49 → 2.51,true
+sfx/misc_cineboom.flac,orchestral,reverse,N1 kurtosis unchanged,-0.06,true
+sfx/misc_cineboom.flac,orchestral,reverse,N8 recurrence unchanged,-0.003,true
+sfx/misc_cineboom.flac,orchestral,speed,length ÷1.06,1.06,true
+sfx/misc_cineboom.flac,orchestral,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/misc_cineboom.flac,orchestral,noise,activity curve holds (r ≥ 0.8),0.97,true
+sfx/misc_crow.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/misc_crow.flac,sfx,level,activity unchanged,0,true
+sfx/misc_crow.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.196,true
+sfx/misc_crow.flac,sfx,level,same events,1 vs 1,true
+sfx/misc_crow.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/misc_crow.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/misc_crow.flac,sfx,shift,events move +0.5 s,1,true
+sfx/misc_crow.flac,sfx,dc,DC offset flagged,yes,true
+sfx/misc_crow.flac,sfx,clip,clipping flagged,yes,true
+sfx/misc_crow.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/misc_crow.flac,sfx,reverse,N6 arrow of time flips sign,0.74 → -0.75,true
+sfx/misc_crow.flac,sfx,reverse,N1 kurtosis unchanged,0.13,true
+sfx/misc_crow.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/misc_crow.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/misc_crow.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/perc_bell.flac,orchestral,level,loudness −12.0 LU,-11.6,false
+sfx/perc_bell.flac,orchestral,level,activity unchanged,0,true
+sfx/perc_bell.flac,orchestral,level,harshness-weighted loudness (C4) lower,-0.122,true
+sfx/perc_bell.flac,orchestral,level,same events,2 vs 2,true
+sfx/perc_bell.flac,orchestral,level,N1 kurtosis unchanged,0,true
+sfx/perc_bell.flac,orchestral,level,N2 same repetition rate,34.27 → 34.27,true
+sfx/perc_bell.flac,orchestral,level,N5 CPP unchanged,0,true
+sfx/perc_bell.flac,orchestral,level,N7 interest unchanged,0.013,true
+sfx/perc_bell.flac,orchestral,level,N8 recurrence unchanged,0.001,true
+sfx/perc_bell.flac,orchestral,shift,events move +0.5 s,1,true
+sfx/perc_bell.flac,orchestral,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/perc_bell.flac,orchestral,dc,DC offset flagged,yes,true
+sfx/perc_bell.flac,orchestral,clip,clipping flagged,yes,true
+sfx/perc_bell.flac,orchestral,reverse,N6 arrow of time flips sign,2.07 → -2.12,true
+sfx/perc_bell.flac,orchestral,reverse,N4 net glide flips sign,-3.85 → 3.89,true
+sfx/perc_bell.flac,orchestral,reverse,N1 kurtosis unchanged,0.4,true
+sfx/perc_bell.flac,orchestral,reverse,N8 recurrence unchanged,0,true
+sfx/perc_bell.flac,orchestral,reverse,N2 same repetition rate,34.27 → 34.27,true
+sfx/perc_bell.flac,orchestral,speed,N2 repetition rate ×1.06,1.06,true
+sfx/perc_bell.flac,orchestral,speed,N9 ring time ÷1.06,1.061,true
+sfx/perc_bell.flac,orchestral,speed,pitch +1.0 semitone,1.02,true
+sfx/perc_bell.flac,orchestral,speed,length ÷1.06,1.06,true
+sfx/perc_bell.flac,orchestral,noise,loudness curve holds (r ≥ 0.9),0.8,false
+sfx/perc_bell.flac,orchestral,noise,activity curve holds (r ≥ 0.8),0.34,false
+sfx/perc_snap.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/perc_snap.flac,sfx,level,activity unchanged,0,true
+sfx/perc_snap.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.2,true
+sfx/perc_snap.flac,sfx,level,same events,1 vs 1,true
+sfx/perc_snap.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/perc_snap.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/perc_snap.flac,sfx,shift,events move +0.5 s,1,true
+sfx/perc_snap.flac,sfx,dc,DC offset flagged,yes,true
+sfx/perc_snap.flac,sfx,clip,clipping flagged,yes,true
+sfx/perc_snap.flac,sfx,reverse,N6 arrow of time flips sign,2.96 → -2.86,true
+sfx/perc_snap.flac,sfx,reverse,N4 net glide flips sign,-0.77 → 0.64,true
+sfx/perc_snap.flac,sfx,reverse,N1 kurtosis unchanged,-3.29,true
+sfx/perc_snap.flac,sfx,speed,N9 ring time ÷1.06,1.057,true
+sfx/perc_snap.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/perc_snap.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/perc_snap.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/perc_swash.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/perc_swash.flac,sfx,level,activity unchanged,0,true
+sfx/perc_swash.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.189,true
+sfx/perc_swash.flac,sfx,level,same events,1 vs 1,true
+sfx/perc_swash.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/perc_swash.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/perc_swash.flac,sfx,shift,events move +0.5 s,1,true
+sfx/perc_swash.flac,sfx,dc,DC offset flagged,yes,true
+sfx/perc_swash.flac,sfx,clip,clipping flagged,yes,true
+sfx/perc_swash.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/perc_swash.flac,sfx,reverse,N4 net glide flips sign,-0.6 → 0.53,true
+sfx/perc_swash.flac,sfx,reverse,N1 kurtosis unchanged,-0.09,true
+sfx/perc_swash.flac,sfx,speed,N9 ring time ÷1.06,1.083,true
+sfx/perc_swash.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/perc_swash.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/perc_swash.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/perc_till.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/perc_till.flac,sfx,level,activity unchanged,0.04,true
+sfx/perc_till.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.09,true
+sfx/perc_till.flac,sfx,level,same events,3 vs 3,true
+sfx/perc_till.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/perc_till.flac,sfx,level,N5 CPP unchanged,0.1,true
+sfx/perc_till.flac,sfx,level,N7 interest unchanged,-0.005,true
+sfx/perc_till.flac,sfx,shift,events move +0.5 s,1,true
+sfx/perc_till.flac,sfx,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/perc_till.flac,sfx,dc,DC offset flagged,yes,true
+sfx/perc_till.flac,sfx,clip,clipping flagged,yes,true
+sfx/perc_till.flac,sfx,reverse,N6 arrow of time flips sign,7.09 → -7.17,true
+sfx/perc_till.flac,sfx,reverse,N4 net glide flips sign,-0.78 → 0.78,true
+sfx/perc_till.flac,sfx,reverse,N1 kurtosis unchanged,-1.63,true
+sfx/perc_till.flac,sfx,speed,N9 ring time ÷1.06,1.034,true
+sfx/perc_till.flac,sfx,speed,pitch +1.0 semitone,1.01,true
+sfx/perc_till.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/perc_till.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/perc_till.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.98,true
+sfx/vinyl_backspin.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/vinyl_backspin.flac,sfx,level,activity unchanged,0,true
+sfx/vinyl_backspin.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.195,true
+sfx/vinyl_backspin.flac,sfx,level,same events,2 vs 2,true
+sfx/vinyl_backspin.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/vinyl_backspin.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/vinyl_backspin.flac,sfx,level,N7 interest unchanged,0,true
+sfx/vinyl_backspin.flac,sfx,shift,events move +0.5 s,1,true
+sfx/vinyl_backspin.flac,sfx,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/vinyl_backspin.flac,sfx,dc,DC offset flagged,yes,true
+sfx/vinyl_backspin.flac,sfx,clip,clipping flagged,yes,true
+sfx/vinyl_backspin.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/vinyl_backspin.flac,sfx,reverse,N4 net glide flips sign,-0.68 → 0.64,true
+sfx/vinyl_backspin.flac,sfx,reverse,N1 kurtosis unchanged,-0.02,true
+sfx/vinyl_backspin.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/vinyl_backspin.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/vinyl_backspin.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.99,true
+sfx/vinyl_hiss.flac,rhythmic,level,loudness −12.0 LU,-12,true
+sfx/vinyl_hiss.flac,rhythmic,level,activity unchanged,0,true
+sfx/vinyl_hiss.flac,rhythmic,level,harshness-weighted loudness (C4) lower,-0.19,true
+sfx/vinyl_hiss.flac,rhythmic,level,same events,11 vs 11,true
+sfx/vinyl_hiss.flac,rhythmic,level,N1 kurtosis unchanged,0,true
+sfx/vinyl_hiss.flac,rhythmic,level,N5 CPP unchanged,0,true
+sfx/vinyl_hiss.flac,rhythmic,level,N7 interest unchanged,0,true
+sfx/vinyl_hiss.flac,rhythmic,level,N8 recurrence unchanged,0,true
+sfx/vinyl_hiss.flac,rhythmic,shift,events move +0.5 s,0.73,false
+sfx/vinyl_hiss.flac,rhythmic,hit,new event or onset at the hit (±25 ms),-12 ms,true
+sfx/vinyl_hiss.flac,rhythmic,dc,DC offset flagged,yes,true
+sfx/vinyl_hiss.flac,rhythmic,clip,clipping flagged,yes,true
+sfx/vinyl_hiss.flac,rhythmic,cut,abrupt end flagged,no,false
+sfx/vinyl_hiss.flac,rhythmic,reverse,N1 kurtosis unchanged,2.85,false
+sfx/vinyl_hiss.flac,rhythmic,reverse,N8 recurrence unchanged,0.003,true
+sfx/vinyl_hiss.flac,rhythmic,speed,length ÷1.06,1.06,true
+sfx/vinyl_hiss.flac,rhythmic,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/vinyl_hiss.flac,rhythmic,noise,activity curve holds (r ≥ 0.8),0.98,true
+sfx/vinyl_rewind.flac,sfx,level,loudness −12.0 LU,-12,true
+sfx/vinyl_rewind.flac,sfx,level,activity unchanged,0,true
+sfx/vinyl_rewind.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.193,true
+sfx/vinyl_rewind.flac,sfx,level,same events,3 vs 3,true
+sfx/vinyl_rewind.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/vinyl_rewind.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/vinyl_rewind.flac,sfx,level,N7 interest unchanged,0,true
+sfx/vinyl_rewind.flac,sfx,level,N8 recurrence unchanged,0,true
+sfx/vinyl_rewind.flac,sfx,shift,events move +0.5 s,1,true
+sfx/vinyl_rewind.flac,sfx,hit,new event or onset at the hit (±25 ms),missed,false
+sfx/vinyl_rewind.flac,sfx,dc,DC offset flagged,yes,true
+sfx/vinyl_rewind.flac,sfx,clip,clipping flagged,yes,true
+sfx/vinyl_rewind.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/vinyl_rewind.flac,sfx,reverse,N4 net glide flips sign,-1.78 → 1.78,true
+sfx/vinyl_rewind.flac,sfx,reverse,N1 kurtosis unchanged,0.11,true
+sfx/vinyl_rewind.flac,sfx,reverse,N8 recurrence unchanged,0,true
+sfx/vinyl_rewind.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/vinyl_rewind.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/vinyl_rewind.flac,sfx,noise,activity curve holds (r ≥ 0.8),1,true
+sfx/vinyl_scratch.flac,sfx,level,loudness −12.0 LU,-12.1,true
+sfx/vinyl_scratch.flac,sfx,level,activity unchanged,0,true
+sfx/vinyl_scratch.flac,sfx,level,harshness-weighted loudness (C4) lower,-0.191,true
+sfx/vinyl_scratch.flac,sfx,level,same events,2 vs 2,true
+sfx/vinyl_scratch.flac,sfx,level,N1 kurtosis unchanged,0,true
+sfx/vinyl_scratch.flac,sfx,level,N5 CPP unchanged,0,true
+sfx/vinyl_scratch.flac,sfx,shift,events move +0.5 s,1,true
+sfx/vinyl_scratch.flac,sfx,dc,DC offset flagged,yes,true
+sfx/vinyl_scratch.flac,sfx,clip,clipping flagged,yes,true
+sfx/vinyl_scratch.flac,sfx,cut,abrupt end flagged,yes,true
+sfx/vinyl_scratch.flac,sfx,reverse,N4 net glide flips sign,-1 → 1.11,true
+sfx/vinyl_scratch.flac,sfx,reverse,N1 kurtosis unchanged,0.41,true
+sfx/vinyl_scratch.flac,sfx,speed,length ÷1.06,1.06,true
+sfx/vinyl_scratch.flac,sfx,noise,loudness curve holds (r ≥ 0.9),1,true
+sfx/vinyl_scratch.flac,sfx,noise,activity curve holds (r ≥ 0.8),0.98,true

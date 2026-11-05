@@ -1,0 +1,657 @@
+{
+ "options": {
+  "out": "tune-full",
+  "maxDur": 12,
+  "workers": 2,
+  "seed": 1,
+  "minGain": 2,
+  "resume": true
+ },
+ "split": {
+  "tune": [
+   "music/442789__lena-orsa__happy-music-pistachio-ice-cream-ragtime.ogg",
+   "music/snare-accelerate.ogg",
+   "music/admiralbob77_-_Choice_-_Drum-bass.ogg",
+   "music/5703-47212-0000.ogg",
+   "music/Karissa_Hobbs_-_Lets_Go_Fishin.ogg",
+   "music/Kevin_MacLeod_-_P_I_Tchaikovsky_Dance_of_the_Sugar_Plum_Fairy.ogg",
+   "music/Hungarian_Dance_number_5_-_Allegro_in_F_sharp_minor_(string_orchestra).ogg",
+   "music/glacier-bay-humpback.ogg",
+   "music/198-209-0000.ogg",
+   "sfx/glitch_robot2.flac",
+   "sfx/guit_em9.flac",
+   "sfx/bass_woodsy_c.flac",
+   "sfx/glitch_perc2.flac",
+   "sfx/elec_cymbal.flac",
+   "sfx/ambi_soft_buzz.flac",
+   "sfx/loop_industrial.flac",
+   "sfx/perc_snap.flac",
+   "sfx/glitch_perc5.flac",
+   "sfx/loop_mika.flac",
+   "sfx/ambi_glass_hum.flac",
+   "sfx/loop_amen.flac",
+   "sfx/drum_heavy_kick.flac",
+   "sfx/ambi_dark_woosh.flac",
+   "sfx/misc_cineboom.flac",
+   "sfx/ambi_haunted_hum.flac",
+   "sfx/loop_breakbeat.flac",
+   "sfx/vinyl_rewind.flac",
+   "sfx/elec_twang.flac",
+   "sfx/glitch_perc3.flac",
+   "sfx/elec_bell.flac",
+   "sfx/ambi_drone.flac",
+   "sfx/guit_e_slide.flac",
+   "sfx/drum_roll.flac",
+   "sfx/bass_hit_c.flac",
+   "sfx/ambi_sauna.flac",
+   "sfx/bass_drop_c.flac",
+   "sfx/ambi_choir.flac"
+  ],
+  "hold": [
+   "music/drese-midi.ogg",
+   "music/147793__setuniman__sweet-waltz-0i-22mi.ogg",
+   "music/drese-tempo.ogg",
+   "music/pibble.ogg",
+   "music/456440__inspectorj__bird-whistling-robin-single-13.ogg",
+   "music/3436-172162-0000.ogg",
+   "music/sorohanro_-_solo-trumpet-06.ogg",
+   "music/Kevin_MacLeod_-_Vibe_Ace.ogg",
+   "sfx/guit_e_fifths.flac",
+   "sfx/perc_swash.flac",
+   "sfx/ambi_glass_rub.flac",
+   "sfx/perc_till.flac",
+   "sfx/glitch_bass_g.flac",
+   "sfx/ambi_piano.flac",
+   "sfx/drum_tom_lo_hard.flac",
+   "sfx/loop_garzul.flac",
+   "sfx/ambi_swoosh.flac",
+   "sfx/elec_wood.flac",
+   "sfx/elec_fuzz_tom.flac",
+   "sfx/elec_ping.flac",
+   "sfx/vinyl_hiss.flac",
+   "sfx/ambi_lunar_land.flac",
+   "sfx/glitch_perc1.flac",
+   "sfx/drum_snare_hard.flac",
+   "sfx/elec_blip.flac",
+   "sfx/perc_bell.flac",
+   "sfx/glitch_robot1.flac",
+   "sfx/drum_cymbal_open.flac",
+   "sfx/elec_chime.flac",
+   "sfx/glitch_perc4.flac",
+   "sfx/vinyl_scratch.flac",
+   "sfx/misc_crow.flac",
+   "sfx/vinyl_backspin.flac",
+   "sfx/guit_harmonics.flac",
+   "sfx/drum_splash_hard.flac",
+   "sfx/misc_burp.flac"
+  ]
+ },
+ "space": {
+  "melFloor": {
+   "label": "Mel spectrum floor",
+   "note": "absolute dB, or relative to the file's loudest band (level-invariant)",
+   "values": [
+    "abs-80",
+    "rel-70",
+    "rel-80",
+    "rel-90"
+   ]
+  },
+  "onsetMin": {
+   "label": "Onset minimum, dB per band",
+   "note": "absolute part of the adaptive onset threshold",
+   "values": [
+    0.4,
+    0.6,
+    0.9
+   ]
+  },
+  "sfxRise": {
+   "label": "Event re-attack and band-rise threshold, dB",
+   "note": "sound-effect event segmentation",
+   "values": [
+    4,
+    6,
+    8
+   ]
+  },
+  "recEps": {
+   "label": "Recurrence threshold range",
+   "note": "clamp for the 10th-percentile distance (N8)",
+   "values": [
+    "0.75-2",
+    "1-2.5",
+    "1.5-3"
+   ]
+  }
+ },
+ "shipped": {
+  "melFloor": "abs-80",
+  "onsetMin": 0.6,
+  "sfxRise": 6,
+  "recEps": "1-2.5"
+ },
+ "stage1": [
+  {
+   "label": "melFloor=abs-80 onsetMin=0.6 sfxRise=6 recEps=1-2.5",
+   "cfg": {
+    "melFloor": "abs-80",
+    "onsetMin": 0.6,
+    "sfxRise": 6,
+    "recEps": "1-2.5"
+   },
+   "pass": 677,
+   "n": 728,
+   "rate": 0.929945054945055
+  },
+  {
+   "label": "melFloor=rel-70 onsetMin=0.6 sfxRise=6 recEps=1-2.5",
+   "cfg": {
+    "melFloor": "rel-70",
+    "onsetMin": 0.6,
+    "sfxRise": 6,
+    "recEps": "1-2.5"
+   },
+   "pass": 691,
+   "n": 729,
+   "rate": 0.9478737997256516
+  },
+  {
+   "label": "melFloor=rel-80 onsetMin=0.6 sfxRise=6 recEps=1-2.5",
+   "cfg": {
+    "melFloor": "rel-80",
+    "onsetMin": 0.6,
+    "sfxRise": 6,
+    "recEps": "1-2.5"
+   },
+   "pass": 689,
+   "n": 729,
+   "rate": 0.9451303155006858
+  },
+  {
+   "label": "melFloor=rel-90 onsetMin=0.6 sfxRise=6 recEps=1-2.5",
+   "cfg": {
+    "melFloor": "rel-90",
+    "onsetMin": 0.6,
+    "sfxRise": 6,
+    "recEps": "1-2.5"
+   },
+   "pass": 686,
+   "n": 728,
+   "rate": 0.9423076923076923
+  },
+  {
+   "label": "melFloor=abs-80 onsetMin=0.4 sfxRise=6 recEps=1-2.5",
+   "cfg": {
+    "melFloor": "abs-80",
+    "onsetMin": 0.4,
+    "sfxRise": 6,
+    "recEps": "1-2.5"
+   },
+   "pass": 675,
+   "n": 728,
+   "rate": 0.9271978021978022
+  },
+  {
+   "label": "melFloor=abs-80 onsetMin=0.9 sfxRise=6 recEps=1-2.5",
+   "cfg": {
+    "melFloor": "abs-80",
+    "onsetMin": 0.9,
+    "sfxRise": 6,
+    "recEps": "1-2.5"
+   },
+   "pass": 677,
+   "n": 728,
+   "rate": 0.929945054945055
+  },
+  {
+   "label": "melFloor=abs-80 onsetMin=0.6 sfxRise=4 recEps=1-2.5",
+   "cfg": {
+    "melFloor": "abs-80",
+    "onsetMin": 0.6,
+    "sfxRise": 4,
+    "recEps": "1-2.5"
+   },
+   "pass": 667,
+   "n": 728,
+   "rate": 0.9162087912087912
+  },
+  {
+   "label": "melFloor=abs-80 onsetMin=0.6 sfxRise=8 recEps=1-2.5",
+   "cfg": {
+    "melFloor": "abs-80",
+    "onsetMin": 0.6,
+    "sfxRise": 8,
+    "recEps": "1-2.5"
+   },
+   "pass": 676,
+   "n": 728,
+   "rate": 0.9285714285714286
+  },
+  {
+   "label": "melFloor=abs-80 onsetMin=0.6 sfxRise=6 recEps=0.75-2",
+   "cfg": {
+    "melFloor": "abs-80",
+    "onsetMin": 0.6,
+    "sfxRise": 6,
+    "recEps": "0.75-2"
+   },
+   "pass": 678,
+   "n": 728,
+   "rate": 0.9313186813186813
+  },
+  {
+   "label": "melFloor=abs-80 onsetMin=0.6 sfxRise=6 recEps=1.5-3",
+   "cfg": {
+    "melFloor": "abs-80",
+    "onsetMin": 0.6,
+    "sfxRise": 6,
+    "recEps": "1.5-3"
+   },
+   "pass": 680,
+   "n": 728,
+   "rate": 0.9340659340659341
+  }
+ ],
+ "decisions": {
+  "melFloor": {
+   "shipped": "abs-80",
+   "best": "rel-70",
+   "gain": 14,
+   "kept": "rel-80",
+   "guard": "next-best value: the best broke a test"
+  },
+  "onsetMin": {
+   "shipped": 0.6,
+   "best": 0.6,
+   "gain": 0,
+   "kept": 0.6
+  },
+  "sfxRise": {
+   "shipped": 6,
+   "best": 6,
+   "gain": 0,
+   "kept": 6
+  },
+  "recEps": {
+   "shipped": "1-2.5",
+   "best": "1.5-3",
+   "gain": 3,
+   "kept": "1.5-3"
+  }
+ },
+ "frozen": {
+  "melFloor": "rel-80",
+  "onsetMin": 0.6,
+  "sfxRise": 6,
+  "recEps": "1.5-3"
+ },
+ "stage2": {
+  "tune": [
+   {
+    "pass": 677,
+    "n": 728,
+    "rate": 0.929945054945055
+   },
+   {
+    "pass": 689,
+    "n": 729,
+    "rate": 0.9451303155006858
+   }
+  ],
+  "hold": [
+   {
+    "pass": 651,
+    "n": 692,
+    "rate": 0.9407514450867052
+   },
+   {
+    "pass": 663,
+    "n": 692,
+    "rate": 0.958092485549133
+   }
+  ],
+  "holdByCheck": {
+   "shipped": {
+    "level: loudness −12.0 LU": [
+     35,
+     36
+    ],
+    "level: activity unchanged": [
+     34,
+     36
+    ],
+    "level: harshness-weighted loudness (C4) lower": [
+     36,
+     36
+    ],
+    "level: same events": [
+     32,
+     36
+    ],
+    "level: same tempo": [
+     2,
+     2
+    ],
+    "level: same sections": [
+     6,
+     6
+    ],
+    "level: N1 kurtosis unchanged": [
+     36,
+     36
+    ],
+    "level: N2 same repetition rate": [
+     4,
+     4
+    ],
+    "level: N5 CPP unchanged": [
+     36,
+     36
+    ],
+    "level: N7 interest unchanged": [
+     25,
+     26
+    ],
+    "level: N8 recurrence unchanged": [
+     13,
+     18
+    ],
+    "shift: events move +0.5 s": [
+     28,
+     36
+    ],
+    "shift: beats move +0.5 s": [
+     2,
+     2
+    ],
+    "shift: sections move +0.5 s": [
+     6,
+     6
+    ],
+    "hit: new event or onset at the hit (±25 ms)": [
+     23,
+     26
+    ],
+    "dc: DC offset flagged": [
+     36,
+     36
+    ],
+    "clip: clipping flagged": [
+     36,
+     36
+    ],
+    "cut: abrupt end flagged": [
+     22,
+     25
+    ],
+    "reverse: N6 arrow of time flips sign": [
+     23,
+     23
+    ],
+    "reverse: N1 kurtosis unchanged": [
+     34,
+     36
+    ],
+    "reverse: N8 recurrence unchanged": [
+     18,
+     18
+    ],
+    "reverse: N2 same repetition rate": [
+     3,
+     4
+    ],
+    "speed: N2 repetition rate ×1.06": [
+     4,
+     4
+    ],
+    "speed: N9 ring time ÷1.06": [
+     13,
+     17
+    ],
+    "speed: tempo ×1.06": [
+     2,
+     2
+    ],
+    "speed: pitch +1.0 semitone": [
+     16,
+     16
+    ],
+    "speed: length ÷1.06": [
+     36,
+     36
+    ],
+    "noise: loudness curve holds (r ≥ 0.9)": [
+     34,
+     36
+    ],
+    "noise: activity curve holds (r ≥ 0.8)": [
+     31,
+     36
+    ],
+    "noise: same tempo": [
+     2,
+     2
+    ],
+    "reverse: N4 net glide flips sign": [
+     21,
+     21
+    ],
+    "speed: N9 material unchanged (log τd)": [
+     2,
+     2
+    ]
+   },
+   "frozen": {
+    "level: loudness −12.0 LU": [
+     35,
+     36
+    ],
+    "level: activity unchanged": [
+     36,
+     36
+    ],
+    "level: harshness-weighted loudness (C4) lower": [
+     36,
+     36
+    ],
+    "level: same events": [
+     36,
+     36
+    ],
+    "level: same tempo": [
+     2,
+     2
+    ],
+    "level: same sections": [
+     6,
+     6
+    ],
+    "level: N1 kurtosis unchanged": [
+     36,
+     36
+    ],
+    "level: N2 same repetition rate": [
+     4,
+     4
+    ],
+    "level: N5 CPP unchanged": [
+     36,
+     36
+    ],
+    "level: N7 interest unchanged": [
+     26,
+     26
+    ],
+    "level: N8 recurrence unchanged": [
+     18,
+     18
+    ],
+    "shift: events move +0.5 s": [
+     28,
+     36
+    ],
+    "shift: beats move +0.5 s": [
+     2,
+     2
+    ],
+    "shift: sections move +0.5 s": [
+     5,
+     6
+    ],
+    "hit: new event or onset at the hit (±25 ms)": [
+     23,
+     26
+    ],
+    "dc: DC offset flagged": [
+     36,
+     36
+    ],
+    "clip: clipping flagged": [
+     36,
+     36
+    ],
+    "cut: abrupt end flagged": [
+     22,
+     25
+    ],
+    "reverse: N6 arrow of time flips sign": [
+     23,
+     23
+    ],
+    "reverse: N1 kurtosis unchanged": [
+     34,
+     36
+    ],
+    "reverse: N8 recurrence unchanged": [
+     18,
+     18
+    ],
+    "reverse: N2 same repetition rate": [
+     3,
+     4
+    ],
+    "speed: N2 repetition rate ×1.06": [
+     4,
+     4
+    ],
+    "speed: N9 ring time ÷1.06": [
+     13,
+     17
+    ],
+    "speed: tempo ×1.06": [
+     2,
+     2
+    ],
+    "speed: pitch +1.0 semitone": [
+     16,
+     16
+    ],
+    "speed: length ÷1.06": [
+     36,
+     36
+    ],
+    "noise: loudness curve holds (r ≥ 0.9)": [
+     34,
+     36
+    ],
+    "noise: activity curve holds (r ≥ 0.8)": [
+     32,
+     36
+    ],
+    "noise: same tempo": [
+     2,
+     2
+    ],
+    "reverse: N4 net glide flips sign": [
+     21,
+     21
+    ],
+    "speed: N9 material unchanged (log τd)": [
+     2,
+     2
+    ]
+   }
+  },
+  "holdByClass": {
+   "rhythmic": [
+    124,
+    135,
+    127,
+    135
+   ],
+   "sfx": [
+    407,
+    424,
+    413,
+    424
+   ],
+   "orchestral": [
+    120,
+    133,
+    123,
+    133
+   ]
+  }
+ },
+ "tests": {
+  "shipped": {
+   "passed": 40,
+   "total": 40,
+   "failed": []
+  },
+  "frozen": {
+   "passed": 40,
+   "total": 40,
+   "failed": []
+  },
+  "tried": [
+   {
+    "cfg": {
+     "melFloor": "rel-70",
+     "onsetMin": 0.6,
+     "sfxRise": 6,
+     "recEps": "1.5-3"
+    },
+    "tests": {
+     "passed": 38,
+     "total": 40,
+     "failed": [
+      "FAIL cue arc: section boundaries found 5/6 ",
+      "FAIL cue arc: section letters AAABCDAA "
+     ]
+    }
+   },
+   {
+    "cfg": {
+     "melFloor": "rel-70",
+     "onsetMin": 0.6,
+     "sfxRise": 6,
+     "recEps": "1-2.5"
+    },
+    "tests": {
+     "passed": 38,
+     "total": 40,
+     "failed": [
+      "FAIL cue arc: section boundaries found 5/6 ",
+      "FAIL cue arc: section letters AAABCDAA "
+     ]
+    }
+   },
+   {
+    "cfg": {
+     "melFloor": "rel-80",
+     "onsetMin": 0.6,
+     "sfxRise": 6,
+     "recEps": "1.5-3"
+    },
+    "tests": {
+     "passed": 40,
+     "total": 40,
+     "failed": []
+    }
+   }
+  ]
+ },
+ "seconds": 1855
+}

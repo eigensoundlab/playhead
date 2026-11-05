@@ -1,0 +1,281 @@
+{
+ "files": 73,
+ "configs": [
+  {
+   "label": "melFloor=abs-80 onsetMin=0.6 sfxRise=6 recEps=1-2.5",
+   "pass": 1277,
+   "n": 1358,
+   "rate": 0.9403534609720177,
+   "tests": "40/40",
+   "failed": []
+  },
+  {
+   "label": "melFloor=abs-80 onsetMin=0.6 sfxRise=6 recEps=1.5-3",
+   "pass": 1277,
+   "n": 1358,
+   "rate": 0.9403534609720177,
+   "tests": "40/40",
+   "failed": []
+  },
+  {
+   "label": "melFloor=rel-80 onsetMin=0.6 sfxRise=6 recEps=1-2.5",
+   "pass": 1296,
+   "n": 1357,
+   "rate": 0.9550478997789241,
+   "tests": "40/40",
+   "failed": []
+  },
+  {
+   "label": "melFloor=rel-80 onsetMin=0.6 sfxRise=6 recEps=1.5-3",
+   "pass": 1296,
+   "n": 1357,
+   "rate": 0.9550478997789241,
+   "tests": "40/40",
+   "failed": []
+  },
+  {
+   "label": "melFloor=rel-90 onsetMin=0.6 sfxRise=6 recEps=1-2.5",
+   "pass": 1292,
+   "n": 1358,
+   "rate": 0.9513991163475699,
+   "tests": "40/40",
+   "failed": []
+  },
+  {
+   "label": "melFloor=rel-90 onsetMin=0.6 sfxRise=6 recEps=1.5-3",
+   "pass": 1293,
+   "n": 1358,
+   "rate": 0.9521354933726067,
+   "tests": "40/40",
+   "failed": []
+  },
+  {
+   "label": "melFloor=rel-70 onsetMin=0.6 sfxRise=6 recEps=1.5-3",
+   "pass": 1299,
+   "n": 1357,
+   "rate": 0.9572586588061901,
+   "tests": "38/40",
+   "failed": [
+    "FAIL cue arc: section boundaries found 5/6 ",
+    "FAIL cue arc: section letters AAABCDAA "
+   ]
+  },
+  {
+   "label": "melFloor=rel-80 onsetMin=0.4 sfxRise=6 recEps=1.5-3",
+   "pass": 1291,
+   "n": 1357,
+   "rate": 0.9513633014001474,
+   "tests": "40/40",
+   "failed": []
+  },
+  {
+   "label": "melFloor=rel-80 onsetMin=0.9 sfxRise=6 recEps=1.5-3",
+   "pass": 1297,
+   "n": 1357,
+   "rate": 0.9557848194546794,
+   "tests": "39/40",
+   "failed": [
+    "FAIL cue arc: section boundaries found 5/6 "
+   ]
+  },
+  {
+   "label": "melFloor=rel-80 onsetMin=0.6 sfxRise=4 recEps=1.5-3",
+   "pass": 1287,
+   "n": 1357,
+   "rate": 0.948415622697126,
+   "tests": "40/40",
+   "failed": []
+  },
+  {
+   "label": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "pass": 1301,
+   "n": 1357,
+   "rate": 0.9587324981577008,
+   "tests": "40/40",
+   "failed": []
+  }
+ ],
+ "splits": [
+  {
+   "split": 0,
+   "picked": "melFloor=rel-90 onsetMin=0.6 sfxRise=6 recEps=1.5-3",
+   "holdOrig": 0.9437869822485208,
+   "holdPicked": 0.9511834319526628,
+   "holdShipped": 0.9585185185185185,
+   "n": 676
+  },
+  {
+   "split": 1,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9461538461538461,
+   "holdPicked": 0.9645608628659477,
+   "holdShipped": 0.9614791987673343,
+   "n": 650
+  },
+  {
+   "split": 2,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9364599092284418,
+   "holdPicked": 0.9546142208774584,
+   "holdShipped": 0.9515885022692889,
+   "n": 661
+  },
+  {
+   "split": 3,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9566517189835575,
+   "holdPicked": 0.9641255605381166,
+   "holdShipped": 0.9596412556053812,
+   "n": 669
+  },
+  {
+   "split": 4,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9532428355957768,
+   "holdPicked": 0.9683257918552036,
+   "holdShipped": 0.9653092006033183,
+   "n": 663
+  },
+  {
+   "split": 5,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9313868613138686,
+   "holdPicked": 0.9518248175182482,
+   "holdShipped": 0.948905109489051,
+   "n": 685
+  },
+  {
+   "split": 6,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9366515837104072,
+   "holdPicked": 0.9577039274924471,
+   "holdShipped": 0.9531722054380665,
+   "n": 663
+  },
+  {
+   "split": 7,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9304733727810651,
+   "holdPicked": 0.9466666666666667,
+   "holdShipped": 0.9422222222222222,
+   "n": 676
+  },
+  {
+   "split": 8,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9488372093023256,
+   "holdPicked": 0.9643410852713178,
+   "holdShipped": 0.9596899224806201,
+   "n": 645
+  },
+  {
+   "split": 9,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9437037037037037,
+   "holdPicked": 0.9525925925925925,
+   "holdShipped": 0.9511111111111111,
+   "n": 675
+  },
+  {
+   "split": 10,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9436201780415431,
+   "holdPicked": 0.9629080118694362,
+   "holdShipped": 0.9584569732937686,
+   "n": 674
+  },
+  {
+   "split": 11,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9442771084337349,
+   "holdPicked": 0.9563253012048193,
+   "holdShipped": 0.9503012048192772,
+   "n": 664
+  },
+  {
+   "split": 12,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9434523809523809,
+   "holdPicked": 0.9567809239940388,
+   "holdShipped": 0.9523099850968704,
+   "n": 672
+  },
+  {
+   "split": 13,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9265367316341829,
+   "holdPicked": 0.9385307346326837,
+   "holdShipped": 0.9355322338830585,
+   "n": 667
+  },
+  {
+   "split": 14,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9323308270676691,
+   "holdPicked": 0.9563253012048193,
+   "holdShipped": 0.9533132530120482,
+   "n": 665
+  },
+  {
+   "split": 15,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9370199692780338,
+   "holdPicked": 0.9508448540706606,
+   "holdShipped": 0.9508448540706606,
+   "n": 651
+  },
+  {
+   "split": 16,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9426470588235294,
+   "holdPicked": 0.9558823529411765,
+   "holdShipped": 0.9558823529411765,
+   "n": 680
+  },
+  {
+   "split": 17,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9350073855243722,
+   "holdPicked": 0.9526627218934911,
+   "holdShipped": 0.9497041420118343,
+   "n": 677
+  },
+  {
+   "split": 18,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9375951293759512,
+   "holdPicked": 0.9603658536585366,
+   "holdShipped": 0.9557926829268293,
+   "n": 657
+  },
+  {
+   "split": 19,
+   "picked": "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3",
+   "holdOrig": 0.9551569506726457,
+   "holdPicked": 0.9671150971599403,
+   "holdShipped": 0.9626307922272048,
+   "n": 669
+  }
+ ],
+ "picks": {
+  "melFloor=rel-90 onsetMin=0.6 sfxRise=6 recEps=1.5-3": 1,
+  "melFloor=rel-80 onsetMin=0.6 sfxRise=8 recEps=1.5-3": 19
+ },
+ "gain": {
+  "mean": 0.015434418371735347,
+  "sd": 0.004803971438985882,
+  "lo": 0.007396449704141994,
+  "hi": 0.023994474137150168,
+  "min": 0.007396449704141994,
+  "max": 0.023994474137150168
+ },
+ "shippedGain": {
+  "mean": 0.012570698898104188,
+  "sd": 0.004534740150322575,
+  "lo": 0.002989536621823663,
+  "hi": 0.020982425944379046,
+  "min": 0.002989536621823663,
+  "max": 0.020982425944379046
+ },
+ "seconds": 3610
+}

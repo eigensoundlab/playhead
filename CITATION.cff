@@ -3,16 +3,17 @@ message: "If you use Playhead in your work, please cite it as below."
 type: software
 title: "Playhead: overview curves and analysis-driven tools for music and game audio"
 abstract: >-
-  Playhead draws a waveform plus one or two feature lines (intensity, activity,
-  tension, beats, sections, event types) so the content of a music or sound
-  effect asset can be read at a glance, and uses the same analysis to drive
-  editing, mixing and mastering tools. It runs entirely in the browser.
+  Playhead is an alternative waveform overview: it adds what a sound is doing
+  (intensity, character, rhythm, structure) to the waveform as curves, marks
+  and a spectrogram on one time axis, composed into strips from short look
+  codes, and uses the same analysis to drive editing, mixing and sound-design
+  tools that act on the events it finds. It runs entirely in the browser.
 authors:
   - family-names: Sandner
     given-names: Daniel
     orcid: "https://orcid.org/0000-0002-1041-814X"
-version: 0.1.0
-date-released: 2026-11-03
+version: 0.2.0
+date-released: 2026-11-05
 doi: 10.5281/zenodo.23932625
 identifiers:
   - type: doi
@@ -20,7 +21,7 @@ identifiers:
     description: "Concept DOI: all versions, resolves to the latest"
   - type: doi
     value: 10.5281/zenodo.23932626
-    description: "Version 0.1.0"
+    description: "Version 0.1.0 (the version behind the results in the paper)"
 license: Apache-2.0
 repository-code: "https://github.com/eigensoundlab/playhead"
 url: "https://eigensoundlab.github.io/playhead/"

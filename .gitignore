@@ -11,7 +11,7 @@ paper/*.bbl
 paper/*.blg
 paper/*.out
 paper/*.synctex.gz
-corpus/
+/corpus/
 batch-out/
 playhead-batch/
 # built library bundles and executables (CI builds them for releases)

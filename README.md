@@ -312,6 +312,7 @@ Decoding uses the browser's `decodeAudioData`. WAV, MP3, AAC/M4A and FLAC decode
 ## Layout
 
 ```
+CHANGELOG.md          what changed in each release
 index.html            the app
 css/playhead.css
 src/analysis.js       feature extraction, curves, rhythm, structure, sound-effect analysis
