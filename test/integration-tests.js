@@ -3,7 +3,7 @@
 // Tests of the public API (src/playhead.js), the library bundles (dist/) and the command line.
 "use strict";
 const fs = require("fs"), os = require("os"), path = require("path");
-const { spawnSync } = require("child_process");
+const { spawnSync } = require("child_process"), { pathToFileURL } = require("url");
 const WL = require("../src/analysis.js"), P = require("../src/probes.js"), IO = require("../tools/audio-io.js");
 require("../src/descriptors.js"); const FX = require("../src/effects.js");
 const Playhead = require("../src/playhead.js");
@@ -135,7 +135,7 @@ module.exports = async function (check) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "playhead-test-")), wav = path.join(tmp, "glass.wav");
   IO.writeWav(wav, glass, true);
   const esm = spawnSync(process.execPath, ["--input-type=module", "-e",
-    `import P from ${JSON.stringify(path.join(root, "dist/playhead-core.mjs"))}; import { createRequire } from "module"; const r = createRequire(${JSON.stringify(path.join(root, "test/x.js"))});
+    `import P from ${JSON.stringify(pathToFileURL(path.join(root, "dist/playhead-core.mjs")).href)}; import { createRequire } from "module"; const r = createRequire(${JSON.stringify(path.join(root, "test/x.js"))});
      const IO = r("../tools/audio-io.js"); const d = await P.analyze(IO.readAudio(${JSON.stringify(wav)}), { name: "glass" }); console.log(JSON.stringify({ p: d.profile, e: d.events.length, g: ["WL", "PHD", "WLFX", "Playhead"].filter(k => k in globalThis) }));`], { encoding: "utf8" });
   let ej = null; try { ej = JSON.parse(esm.stdout.trim()); } catch (e) { }
   check("dist: ES module bundle works and leaks no globals", ej ? `${ej.p}, ${ej.e} events, globals: ${ej.g.join(",") || "none"}` : (esm.stderr || "").slice(0, 120), !!ej && ej.p === "sfx" && ej.e === g1.events.length && !ej.g.length);
