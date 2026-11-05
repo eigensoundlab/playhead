@@ -146,7 +146,11 @@ function buildRows() {
   STR.forEach(s => mkRow($("rows-structure"), s, "structure"));
   DESCROWS.forEach(s => mkRow($("rows-desc"), s, "desc"));
   DESIGNS.forEach(s => mkRow($("rows-design"), s, "design"));
-  if ($("rows-compose")) mkRow($("rows-compose"), { id: "compose", name: "Your combination", desc: "" }, "compose");
+  if ($("rows-compose")) {
+    mkRow($("rows-compose"), { id: "compose", name: "Your combination", desc: "" }, "compose");
+    mkRow($("rows-compose"), { id: "compose-wave", name: "Waveform", desc: "For comparison: the same file as an ordinary waveform." }, "compose");
+    mkRow($("rows-compose"), { id: "compose-spec", name: "Spectrogram", desc: "For comparison: a standard spectrogram (mel scale, 40 Hz to 16 kHz, low at the bottom)." }, "compose");
+  }
 }
 
 /* ---------------- files ---------------- */
@@ -631,7 +635,7 @@ function drawStripFor(cv, spec, f, cols, h, P, opts) {
   const g = prep(cv, h), x = g.x, w = g.w;
   x.fillStyle = P.bg; x.fillRect(0, 0, w, h);
   if (!f || !f.F) return;
-  if (spec.id === "compose") { drawCompose(x, P, w, h, f); return; }
+  if (spec.id === "compose" || spec.id === "compose-wave" || spec.id === "compose-spec") { drawCompose(x, P, w, h, f, spec.id === "compose-wave" ? "wave" : spec.id === "compose-spec" ? "spec" : null, opts.thumb); return; }
   const v = viewOf(f, cols);
   const C = WL.CLASSES[v.cls];
   if (!opts.thumb) drawSegLines(x, P, segCols(f, cols), h);
@@ -662,23 +666,35 @@ const CMP_COLOURS = ["", "loudness", "activity", "arousal", "harshness", "tensio
 const CMP_LINES = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "structureNovelty", "localPulse", "n1Kurtosis", "n4Velocity", "n6Arrow", "n7Surprisal"];
 const CMP_LANES = ["structureNovelty", "localPulse", "loudness", "activity", "arousal", "harshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
 const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Downbeats"], ["beats", "Beats"], ["onsets", "Onsets"], ["events", "Events"]];
-const CMP_MAX_LANES = 3, CMP_H = 112;
-const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : "") };
+const CMP_MAX_LANES = 3, CMP_HEIGHTS = [64, 96, 128, 160, 192];
+const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), h: store.get("lookHeight", 128), refs: store.get("lookRefs", true) };
+const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"]];
+const CMP_FORMS = [["lanes", "Separate, each in its own band"], ["overlay", "Overlaid on the waveform"]];
+const CMP_SHAPES = [["base", "From the baseline"], ["mirror", "Mirrored, like a waveform"], ["horizon", "Horizon (folded bands)"], ["line", "Line"]];
 const cmpLabel = k => k ? (PHAPI && PHAPI.curveLabels[k]) || k : "None";
 // look code <-> control state
 function cmpState(code) {
-  const st = { colour: "", line: "", lanes: [], signed: true, marks: new Set() };
+  const st = { bg: "none", colour: "", line: "", lanes: [], signed: true, marks: new Set(), form: "lanes", shape: "base" };
+  let wave = false, spec = false;
   for (const l of (PHAPI && PHAPI.parseLook(code)) || []) {
-    if (l.type === "wave") st.colour = l.colour || "";
+    if (l.type === "wave") { wave = true; st.colour = l.colour || ""; }
+    else if (l.type === "spec") spec = true;
+    else if (l.type === "form") st.form = l.value;
+    else if (l.type === "shape") st.shape = l.value;
     else if (l.type === "line") st.line = l.curve;
     else if (l.type === "lane" && st.lanes.length < CMP_MAX_LANES) { st.lanes.push(l.curve); if (l.curve === "structureNovelty") st.signed = !!l.signed; }
     else if (l.type === "sections") st.marks.add("sections");
     else if (l.type === "ticks") for (const k of l.of) st.marks.add(k);
   }
+  st.bg = spec && wave ? "specwave" : spec ? "spec" : wave ? "wave" : "none";
   return st;
 }
 function cmpCode(st) {
-  const parts = ["wave" + (st.colour ? ":" + st.colour : "")];
+  const parts = [];
+  if (st.form === "overlay") parts.push("form:overlay");
+  if (st.shape !== "base") parts.push("shape:" + st.shape);
+  if (st.bg === "spec" || st.bg === "specwave") parts.push("spec");
+  if (st.bg === "wave" || st.bg === "specwave") parts.push("wave" + (st.bg === "wave" && st.colour ? ":" + st.colour : ""));
   if (st.marks.has("sections")) parts.push("sections");
   if (st.line) parts.push("line:" + st.line);
   for (const k of st.lanes) parts.push("lane:" + k + (k === "structureNovelty" && st.signed ? "~signed" : ""));
@@ -688,7 +704,7 @@ function cmpCode(st) {
 }
 function themeOf(P) {
   return { background: null, wave: P.ink, waveLow: P.ramp[0], waveHigh: P.ramp[P.ramp.length - 1], line: P.line, tick: P.tick, text: P.rulerInk, rule: P.off,
-    lane: P.cat[0], laneDown: P.cat[1], laneFlat: P.off };
+    lane: P.cat[0], laneDown: P.cat[1], laneFlat: P.off, series: [P.cat[2], P.cat[4]], specRamp: P.ramp, halo: P.halo };
 }
 // the Playhead document for a file, built once per asset class from the analysis the lab already has
 function composeDoc(f) {
@@ -698,21 +714,30 @@ function composeDoc(f) {
   if (have) return have;
   const ent = f.phDocs[key] = { doc: null, err: null };
   PHAPI.fromAnalysis(f.F, f.buf, { profile: f.dur > 6 ? "music" : "sfx", assetClass: key, name: f.name })
-    .then(d => { ent.doc = d; if (S.sel === f) redrawCompose(); })
-    .catch(e => { ent.err = e && e.message || String(e); console.error(e); if (S.sel === f) redrawCompose(); });
+    .then(d => { ent.doc = d; repaintSoon(); })
+    .catch(e => { ent.err = e && e.message || String(e); console.error(e); repaintSoon(); });
   return ent;
 }
-function drawCompose(x, P, w, h, f) {
+let repaintQueued = false;
+function repaintSoon() { if (repaintQueued) return; repaintQueued = true; requestAnimationFrame(() => { repaintQueued = false; render(); }); }
+// look: null for the composer's look, or a fixed look for the comparison rows; thumb: library thumbnails (no legend)
+function drawCompose(x, P, w, h, f, look, thumb) {
   if (!PHAPI) { drawOff(x, P, w, h, "The Playhead API (src/playhead.js) is not loaded"); return; }
   const ent = composeDoc(f);
   if (!ent.doc) { drawOff(x, P, w, h, ent.err ? "Could not prepare this file: " + ent.err : "Preparing…"); return; }
-  const r = PHAPI.drawStrip(x, ent.doc, { width: w, height: h, look: CMP.code, theme: themeOf(P) });
-  const ds = $("ds-compose"); if (ds) ds.textContent = r.legend;
+  const r = PHAPI.drawStrip(x, ent.doc, { width: w, height: h, look: look || CMP.code, theme: themeOf(P) });
+  if (!look && !thumb) { const ds = $("ds-compose"); if (ds) ds.textContent = r.legend; }
 }
 function redrawCompose() {
-  const sc = scopes.find(s => s.spec.id === "compose"), ruler = scopes.find(s => s.spec.id === "ruler");
-  if (!sc) return;
-  drawStripFor(sc.cv, sc.spec, S.sel && S.sel.F ? S.sel : null, Math.max(50, Math.floor(ruler.cv.clientWidth || 800)), CMP_H, PANELS[S.panel]);
+  const ruler = scopes.find(s => s.spec.id === "ruler"), cols = Math.max(50, Math.floor(ruler.cv.clientWidth || 800));
+  for (const sc of scopes) if (sc.group === "compose") drawStripFor(sc.cv, sc.spec, S.sel && S.sel.F ? S.sel : null, cols, CMP.h, PANELS[S.panel]);
+  if (S.thumb === "compose") renderLibrary();
+}
+function showCompareRows() {
+  for (const id of ["compose-wave", "compose-spec"]) {
+    const cv = $("cv-" + id); if (!cv) continue;
+    const scope = cv.closest(".scope"); scope.hidden = !CMP.refs; if (scope.previousElementSibling) scope.previousElementSibling.hidden = !CMP.refs;
+  }
 }
 function buildComposer() {
   const box = $("composer");
@@ -726,9 +751,14 @@ function buildComposer() {
   };
   const lookOpts = [["", "Your own"]].concat(Object.entries(PHAPI.looks).map(([k, L]) => [k, L.name]));
   const [lLook, sLook] = sel("cmp-look", "Start from", lookOpts, "Ready-made looks; changing anything below makes it your own");
+  const [lBg, sBg] = sel("cmp-bg", "Behind", CMP_BG, "What the strip shows behind the curves: the waveform, a spectrogram, or nothing so the curves take the whole strip");
   const [lCol, sCol] = sel("cmp-colour", "Waveform colour", CMP_COLOURS.map(k => [k, cmpLabel(k)]), "A curve that tints the waveform, from the low to the high end of the colour ramp");
+  const [lForm, sForm] = sel("cmp-form", "Lanes", CMP_FORMS, "Separate: each curve in its own band, like a stack of waveforms. Overlaid: the curves drawn on the waveform itself, to compare their shapes with it");
+  const [lShape, sShape] = sel("cmp-shape", "Shape", CMP_SHAPES, "How each lane's curve is drawn: filled from the baseline, mirrored around the middle like a waveform, folded into a horizon chart (compact), or as a line");
+  const [lH, sH] = sel("cmp-height", "Height", CMP_HEIGHTS.map(v => [String(v), v + " px"]), "Height of the strips in this section");
+  const refL = el("label", "chk"), refs = el("input"); refs.type = "checkbox"; refs.id = "cmp-refs"; refL.htmlFor = "cmp-refs"; refL.append(refs, document.createTextNode(" Show the waveform and the spectrogram under it for comparison"));
   const [lLine, sLine] = sel("cmp-line", "Line", CMP_LINES.map(k => [k, cmpLabel(k)]), "A curve drawn over the waveform");
-  const lanes = el("fieldset"); lanes.appendChild(el("legend", "", "Lanes under the waveform (up to " + CMP_MAX_LANES + ")"));
+  const lanes = el("fieldset"); lanes.appendChild(el("legend", "", "Curves (up to " + CMP_MAX_LANES + ")"));
   const laneBoxes = CMP_LANES.map(k => { const l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.value = k; l.appendChild(c); l.appendChild(document.createTextNode(" " + cmpLabel(k))); lanes.appendChild(l); return c; });
   const sl = el("label", "chk"), signed = el("input"); signed.type = "checkbox"; sl.appendChild(signed);
   sl.appendChild(document.createTextNode(" Structural change: up for an entry, down for a drop or break"));
@@ -743,11 +773,15 @@ function buildComposer() {
   const copy = el("button", "", "Copy"); copy.type = "button";
   const fb = el("a", "", "Tell us if this helps"); fb.target = "_blank"; fb.rel = "noopener";
   codeRow.append(cl, copy, fb);
-  box.append(lLook, lCol, lLine, lanes, marks, codeRow);
+  const row1 = el("div", "cmp-row"), row2 = el("div", "cmp-row");
+  row1.append(lLook, lBg, lCol, lLine);
+  row2.append(lForm, lShape, lH, refL);
+  box.append(row1, lanes, row2, marks, codeRow);
 
   const show = () => {
     const st = cmpState(CMP.code);
-    sCol.value = st.colour; sLine.value = st.line; signed.checked = st.signed;
+    sBg.value = st.bg; sCol.value = st.colour; sCol.disabled = st.bg !== "wave"; sLine.value = st.line; signed.checked = st.signed;
+    sForm.value = st.form; sShape.value = st.shape; sH.value = String(CMP.h); refs.checked = CMP.refs;
     laneBoxes.forEach(c => { c.checked = st.lanes.includes(c.value); c.disabled = !c.checked && st.lanes.length >= CMP_MAX_LANES; });
     signed.disabled = !st.lanes.includes("structureNovelty");
     markBoxes.forEach(c => { c.checked = st.marks.has(c.value); });
@@ -758,7 +792,8 @@ function buildComposer() {
   };
   const set = c => { CMP.code = c; store.set("look", c); show(); redrawCompose(); };
   const fromControls = () => {
-    const st = { colour: sCol.value, line: sLine.value, signed: signed.checked, lanes: CMP_LANES.filter(k => laneBoxes.find(c => c.value === k).checked).slice(0, CMP_MAX_LANES), marks: new Set(markBoxes.filter(c => c.checked).map(c => c.value)) };
+    const st = { bg: sBg.value, colour: sCol.value, line: sLine.value, signed: signed.checked, form: sForm.value, shape: sShape.value,
+      lanes: CMP_LANES.filter(k => laneBoxes.find(c => c.value === k).checked).slice(0, CMP_MAX_LANES), marks: new Set(markBoxes.filter(c => c.checked).map(c => c.value)) };
     set(cmpCode(st));
   };
   sLook.addEventListener("change", () => {
@@ -768,7 +803,9 @@ function buildComposer() {
     const f = S.sel, ent = f && f.F && f.phDocs && f.phDocs[effClass(f)];
     set(L.code || PHAPI.lookCode(PHAPI.parseLook(ent && ent.doc && (ent.doc.profile === "sfx") ? "wave:harshness,line:activity,ticks:events" : "wave:activity,sections,line:tension,ticks:downbeats+events")));
   });
-  [sCol, sLine, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
+  [sBg, sCol, sLine, sForm, sShape, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
+  sH.addEventListener("change", () => { CMP.h = parseInt(sH.value, 10) || 128; store.set("lookHeight", CMP.h); redrawCompose(); });
+  refs.addEventListener("change", () => { CMP.refs = refs.checked; store.set("lookRefs", CMP.refs); showCompareRows(); redrawCompose(); });
   code.addEventListener("change", () => { const ls = PHAPI.parseLook(code.value); if (ls && ls.length) set(PHAPI.lookCode(ls)); else show(); });
   copy.addEventListener("click", async () => {
     try { await navigator.clipboard.writeText(CMP.code); copy.textContent = "Copied"; }
@@ -776,6 +813,7 @@ function buildComposer() {
     setTimeout(() => { copy.textContent = "Copy"; }, 2000);
   });
   show();
+  showCompareRows();
 }
 
 function fmtT(t, fine) {
@@ -1063,7 +1101,7 @@ function render() {
   const ready = f && f.F;
   for (const s of scopes) {
     if (s.group === "ruler") continue;
-    drawStripFor(s.cv, s.spec, ready ? f : null, cols, s.spec.id === "compose" ? CMP_H : S.height, P);
+    drawStripFor(s.cv, s.spec, ready ? f : null, cols, s.group === "compose" ? CMP.h : S.height, P);
   }
   updateLabels();
   renderMatrix();
@@ -1425,7 +1463,7 @@ function renderLibrary() {
     const cv = $("th-" + f.id);
     const cols = Math.max(50, Math.floor(cv.clientWidth || 600));
     const th = S.thumb === "auto" ? (f.F && effClass(f) === "sfx" ? "d5" : "d4") : S.thumb;
-    const spec = th === "unity" ? { id: "unity" } : th === "c1" ? SINGLE[0] : (DESIGNS.find(d => d.id === th) || DESIGNS[2]);
+    const spec = th === "unity" ? { id: "unity" } : th === "compose" ? { id: "compose" } : th === "c1" ? SINGLE[0] : (DESIGNS.find(d => d.id === th) || DESIGNS[2]);
     drawStripFor(cv, spec, f.F ? f : null, cols, 24, P, { thumb: true });
   }
 }

@@ -53,6 +53,19 @@ module.exports = async function (check) {
   const intoSound = bars(stepDoc(true)), intoSilence = bars(stepDoc(false)), mid = 72 + 1 + (100 - 72 - 1) / 2;
   check("looks: signed change lane: up into sound, down into silence", `${intoSound.length} / ${intoSilence.length} columns`,
     intoSound.length > 0 && intoSilence.length > 0 && intoSound.every(b => b.style === "UP" && b.y + b.h <= mid + 0.01) && intoSilence.every(b => b.style === "DOWN" && b.y >= mid - 0.01));
+  // spectrogram layer: a compact mel spectrogram in the document, drawn as one cell per band and column without a canvas
+  const sp = g1.spectrum, cells = sp ? sp.columns * sp.bands : 0;
+  let rects = 0; const rc = new Proxy({ canvas: { width: 300, height: 80 } }, { get: (t, k) => k in t ? t[k] : (...a) => { if (k === "fillRect") rects++; }, set: () => true });
+  const rs = Playhead.drawStrip(rc, g1, { look: "spectrum" });
+  check("api: documents carry a mel spectrogram; the spectrogram layer draws it", sp ? `${sp.bands} bands x ${sp.columns} columns, ${(sp.data.length / 1024).toFixed(1)} KB` : "none",
+    !!sp && sp.bands === 40 && sp.columns === cols && sp.data.length === Math.ceil(cells / 3) * 4 && rects === cells && rs.legend.startsWith("spectrogram") && f.spectrum === undefined && m.spectrum.columns === m.curves.loudness.length);
+  // forms and shapes: overlaid curves stay in the waveform's band, stacked ones get their own; without a waveform they fill the strip
+  const boxes = (doc, look, all) => { const out = []; let a = 1; const c = new Proxy({ canvas: { width: 200, height: 100 } }, { get: (t, k) => k in t ? t[k] : (...args) => { if (k === "fillRect" && (all || a < 1)) out.push(args); }, set: (t, k, v) => { if (k === "globalAlpha") a = v; return true; } }); Playhead.drawStrip(c, doc, { look }); return out; };
+  const ov = boxes(g1, "form:overlay,shape:mirror,wave,lane:activity"), st = boxes(g1, "shape:horizon,wave,lane:activity"), only = boxes(g1, "shape:mirror,lane:activity", true);
+  const mirrored = only.length > 50 && only.every(([x, y, w, h]) => Math.abs((y + h / 2) - 50) < 0.6);
+  check("looks: forms and shapes (overlay in the waveform band, horizon under it, mirrored around the middle)", `${ov.length} / ${st.length} / ${only.length} columns`,
+    ov.length > 0 && ov.every(([x, y, w, h]) => y >= 0 && y + h <= 100) && st.length > 0 && st.every(([x, y]) => y >= 72) && mirrored
+    && Playhead.lookCode(Playhead.parseLook("shape:mirror,form:overlay,spec,wave,lane:loudness")) === "shape:mirror,form:overlay,spec,wave,lane:loudness" && Playhead.parseLook("shape:wobbly,form:sideways").length === 0);
   const fa = await Playhead.fromAnalysis(await WL.analyse(glass), glass, { name: "glass" });
   check("api: fromAnalysis gives the analyze() document", "", JSON.stringify(strip(fa)) === JSON.stringify(strip(g1)));
   const pr = await Playhead.process(glass, "layers", { gains: [-12] });

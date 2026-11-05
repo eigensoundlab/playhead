@@ -31,7 +31,7 @@ const r = await Playhead.process(sound, "deharsh", { amount: 0.6 });   // r.outp
 | Function | Returns |
 |---|---|
 | `analyze(input, opts)` | a JSON document (below). `input` is an `AudioBuffer` or `{ sampleRate, channels: [Float32Array, ...] }` (mono or stereo). `opts`: `profile`, `name`, `curveRate` (curve samples per second; default 100 up to 10 s, 20 above), `waveColumns` (default 1000), `assetClass` (override the guess), `onProgress(p)` |
-| `drawStrip(ctx, doc, opts)` | draws a strip into any Canvas 2D context, including an `OffscreenCanvas` in a worker, and returns `{ code, layers, legend }`. `opts`: `width`, `height`, `from`, `to` (seconds), `theme`, and `look` (a look name or look code, see [Looks](#looks)) or `layers`; without them the automatic look, which the older options `curve`, `colour`, `lineRange`, `events`, `sections`, `beats` still adjust |
+| `drawStrip(ctx, doc, opts)` | draws a strip into any Canvas 2D context, including an `OffscreenCanvas` in a worker, and returns `{ code, layers, legend, items }` (`items`: one `{ label, colour }` or `{ label, ramp }` per coloured element, for a host's own key). `opts`: `width`, `height`, `from`, `to` (seconds), `theme`, and `look` (a look name or look code, see [Looks](#looks)) or `layers`; without them the automatic look, which the older options `curve`, `colour`, `lineRange`, `events`, `sections`, `beats` still adjust |
 | `fromAnalysis(F, input, opts)` | the document for an existing `WL.analyse()` result, without analysing again |
 | `parseLook(code)`, `lookCode(layers)`, `describeLook(layers, doc)` | look code to layers and back; a plain-language legend |
 | `looks`, `curveLabels` | the ready-made looks (`name`, `desc`, `code`) and readable names of the curves, for menus |
@@ -49,7 +49,10 @@ const r = await Playhead.process(sound, "deharsh", { amount: 0.6 });   // r.outp
 | `music` | + beats, downbeats, sections | 0.54 s | 1.7 s (94 KB) | 4.1 s (315 KB) |
 | `auto` | `sfx` up to 10 s, `music` above | | | |
 
-The first analysis at a new sample rate adds about 0.25 s of one-time calibration.
+The first analysis at a new sample rate adds about 0.25 s of one-time calibration. The `sfx` and `music` documents
+also carry a small mel spectrogram for the spectrogram layer: about 5.3 KB per second of sound up to 10 s (100 columns
+per second) and 1.1 KB per second above (20 columns per second). `analyze(..., { spectrum: false })` leaves it out;
+`fast` leaves it out unless `spectrum: true`.
 
 ## The document (schema `playhead-analysis`, version 1)
 
@@ -60,6 +63,7 @@ The first analysis at a new sample rate adds about 0.25 s of one-time calibratio
 | `profile`, `assetClass`, `guessedClass` | what was computed; the class used for the curves (`sfx`, `rhythmic`, `orchestral`, `ambience`…) |
 | `summary` | `peakLufs`, `loudnessRange`, `soundStart`, `soundEnd`; with events also `peakDb`, `attack` |
 | `curves` | `rate` (samples per second), `start` (0), then one array per curve, `null` where silent. 0–1 on fixed library-wide scales: `loudness`, `activity`, `arousal`, `harshness`, `tension`, `harmonicTension`, `surprise`; in LUFS: `lufs`; with descriptors also `n1Kurtosis`, `n2RepetitionHz`, `n4Velocity` (oct/s), `n5Cpp` (dB), `n5Coherence`, `n6Arrow`, `n7Surprisal`, `n8Recurrence`; music profile also `structureNovelty` (Foote novelty, 0–1, values in silence too) and `localPulse` (PLP scaled by its clarity, 0–1). New curves are added without changing the schema version: read the ones you know and ignore the rest |
+| `spectrum` | `sfx` and `music` profiles: a mel spectrogram for drawing. `bands` (40), `fmin`, `fmax` (Hz), `columns` (as the curves), `dbTop` and `dbRange` (80 dB mapped to 0–255), `data`: base64 of one byte per band and column, column after column, lowest band first |
 | `wave` | `columns`, `min`, `max`, `rms`: a waveform overview for thumbnails without decoding again |
 | `onsets` | onset times (s) |
 | `events` | `start`, `end`, `decayEnd`, `peak`, `peakDb`, `tag` (Schaeffer-style, e.g. `N′`), `word` (e.g. `tonal hit`), `facture`, `mass`, `direction`, `f0`, `grains` |
@@ -78,15 +82,23 @@ text that hosts can store, offer in a menu, paste between apps and send with fee
 
 | Layer | Code | Draws |
 |---|---|---|
-| waveform | `wave` or `wave:<curve>` | the waveform, plain or tinted along the theme's ramp (`waveLow` → `waveHigh`) by a 0–1 curve |
+| waveform | `wave` or `wave:<curve>` | the waveform, plain or tinted along the theme's ramp (`waveLow` → `waveHigh`) by a 0–1 curve; over a spectrogram, its outline |
+| spectrogram | `spec` | the document's mel spectrogram (40 bands, 40 Hz–16 kHz, low at the bottom, colours from `specRamp`) |
 | line | `line:<curve>` | a curve over the waveform (descriptor curves on their 5th–95th percentile) |
 | lane | `lane:<curve>` or `lane:<curve>~signed` | a curve in its own lane under the waveform (up to three lanes share about half the height). `~signed` is for change curves such as `structureNovelty`: drawn up where the level rises across the change (an entry), down where it falls (a drop, a break into silence) and centred where only the material changes, so a break never reads as "more" |
 | sections | `sections` | boundaries and letters (music profile) |
 | marks | `ticks:<kinds>` | `events`, `onsets`, `beats`, `downbeats`, joined with `+` |
+| form | `form:lanes` (default) or `form:overlay` | lanes each in their own band under the waveform, or all of them drawn on the waveform itself (light fill and a contour, so the waveform stays visible) |
+| shape | `shape:base` (default), `shape:mirror`, `shape:horizon`, `shape:line` | how a lane's curve is drawn: filled from the bottom; mirrored around the middle, like a waveform; a horizon chart (folded into three bands of rising strength, compact at small heights); a line |
 
-Ready-made looks (`Playhead.looks`): `auto` (the default: by profile), `plain` (waveform only), `structure`
-(`wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats`), `rhythm`, `tension`, `events` and
-`lanes` (three separate lanes, no colour mixing). A layer whose curve is not in the document is left out and the
+Without a waveform or spectrogram the lanes share the whole strip, so curves can stand in for the waveform
+(`shape:mirror,lane:loudness,lane:activity,lane:harshness`).
+
+Ready-made looks (`Playhead.looks`): `auto` (the default: by profile), the two references `plain` (waveform only) and
+`spectrum` (spectrogram), `structure` (`wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats`),
+`rhythm`, `tension`, `events`, `lanes` (three separate lanes, no colour mixing), `shapes` (curves mirrored like
+waveforms, no waveform), `overlay` (curves drawn on the waveform), `horizon` (horizon lanes) and `specstructure`
+(spectrogram with sections and structural change). A layer whose curve is not in the document is left out and the
 legend says so (`structure` and `rhythm` need the music profile).
 
 ```js

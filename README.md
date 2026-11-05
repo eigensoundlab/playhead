@@ -73,11 +73,14 @@ playhead markers song.wav --kinds sections,downbeats   # tab-separated regions a
 playhead process shot.wav --tool layers --param gains=-12
 ```
 
-**Looks.** What goes on the strip is a list of layers (a coloured or plain waveform, a line, up to three lanes such
-as structural change and the local pulse, sections and marks), written as a short look code such as
-`wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats`. The app's **Compose your own** section
-builds one and previews it; the same code works in every host that draws with `drawStrip`, and the feedback link sends
-it with your notes. Structural change is drawn signed: up for an entry, down for a drop or a break into silence.
+**Looks.** What goes on the strip is a list of layers (a plain or coloured waveform or a spectrogram behind, a line, up
+to three curves, sections and marks), written as a short look code such as
+`wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats`. Curves can sit in separate bands or be
+overlaid on the waveform, drawn from the baseline, mirrored like a waveform, as horizon charts or as lines, and without
+a waveform they take the whole strip. The app's **Compose your own** section builds a look and previews it above the
+ordinary waveform and spectrogram of the same file; the same code works in every host that draws with `drawStrip`, and
+the feedback link sends it with your notes. Structural change is drawn signed: up for an entry, down for a drop or a
+break into silence.
 
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
 

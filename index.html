@@ -92,7 +92,7 @@
 
   <div class="sechead"><h2>Combined playhead waveforms</h2><p>Height carries the main curve and colour a second one, on a ramp that gets lighter as the value rises. These are the candidates for the actual preview.</p></div>
   <div class="rows" id="rows-design"></div>
-  <div class="sechead"><h2>Compose your own</h2><p>Choose what goes on one strip: a colour, a line, up to three lanes underneath and the marks. The result is a look code that SFX Workbench and kurator understand, so a combination found here can be used there, and sent with your feedback.</p></div>
+  <div class="sechead"><h2>Compose your own</h2><p>Choose what goes on one strip: the waveform or a spectrogram behind, a colour, a line, up to three curves as separate waveform-like shapes or overlaid on the waveform, and the marks. The ordinary waveform and spectrogram are drawn underneath for comparison. The result is a look code that SFX Workbench and kurator understand, so a combination found here can be used there, and sent with your feedback.</p></div>
   <div class="composer" id="composer"></div>
   <div class="rows" id="rows-compose"></div>
 </div>
@@ -110,6 +110,7 @@
   <label class="ctl" for="thumb" style="margin-left:auto">Thumbnail
     <select id="thumb">
       <option value="auto">By class: D5 for SFX, D4 otherwise</option>
+      <option value="compose">Your combination (from the composer)</option>
       <option value="d5">D5 SFX thumbnail</option>
       <option value="d4">D4 Structure overlay</option>
       <option value="d3">D3 Asset thumbnail</option>
