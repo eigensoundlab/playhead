@@ -63,6 +63,7 @@ per second) and 1.1 KB per second above (20 columns per second). `analyze(..., {
 | `profile`, `assetClass`, `guessedClass` | what was computed; the class used for the curves (`sfx`, `rhythmic`, `orchestral`, `ambience`…) |
 | `summary` | `peakLufs`, `loudnessRange`, `soundStart`, `soundEnd`; with events also `peakDb`, `attack` |
 | `curves` | `rate` (samples per second), `start` (0), then one array per curve, `null` where silent. 0–1 on fixed library-wide scales: `loudness`, `activity`, `arousal`, `harshness`, `tension`, `harmonicTension`, `surprise`; in LUFS: `lufs`; with descriptors also `n1Kurtosis`, `n2RepetitionHz`, `n4Velocity` (oct/s), `n5Cpp` (dB), `n5Coherence`, `n6Arrow`, `n7Surprisal`, `n8Recurrence`; music profile also `structureNovelty` (Foote novelty, 0–1, values in silence too) and `localPulse` (PLP scaled by its clarity, 0–1). New curves are added without changing the schema version: read the ones you know and ignore the rest |
+| `noveltyTicks` | times (s) of the strongest spectral surprises, the lab's novelty ticks (music and ambience; empty for sound effects) |
 | `spectrum` | `sfx` and `music` profiles: a mel spectrogram for drawing. `bands` (40), `fmin`, `fmax` (Hz), `columns` (as the curves), `dbTop` and `dbRange` (80 dB mapped to 0–255), `data`: base64 of one byte per band and column, column after column, lowest band first |
 | `wave` | `columns`, `min`, `max`, `rms`: a waveform overview for thumbnails without decoding again |
 | `onsets` | onset times (s) |
@@ -87,7 +88,9 @@ text that hosts can store, offer in a menu, paste between apps and send with fee
 | line | `line:<curve>` | a curve over the waveform (descriptor curves on their 5th–95th percentile) |
 | lane | `lane:<curve>` or `lane:<curve>~signed` | a curve in its own lane under the waveform (up to three lanes share about half the height). `~signed` is for change curves such as `structureNovelty`: drawn up where the level rises across the change (an entry), down where it falls (a drop, a break into silence) and centred where only the material changes, so a break never reads as "more" |
 | sections | `sections` | boundaries and letters (music profile) |
-| marks | `ticks:<kinds>` | `events`, `onsets`, `beats`, `downbeats`, joined with `+` |
+| marks | `ticks:<kinds>` | `events`, `onsets`, `beats`, `downbeats` under the waveform, and `novelty` (the strongest spectral surprises) from the top edge, joined with `+` |
+| outline | `outline` | the ordinary peak waveform as a contour over what is drawn before it (theme key `outline`) |
+| height | `sculpt:<curve>` | reshapes the waveform layer: its envelope follows the curve while its detail stays. `sculpt:loudness` gives a waveform as loud as it sounds (a dB-like scale); the outline layer keeps the ordinary peaks for comparison |
 | form | `form:lanes` (default) or `form:overlay` | lanes each in their own band under the waveform, or all of them drawn on the waveform itself (light fill and a contour, so the waveform stays visible) |
 | shape | `shape:base` (default), `shape:mirror`, `shape:horizon`, `shape:line` | how a lane's curve is drawn: filled from the bottom; mirrored around the middle, like a waveform; a horizon chart (folded into three bands of rising strength, compact at small heights); a line |
 
@@ -98,7 +101,10 @@ Ready-made looks (`Playhead.looks`): `auto` (the default: by profile), the two r
 `spectrum` (spectrogram), `structure` (`wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats`),
 `rhythm`, `tension`, `events`, `lanes` (three separate lanes, no colour mixing), `shapes` (curves mirrored like
 waveforms, no waveform), `overlay` (curves drawn on the waveform), `horizon` (horizon lanes) and `specstructure`
-(spectrogram with sections and structural change). A layer whose curve is not in the document is left out and the
+(spectrogram with sections and structural change), and `sculpted` (`sculpt:loudness,wave:harshness,outline,ticks:events+novelty`:
+the waveform as loud as it sounds, coloured by harshness, over the ordinary peak outline).
+`Playhead.lookFits(doc, look)` says whether a look shows something for a document (every curve it uses is there and not
+empty), for menus that hide looks a file cannot use. A layer whose curve is not in the document is left out and the
 legend says so (`structure` and `rhythm` need the music profile).
 
 ```js

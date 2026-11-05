@@ -151,6 +151,7 @@ async function build(F, buf, opts, t0, prog) {
     curves: { rate: rnd(cols / F.dur, 6), start: 0, scale: "0..1 on fixed library-wide scales; lufs in LUFS; null where silent", ...curves },
     wave: waveOverview(buf, opts.waveColumns || 1000),
     onsets: ev.onsetTimes.map(t => rnd(t, 4)),
+    noveltyTicks: cur.ticks.map(m => rnd(m * F.dt, 4)),
     rhythm: null, sections: null, events: null, layers: null, issues: null, descriptors: null
   };
   // a small mel spectrogram for the spectrogram layer (sfx and music profiles; opts.spectrum false leaves it out)
@@ -257,7 +258,12 @@ function toMarkers(doc, opts) {
 //                                      down where it falls (a drop, a break into silence) and centred where the level
 //                                      stays and only the material changes, so a break never reads as "more"
 //   { type: "sections" }              boundaries and letters (music profile; a letter repeats when material returns)
-//   { type: "ticks", of: [...] }      marks under the waveform: "events", "onsets", "beats", "downbeats"
+//   { type: "ticks", of: [...] }      marks under the waveform: "events", "onsets", "beats", "downbeats", and from the
+//                                      top edge "novelty" (the strongest spectral surprises: new sounds, drops, entries)
+//   { type: "outline" }               the waveform's outline (min and max), over everything drawn before it
+//   { type: "sculpt", curve }         reshapes the waveform layer: its envelope follows the curve while its fine
+//                                      structure stays, e.g. "sculpt:loudness" for a waveform as loud as it sounds (the
+//                                      outline layer keeps the ordinary peaks, for comparison)
 //   { type: "form", value }           how lanes are arranged: "lanes" (each in its own band under the waveform, the
 //                                      default) or "overlay" (all of them over the waveform, in one band)
 //   { type: "shape", value }          how a lane's curve is drawn: "base" (filled from the bottom, the default),
@@ -270,17 +276,18 @@ const DEFAULT_THEME = {
   background: null, wave: "#9aa5ac", waveLow: [214, 226, 240], waveHigh: [24, 79, 149], line: "#eb6834", tick: "#13181b", text: "#13181b", rule: "#4e5960",
   lane: null, laneDown: null, laneFlat: null,     // lanes: rises (default: line), drops (default: rule), level-neutral changes (default: wave)
   series: null,                                   // colours of the 2nd and 3rd lane (default below)
+  outline: null,                                  // the outline layer (default: wave)
   halo: null,                                     // outline behind letters, for reading them over a spectrogram (none by default)
   specRamp: [[0, 0, 4], [66, 10, 104], [147, 38, 103], [221, 81, 58], [252, 165, 10], [252, 255, 164]]   // spectrogram, quiet -> loud
 };
 const SERIES = ["#2f9378", "#7e60c4"];
 const CURVE_LABELS = {
   loudness: "loudness", activity: "activity", arousal: "arousal", harshness: "harshness", tension: "tension", harmonicTension: "harmonic tension",
-  surprise: "spectral surprise", lufs: "loudness (LUFS)", structureNovelty: "structural change", localPulse: "local pulse",
+  surprise: "novelty (spectral surprise)", lufs: "loudness (LUFS)", structureNovelty: "structural change", localPulse: "local pulse",
   n1Kurtosis: "impulsiveness", n2RepetitionHz: "repetition rate", n4Velocity: "spectral motion", n5Cpp: "periodicity", n5Coherence: "phase coherence",
   n6Arrow: "time arrow", n7Surprisal: "surprisal", n8Recurrence: "recurrence"
 };
-const TICK_KINDS = ["events", "onsets", "beats", "downbeats"], FORMS = ["lanes", "overlay"], SHAPES = ["base", "mirror", "horizon", "line"];
+const TICK_KINDS = ["events", "onsets", "beats", "downbeats", "novelty"], FORMS = ["lanes", "overlay"], SHAPES = ["base", "mirror", "horizon", "line"];
 const LOOKS = {
   auto: { name: "Automatic", desc: "Sound effects: harshness as colour, activity as the line, events. Music: activity as colour, tension as the line, sections, downbeats.", code: null },
   plain: { name: "Waveform only", desc: "The waveform without analysis, for comparison.", code: "wave" },
@@ -293,7 +300,8 @@ const LOOKS = {
   shapes: { name: "Curves as waveforms", desc: "No waveform: loudness, activity and harshness each drawn like a waveform, mirrored around its middle.", code: "shape:mirror,lane:loudness,lane:activity,lane:harshness" },
   overlay: { name: "Curves over the waveform", desc: "Activity and harshness drawn like waveforms on top of the waveform itself, to compare their shapes directly.", code: "form:overlay,shape:mirror,wave,lane:activity,lane:harshness" },
   horizon: { name: "Horizon lanes", desc: "Loudness, activity and harshness as horizon charts: compact lanes that keep detail at small heights.", code: "shape:horizon,wave,lane:loudness,lane:activity,lane:harshness" },
-  specstructure: { name: "Spectrogram and structure", desc: "The spectrogram with sections, structural change and downbeats.", code: "spec,sections,lane:structureNovelty~signed,ticks:downbeats" }
+  specstructure: { name: "Spectrogram and structure", desc: "The spectrogram with sections, structural change and downbeats.", code: "spec,sections,lane:structureNovelty~signed,ticks:downbeats" },
+  sculpted: { name: "Waveform as loud as it sounds", desc: "The waveform's envelope follows perceived loudness (a dB-like scale) while its detail stays; colour shows harshness, with the ordinary peak outline for comparison.", code: "sculpt:loudness,wave:harshness,outline,ticks:events+novelty" }
 };
 const isSfxDoc = doc => doc.profile === "sfx" || doc.assetClass === "sfx";
 // the layers the renderer drew before looks existed; still the default, and still driven by the old options
@@ -315,7 +323,8 @@ function parseLook(code) {
   for (const tok of c.split(",").map(t => t.trim()).filter(Boolean)) {
     const [main, ...flags] = tok.split("~"), i = main.indexOf(":"), type = i < 0 ? main : main.slice(0, i), arg = i < 0 ? "" : main.slice(i + 1);
     if (type === "wave") out.push({ type, colour: arg || null });
-    else if (type === "spec") out.push({ type });
+    else if (type === "spec" || type === "outline") out.push({ type });
+    else if (type === "sculpt" && arg) out.push({ type, curve: arg });
     else if (type === "line" && arg) out.push({ type, curve: arg });
     else if (type === "lane" && arg) out.push({ type, curve: arg, signed: flags.includes("signed") });
     else if (type === "sections") out.push({ type });
@@ -329,7 +338,7 @@ function parseLook(code) {
 function lookCode(layers) {
   return (layers || []).map(l => l.type === "wave" ? "wave" + (l.colour ? ":" + l.colour : "") : l.type === "line" ? "line:" + l.curve
     : l.type === "lane" ? "lane:" + l.curve + (l.signed ? "~signed" : "") : l.type === "ticks" ? (l.of && l.of.length ? "ticks:" + l.of.join("+") : "")
-    : l.type === "form" || l.type === "shape" ? l.type + ":" + l.value : l.type).filter(Boolean).join(",");
+    : l.type === "form" || l.type === "shape" ? l.type + ":" + l.value : l.type === "sculpt" ? "sculpt:" + l.curve : l.type).filter(Boolean).join(",");
 }
 const optionOf = (layers, type, dflt) => { const l = (layers || []).find(x => x.type === type); return l ? l.value : dflt; };
 /** Plain-language description of layers, for a legend beside the strip. */
@@ -340,11 +349,13 @@ function describeLook(layers, doc) {
   for (const l of layers || []) {
     if (l.type === "wave") parts.push(l.colour && has(l.colour) ? "colour: " + lab(l.colour) : "waveform");
     else if (l.type === "spec") parts.push(!doc || doc.spectrum ? "spectrogram (mel, low at the bottom)" : "spectrogram (not in this analysis)");
+    else if (l.type === "outline") parts.push("outline: peak waveform");
+    else if (l.type === "sculpt") parts.push(has(l.curve) ? "height: " + lab(l.curve) : "height: " + lab(l.curve) + " (not in this analysis)");
     else if (l.type === "line" && has(l.curve)) parts.push("line: " + lab(l.curve));
     else if (l.type === "lane") parts.push((form === "overlay" ? "over the waveform: " : "lane: ") + lab(l.curve) + (has(l.curve) ? (l.signed ? " (up: entry, down: drop or break, centred: same level)" : "") : " (not in this analysis)"));
     else if (l.type === "sections" && (!doc || doc.sections)) parts.push("letters: sections");
     else if (l.type === "ticks" && l.of) {
-      const ok = r => !doc || (r === "events" ? !!doc.events : r === "onsets" ? !!doc.onsets : !!(doc.rhythm && doc.rhythm.reliable));
+      const ok = r => !doc || (r === "events" ? !!doc.events : r === "onsets" ? !!doc.onsets : r === "novelty" ? !!(doc.noveltyTicks && doc.noveltyTicks.length) : !!(doc.rhythm && doc.rhythm.reliable));
       const of = l.of.filter(ok); if (of.length) parts.push("marks: " + of.join(", "));
     }
   }
@@ -360,6 +371,18 @@ function autoRange(name, arr) {
   else return [0, 1];
   if (r[1] - r[0] < 1e-9) r = [r[0] - 1, r[0] + 1];
   return r;
+}
+/** Whether a look shows something for this document: every curve it uses is there and not empty, and a spectrogram
+ *  layer has data. For menus that hide looks a file cannot use (structure needs music, for example). */
+function lookFits(doc, look) {
+  const layers = parseLook(look) || legacyLayers(doc, {}), curves = doc && doc.curves || {};
+  const live = k => Array.isArray(curves[k]) && curves[k].some(v => v != null && v !== 0);
+  for (const l of layers) {
+    if ((l.type === "lane" || l.type === "line" || l.type === "sculpt") && !live(l.curve)) return false;
+    if (l.type === "wave" && l.colour && !live(l.colour)) return false;
+    if (l.type === "spec" && !doc.spectrum) return false;
+  }
+  return true;
 }
 const specCache = typeof WeakMap !== "undefined" ? new WeakMap() : null;
 function specBytes(sp) {
@@ -383,6 +406,7 @@ function drawStrip(ctx, doc, opts) {
   const th = Object.assign({}, DEFAULT_THEME, opts.theme || {});
   th.lane = th.lane || th.line; th.laneDown = th.laneDown || th.rule; th.laneFlat = th.laneFlat || th.wave;
   const series = [th.lane].concat(th.series || SERIES);
+  th.outline = th.outline || th.wave;
   const layers = opts.layers ? parseLook(opts.layers) : opts.look ? (parseLook(opts.look) || legacyLayers(doc, opts)) : legacyLayers(doc, opts);
   const W = opts.width || (ctx.canvas && ctx.canvas.width) || 600, H = opts.height || (ctx.canvas && ctx.canvas.height) || 64;
   const dur = doc.source.duration, t0 = Math.max(0, opts.from || 0), t1 = Math.min(dur, opts.to || dur), span = Math.max(1e-6, t1 - t0);
@@ -406,12 +430,35 @@ function drawStrip(ctx, doc, opts) {
   };
   const mix = (a, b, u) => "rgb(" + a.map((v, i) => Math.round(v + (b[i] - v) * u)).join(",") + ")";
   const specBefore = l => { const i = layers.indexOf(l); return doc.spectrum && layers.some((x, j) => x.type === "spec" && j < i); };
+  const sculptL = layers.find(l => l.type === "sculpt" && Array.isArray(curves[l.curve])), sculpt = sculptL ? curves[sculptL.curve] : null;
+  // the waveform per pixel column as [top, bottom] (fractions of the half-height, + up); with a sculpt curve the
+  // envelope (a running maximum over about 1% of the width) is replaced by the curve and the detail inside it is kept
+  let colsCache = null;
+  const waveCols = () => {
+    if (colsCache) return colsCache;
+    const wv = doc.wave, wc = wv.columns, hi = new Float32Array(W), lo = new Float32Array(W);
+    let peak = 1e-9; for (let c = 0; c < wc; c++) peak = Math.max(peak, Math.abs(wv.min[c] || 0), Math.abs(wv.max[c] || 0));
+    for (let x = 0; x < W; x++) {
+      const ta = t0 + x / W * span, tb = t0 + (x + 1) / W * span, ca = Math.floor(ta / dur * wc), cb = Math.max(ca + 1, Math.ceil(tb / dur * wc));
+      let a = 0, b = 0; for (let c = ca; c < cb && c < wc; c++) { a = Math.min(a, wv.min[c] || 0); b = Math.max(b, wv.max[c] || 0); }
+      hi[x] = b / peak; lo[x] = a / peak;
+    }
+    if (sculpt) {
+      const r = Math.max(2, Math.round(W / 100)), amp = x => Math.max(hi[x], -lo[x]), env = new Float32Array(W);
+      for (let x = 0; x < W; x++) { let m = 0; for (let k = Math.max(0, x - r); k <= Math.min(W - 1, x + r); k++) m = Math.max(m, amp(k)); env[x] = m; }
+      for (let x = 0; x < W; x++) {
+        const v = valAt(sculpt, t0 + x / W * span, t0 + (x + 1) / W * span), g = v == null || env[x] < 1e-4 ? 0 : Math.max(0, Math.min(1, v)) / env[x];
+        hi[x] *= g; lo[x] *= g;
+      }
+    }
+    return (colsCache = { hi, lo });
+  };
   const draw = {
     wave(l) {
       if (!mainH) return;
       const H = mainH, mid = H / 2, wv = doc.wave, wc = wv.columns;
       let peak = 1e-9; for (let c = 0; c < wc; c++) peak = Math.max(peak, Math.abs(wv.min[c] || 0), Math.abs(wv.max[c] || 0));
-      const colour = l.colour && curves[l.colour] ? curves[l.colour] : null;
+      const colour = l.colour && curves[l.colour] ? curves[l.colour] : null, sc = sculpt ? waveCols() : null;
       const outline = specBefore(l);
       if (colour) items.push({ label: CURVE_LABELS[l.colour] || l.colour, ramp: [th.waveLow, th.waveHigh] });
       if (outline) { ctx.strokeStyle = th.wave; ctx.lineWidth = 1; ctx.globalAlpha = 0.8; }
@@ -420,6 +467,7 @@ function drawStrip(ctx, doc, opts) {
         const ta = t0 + x / W * span, tb = t0 + (x + 1) / W * span;
         const ca = Math.floor(ta / dur * wc), cb = Math.max(ca + 1, Math.ceil(tb / dur * wc));
         let lo = 0, hi = 0; for (let c = ca; c < cb && c < wc; c++) { lo = Math.min(lo, wv.min[c] || 0); hi = Math.max(hi, wv.max[c] || 0); }
+        if (sc) { hi = sc.hi[x] * peak; lo = sc.lo[x] * peak; }
         const yTop = mid - hi / peak * (mid - 1), yBot = mid - lo / peak * (mid - 1);
         if (outline) { top.push(yTop); bot.push(yBot); continue; }
         const u = colour ? valAt(colour, ta, tb) : null;
@@ -430,6 +478,21 @@ function drawStrip(ctx, doc, opts) {
         for (const ys of [top, bot]) { ctx.beginPath(); ys.forEach((y, x) => x ? ctx.lineTo(x + 0.5, y) : ctx.moveTo(0.5, y)); ctx.stroke(); }
         ctx.globalAlpha = 1;
       }
+    },
+    outline() {
+      // the ordinary peak waveform as a contour, so a sculpted or curve-only strip can be read against it
+      const Hm = mainH || H, mid = Hm / 2, wv = doc.wave, wc = wv.columns;
+      let peak = 1e-9; for (let c = 0; c < wc; c++) peak = Math.max(peak, Math.abs(wv.min[c] || 0), Math.abs(wv.max[c] || 0));
+      const top = [], bot = [];
+      for (let x = 0; x < W; x++) {
+        const ta = t0 + x / W * span, tb = t0 + (x + 1) / W * span, ca = Math.floor(ta / dur * wc), cb = Math.max(ca + 1, Math.ceil(tb / dur * wc));
+        let lo = 0, hi = 0; for (let c = ca; c < cb && c < wc; c++) { lo = Math.min(lo, wv.min[c] || 0); hi = Math.max(hi, wv.max[c] || 0); }
+        top.push(mid - hi / peak * (mid - 1)); bot.push(mid - lo / peak * (mid - 1));
+      }
+      ctx.strokeStyle = th.outline; ctx.lineWidth = 1; ctx.globalAlpha = 0.85;
+      for (const ys of [top, bot]) { ctx.beginPath(); ys.forEach((y, x) => x ? ctx.lineTo(x + 0.5, y) : ctx.moveTo(0.5, y)); ctx.stroke(); }
+      ctx.globalAlpha = 1;
+      items.push({ label: "peak waveform", colour: th.outline });
     },
     spec() {
       const sp = doc.spectrum, u8 = specBytes(sp);
@@ -542,6 +605,10 @@ function drawStrip(ctx, doc, opts) {
       if (of.includes("beats") && ok) vl(r.beats, 3, 0.5);
       if (of.includes("onsets") && doc.onsets) vl(doc.onsets, 3, 0.6);
       if (of.includes("downbeats") && ok) vl(r.downbeats, 4);
+      if (of.includes("novelty") && doc.noveltyTicks) for (const t of doc.noveltyTicks) {     // from the top edge, like the lab's novelty ticks
+        if (t < t0 || t > t1) continue; const x = xOf(t);
+        ctx.beginPath(); ctx.moveTo(x, 1); ctx.lineTo(x - 3, 7); ctx.lineTo(x + 3, 7); ctx.closePath(); ctx.fill();
+      }
       if (of.includes("events") && doc.events) for (const e of doc.events) {
         if (e.start < t0 || e.start > t1) continue; const x = xOf(e.start);
         ctx.beginPath(); ctx.moveTo(x, Hm - 1); ctx.lineTo(x - 3, Hm - 6); ctx.lineTo(x + 3, Hm - 6); ctx.closePath(); ctx.fill();
@@ -552,7 +619,7 @@ function drawStrip(ctx, doc, opts) {
   return { code: lookCode(layers), layers, legend: describeLook(layers, doc), items };
 }
 
-const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, drawStrip, parseLook, lookCode, describeLook, looks: LOOKS, curveLabels: CURVE_LABELS, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
+const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, drawStrip, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.Playhead = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

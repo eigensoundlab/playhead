@@ -665,7 +665,8 @@ const PHAPI = window.Playhead || null;
 const CMP_COLOURS = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise"];
 const CMP_LINES = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "structureNovelty", "localPulse", "n1Kurtosis", "n4Velocity", "n6Arrow", "n7Surprisal"];
 const CMP_LANES = ["structureNovelty", "localPulse", "loudness", "activity", "arousal", "harshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
-const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Downbeats"], ["beats", "Beats"], ["onsets", "Onsets"], ["events", "Events"]];
+const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Downbeats"], ["beats", "Beats"], ["onsets", "Onsets"], ["events", "Events"], ["novelty", "Novelty (top)"]];
+const CMP_SCULPT = ["", "loudness", "arousal", "activity", "harshness", "tension"];
 const CMP_MAX_LANES = 3, CMP_HEIGHTS = [64, 96, 128, 160, 192];
 const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), h: store.get("lookHeight", 128), refs: store.get("lookRefs", true) };
 const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"]];
@@ -674,12 +675,14 @@ const CMP_SHAPES = [["base", "From the baseline"], ["mirror", "Mirrored, like a 
 const cmpLabel = k => k ? (PHAPI && PHAPI.curveLabels[k]) || k : "None";
 // look code <-> control state
 function cmpState(code) {
-  const st = { bg: "none", colour: "", line: "", lanes: [], signed: true, marks: new Set(), form: "lanes", shape: "base" };
+  const st = { bg: "none", colour: "", line: "", lanes: [], signed: true, marks: new Set(), form: "lanes", shape: "base", sculpt: "", outline: false };
   let wave = false, spec = false;
   for (const l of (PHAPI && PHAPI.parseLook(code)) || []) {
     if (l.type === "wave") { wave = true; st.colour = l.colour || ""; }
     else if (l.type === "spec") spec = true;
     else if (l.type === "form") st.form = l.value;
+    else if (l.type === "sculpt") st.sculpt = l.curve;
+    else if (l.type === "outline") st.outline = true;
     else if (l.type === "shape") st.shape = l.value;
     else if (l.type === "line") st.line = l.curve;
     else if (l.type === "lane" && st.lanes.length < CMP_MAX_LANES) { st.lanes.push(l.curve); if (l.curve === "structureNovelty") st.signed = !!l.signed; }
@@ -692,6 +695,7 @@ function cmpState(code) {
 function cmpCode(st) {
   const parts = [];
   if (st.form === "overlay") parts.push("form:overlay");
+  if (st.sculpt) parts.push("sculpt:" + st.sculpt);
   if (st.shape !== "base") parts.push("shape:" + st.shape);
   if (st.bg === "spec" || st.bg === "specwave") parts.push("spec");
   if (st.bg === "wave" || st.bg === "specwave") parts.push("wave" + (st.bg === "wave" && st.colour ? ":" + st.colour : ""));
@@ -702,9 +706,15 @@ function cmpCode(st) {
   if (ticks.length) parts.push("ticks:" + ticks.join("+"));
   return parts.join(",");
 }
+// the look as drawn: the composer's code, with the peak outline when "Waveform outline" is on (the same switch as the
+// lab's other strips use)
+function cmpEffective(code) {
+  const ls = (PHAPI && PHAPI.parseLook(code)) || [], has = ls.some(l => l.type === "outline");
+  return S.ghost && !has ? (code ? code + "," : "") + "outline" : code;
+}
 function themeOf(P) {
   return { background: null, wave: P.ink, waveLow: P.ramp[0], waveHigh: P.ramp[P.ramp.length - 1], line: P.line, tick: P.tick, text: P.rulerInk, rule: P.off,
-    lane: P.cat[0], laneDown: P.cat[1], laneFlat: P.off, series: [P.cat[2], P.cat[4]], specRamp: P.ramp, halo: P.halo };
+    lane: P.cat[0], laneDown: P.cat[1], laneFlat: P.off, series: [P.cat[2], P.cat[4]], specRamp: P.ramp, halo: P.halo, outline: P.outline };
 }
 // the Playhead document for a file, built once per asset class from the analysis the lab already has
 function composeDoc(f) {
@@ -725,7 +735,7 @@ function drawCompose(x, P, w, h, f, look, thumb) {
   if (!PHAPI) { drawOff(x, P, w, h, "The Playhead API (src/playhead.js) is not loaded"); return; }
   const ent = composeDoc(f);
   if (!ent.doc) { drawOff(x, P, w, h, ent.err ? "Could not prepare this file: " + ent.err : "Preparing…"); return; }
-  const r = PHAPI.drawStrip(x, ent.doc, { width: w, height: h, look: look || CMP.code, theme: themeOf(P) });
+  const r = PHAPI.drawStrip(x, ent.doc, { width: w, height: h, look: look || cmpEffective(CMP.code), theme: themeOf(P) });
   if (!look && !thumb) { const ds = $("ds-compose"); if (ds) ds.textContent = r.legend; }
 }
 function redrawCompose() {
@@ -758,6 +768,9 @@ function buildComposer() {
   const [lH, sH] = sel("cmp-height", "Height", CMP_HEIGHTS.map(v => [String(v), v + " px"]), "Height of the strips in this section");
   const refL = el("label", "chk"), refs = el("input"); refs.type = "checkbox"; refs.id = "cmp-refs"; refL.htmlFor = "cmp-refs"; refL.append(refs, document.createTextNode(" Show the waveform and the spectrogram under it for comparison"));
   const [lLine, sLine] = sel("cmp-line", "Line", CMP_LINES.map(k => [k, cmpLabel(k)]), "A curve drawn over the waveform");
+  const [lSc, sSc] = sel("cmp-sculpt", "Waveform height from", CMP_SCULPT.map(k => [k, k ? cmpLabel(k) : "Peaks (ordinary)"]), "Reshape the waveform: its envelope follows this curve while its detail stays. Loudness gives a waveform as loud as it sounds");
+  const olL = el("label", "chk"), outl = el("input"); outl.type = "checkbox"; outl.id = "cmp-outline"; olL.htmlFor = "cmp-outline"; olL.append(outl, document.createTextNode(" Waveform outline"));
+  olL.title = "The ordinary peak waveform as a contour over the strip; the same switch as in the top bar";
   const lanes = el("fieldset"); lanes.appendChild(el("legend", "", "Curves (up to " + CMP_MAX_LANES + ")"));
   const laneBoxes = CMP_LANES.map(k => { const l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.value = k; l.appendChild(c); l.appendChild(document.createTextNode(" " + cmpLabel(k))); lanes.appendChild(l); return c; });
   const sl = el("label", "chk"), signed = el("input"); signed.type = "checkbox"; sl.appendChild(signed);
@@ -774,25 +787,32 @@ function buildComposer() {
   const fb = el("a", "", "Tell us if this helps"); fb.target = "_blank"; fb.rel = "noopener";
   codeRow.append(cl, copy, fb);
   const row1 = el("div", "cmp-row"), row2 = el("div", "cmp-row");
-  row1.append(lLook, lBg, lCol, lLine);
+  row1.append(lLook, lBg, lCol, lSc, lLine, olL);
   row2.append(lForm, lShape, lH, refL);
   box.append(row1, lanes, row2, marks, codeRow);
 
   const show = () => {
     const st = cmpState(CMP.code);
     sBg.value = st.bg; sCol.value = st.colour; sCol.disabled = st.bg !== "wave"; sLine.value = st.line; signed.checked = st.signed;
+    sSc.value = st.sculpt; sSc.disabled = st.bg !== "wave" && st.bg !== "specwave"; outl.checked = !!S.ghost;
     sForm.value = st.form; sShape.value = st.shape; sH.value = String(CMP.h); refs.checked = CMP.refs;
     laneBoxes.forEach(c => { c.checked = st.lanes.includes(c.value); c.disabled = !c.checked && st.lanes.length >= CMP_MAX_LANES; });
     signed.disabled = !st.lanes.includes("structureNovelty");
     markBoxes.forEach(c => { c.checked = st.marks.has(c.value); });
-    const named = Object.entries(PHAPI.looks).find(([, L]) => L.code === CMP.code);
+    const norm = c => String(c || "").split(",").sort().join(","), eff = norm(cmpEffective(CMP.code));
+    const named = Object.entries(PHAPI.looks).find(([, L]) => L.code && (norm(L.code) === norm(CMP.code) || norm(L.code) === eff));
     sLook.value = named ? named[0] : "";
-    code.value = CMP.code;
-    fb.href = "https://github.com/eigensoundlab/playhead/issues/new?template=look-feedback.yml&title=" + encodeURIComponent("Look feedback: " + CMP.code) + "&look=" + encodeURIComponent(CMP.code) + "&app=" + encodeURIComponent("Playhead app");
+    code.value = cmpEffective(CMP.code);
+    fb.href = "https://github.com/eigensoundlab/playhead/issues/new?template=look-feedback.yml&title=" + encodeURIComponent("Look feedback: " + cmpEffective(CMP.code)) + "&look=" + encodeURIComponent(cmpEffective(CMP.code)) + "&app=" + encodeURIComponent("Playhead app");
   };
-  const set = c => { CMP.code = c; store.set("look", c); show(); redrawCompose(); };
+  // a code with an outline turns "Waveform outline" on; the stored code keeps the rest
+  const set = c => {
+    const ls = PHAPI.parseLook(c) || [];
+    if (ls.some(l => l.type === "outline")) { S.ghost = true; store.set("ghost", true); $("ghost").checked = true; c = PHAPI.lookCode(ls.filter(l => l.type !== "outline")); }
+    CMP.code = c; store.set("look", c); show(); render();
+  };
   const fromControls = () => {
-    const st = { bg: sBg.value, colour: sCol.value, line: sLine.value, signed: signed.checked, form: sForm.value, shape: sShape.value,
+    const st = { bg: sBg.value, colour: sCol.value, line: sLine.value, signed: signed.checked, form: sForm.value, shape: sShape.value, sculpt: sSc.value,
       lanes: CMP_LANES.filter(k => laneBoxes.find(c => c.value === k).checked).slice(0, CMP_MAX_LANES), marks: new Set(markBoxes.filter(c => c.checked).map(c => c.value)) };
     set(cmpCode(st));
   };
@@ -803,7 +823,9 @@ function buildComposer() {
     const f = S.sel, ent = f && f.F && f.phDocs && f.phDocs[effClass(f)];
     set(L.code || PHAPI.lookCode(PHAPI.parseLook(ent && ent.doc && (ent.doc.profile === "sfx") ? "wave:harshness,line:activity,ticks:events" : "wave:activity,sections,line:tension,ticks:downbeats+events")));
   });
-  [sBg, sCol, sLine, sForm, sShape, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
+  [sBg, sCol, sLine, sSc, sForm, sShape, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
+  outl.addEventListener("change", () => { S.ghost = outl.checked; store.set("ghost", S.ghost); $("ghost").checked = S.ghost; show(); render(); });
+  $("ghost").addEventListener("change", show);
   sH.addEventListener("change", () => { CMP.h = parseInt(sH.value, 10) || 128; store.set("lookHeight", CMP.h); redrawCompose(); });
   refs.addEventListener("change", () => { CMP.refs = refs.checked; store.set("lookRefs", CMP.refs); showCompareRows(); redrawCompose(); });
   code.addEventListener("change", () => { const ls = PHAPI.parseLook(code.value); if (ls && ls.length) set(PHAPI.lookCode(ls)); else show(); });

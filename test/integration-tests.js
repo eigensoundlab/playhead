@@ -66,6 +66,17 @@ module.exports = async function (check) {
   check("looks: forms and shapes (overlay in the waveform band, horizon under it, mirrored around the middle)", `${ov.length} / ${st.length} / ${only.length} columns`,
     ov.length > 0 && ov.every(([x, y, w, h]) => y >= 0 && y + h <= 100) && st.length > 0 && st.every(([x, y]) => y >= 72) && mirrored
     && Playhead.lookCode(Playhead.parseLook("shape:mirror,form:overlay,spec,wave,lane:loudness")) === "shape:mirror,form:overlay,spec,wave,lane:loudness" && Playhead.parseLook("shape:wobbly,form:sideways").length === 0);
+  // novelty marks, the peak outline, a waveform sculpted by a curve, and which looks fit a document
+  const sculpted = (() => { const d = JSON.parse(JSON.stringify(g1)); d.curves.loudness = d.curves.loudness.map(v => v == null ? null : 0.5); const rows = []; let st = null;
+    const c = new Proxy({ canvas: { width: 300, height: 100 } }, { get: (t, k) => k in t ? t[k] : (...a) => { if (k === "fillRect" && st !== "#fff") rows.push(a); }, set: (t, k, v) => { if (k === "fillStyle") st = v; return true; } });
+    Playhead.drawStrip(c, d, { look: "sculpt:loudness,wave" }); return rows; })();
+  const tallest = Math.max(...sculpted.map(([x, y, w, h]) => h)), half = 50 - 1;
+  let strokes = 0; const oc = new Proxy({ canvas: { width: 300, height: 60 } }, { get: (t, k) => k in t ? t[k] : (...a) => { if (k === "stroke") strokes++; }, set: () => true });
+  const or = Playhead.drawStrip(oc, g1, { look: "lane:activity,outline" });
+  const fits = Playhead.lookFits(m, "structure") && !Playhead.lookFits(g1, "structure") && Playhead.lookFits(g1, "events") && Playhead.lookFits(g1, "spectrum") && !Playhead.lookFits(f, "spectrum");
+  check("looks: novelty marks, outline, sculpted waveform, lookFits", `${m.noveltyTicks.length} novelty marks; sculpted peak ${(tallest / 2 / half).toFixed(2)} of full`,
+    m.noveltyTicks.length > 0 && Array.isArray(g1.noveltyTicks) && strokes === 2 && or.legend.includes("outline") && Math.abs(tallest / 2 / half - 0.5) < 0.03 && fits
+    && Playhead.lookCode(Playhead.parseLook("sculpt:loudness,wave:harshness,outline,ticks:events+novelty")) === "sculpt:loudness,wave:harshness,outline,ticks:events+novelty");
   const fa = await Playhead.fromAnalysis(await WL.analyse(glass), glass, { name: "glass" });
   check("api: fromAnalysis gives the analyze() document", "", JSON.stringify(strip(fa)) === JSON.stringify(strip(g1)));
   const pr = await Playhead.process(glass, "layers", { gains: [-12] });
