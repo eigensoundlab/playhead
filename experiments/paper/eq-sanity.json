@@ -1,0 +1,25 @@
+{
+ "generated": "tools/eq-sanity.js",
+ "version": "0.2.0",
+ "input": "cue arc (CC0), 10-30 s",
+ "edits": {
+  "low-pass 2 kHz": {
+   "change": 3.72,
+   "eqShare": 0.96,
+   "dynShare": 0.96,
+   "autoShare": 0.96
+  },
+  "gain ride ±6 dB at 0.25 Hz": {
+   "change": 4.18,
+   "eqShare": 0.08,
+   "dynShare": 0.36,
+   "autoShare": 0.98
+  },
+  "pitch +2 semitones": {
+   "change": 18.59,
+   "eqShare": 0.02,
+   "dynShare": 0.67,
+   "autoShare": 0.77
+  }
+ }
+}
