@@ -12,7 +12,7 @@ Playhead is a research prototype. It runs entirely in the browser: audio you dro
 
 | Lane | What it measures | Basis |
 |---|---|---|
-| C1 Loudness | Short-term loudness in LUFS | ITU-R BS.1770 K-weighting; ISO 532-1 sone loudness |
+| C1 Loudness | Short-term loudness in LUFS | ITU-R BS.1770-5 K-weighting; ISO 532-1 sone loudness |
 | C2 Activity | How busy the sound is: onsets and spectral change, not level | Log-mel spectral flux (SuperFlux-style) plus event density |
 | C3 Arousal | Energy and excitement composite | Loudness, activity, sharpness |
 | C4 Harshness | Loudness weighted by how unpleasant it is | Zwicker psychoacoustic annoyance: DIN 45692 sharpness, roughness, fluctuation strength |

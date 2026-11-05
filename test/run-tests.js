@@ -27,6 +27,25 @@ const finite = buf => { for (let c = 0; c < buf.numberOfChannels; c++) for (cons
   const t0 = Date.now();
   await WL.calibrate(44100);
 
+  /* loudness against Rec. ITU-R BS.1770-5 (11/2023): the K-weighting coefficients of its Tables 1 and 2 at 48 kHz, the
+     same frequency response at other rates, and its calibration (0 dBFS 997 Hz sine in one channel = -3.01 LKFS) */
+  {
+    const ref = [[1.53512485958697, -2.69169618940638, 1.19839281085285, -1.69065929318241, 0.73248077421585], [1.0, -2.0, 1.0, -1.99004745483398, 0.99007225036621]];
+    const c48 = WL.kFilterCoeffs(48000); let dc = 0; for (let s = 0; s < 2; s++) for (let k = 0; k < 5; k++) dc = Math.max(dc, Math.abs(c48[s][k] - ref[s][k]));
+    const H = (cc, f, fs) => { const w = 2 * Math.PI * f / fs; let g = 1; for (const [b0, b1, b2, a1, a2] of cc) g *= Math.hypot(b0 + b1 * Math.cos(w) + b2 * Math.cos(2 * w), b1 * Math.sin(w) + b2 * Math.sin(2 * w)) / Math.hypot(1 + a1 * Math.cos(w) + a2 * Math.cos(2 * w), a1 * Math.sin(w) + a2 * Math.sin(2 * w)); return 20 * Math.log10(g); };
+    let dr = 0; for (let f = 20; f < 16000; f *= 1.02) dr = Math.max(dr, Math.abs(H(WL.kFilterCoeffs(44100), f, 44100) - H(ref, f, 48000)));
+    const sine = fs => Float32Array.from({ length: fs * 5 }, (_, i) => Math.sin(2 * Math.PI * 997 * i / fs));
+    const l48 = FX.lufsOf([sine(48000), new Float32Array(48000 * 5)], 48000), l44 = FX.lufsOf([sine(44100)], 44100);
+    // gating (400 ms blocks, 75 % overlap, -70 LKFS absolute, -10 LU relative): a passage 40 dB quieter and silence
+    // after a steady tone are gated out, so the integrated loudness is the tone's own, less about 0.13 dB from the three
+    // blocks that straddle the change (without the relative gate it would be 3 dB lower)
+    const fs = 48000, tone = sine(fs).map(v => 0.5 * v), quiet = tone.map(v => v / 100), both = new Float32Array(tone.length * 3);
+    both.set(tone, 0); both.set(quiet, tone.length);
+    const lt = FX.lufsOf([tone], fs), lb = FX.lufsOf([both], fs);
+    check("loudness: BS.1770-5 K-weighting, calibration, gating", `${l48.toFixed(2)} / ${l44.toFixed(2)} LKFS`, dc < 1e-12 && dr < 0.01 && Math.abs(l48 + 3.01) < 0.01 && Math.abs(l44 + 3.01) < 0.01 && Math.abs(lb - lt) < 0.2,
+      `coefficients ±${dc.toExponential(0)}, 44.1 kHz response within ${dr.toFixed(3)} dB, gated ${lb.toFixed(2)} vs ${lt.toFixed(2)}`);
+  }
+
   /* music: beats, downbeats, sections */
   const arc = P.makeCueArc(44100, WL.kFilterCoeffs);
   const A = await analyseAll(arc, "Cue arc");

@@ -21,7 +21,8 @@ function peakOf(chans) { let p = 0; for (const ch of chans) for (let i = 0; i < 
 function scaleTo(chans, peak) { const p = peakOf(chans); if (p <= 0) return 1; const g = peak / p; for (const ch of chans) for (let i = 0; i < ch.length; i++) ch[i] *= g; return g; }
 function rng(seed) { let a = seed >>> 0; return () => { a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
 const db = v => 20 * Math.log10(Math.max(v, 1e-12));
-// integrated loudness, ITU-R BS.1770 (400 ms blocks, 75% overlap, -70 LUFS absolute and -10 LU relative gates)
+// integrated loudness, ITU-R BS.1770-5 (400 ms blocks, 75% overlap, -70 LUFS absolute and -10 LU relative gates;
+// test/run-tests.js checks the K-weighting, calibration and gating against the Recommendation)
 function lufsOf(chans, sr) {
   const kc = WL.kFilterCoeffs(sr), len = chans[0].length, blk = Math.round(0.4 * sr), hop = Math.round(0.1 * sr);
   const zs = chans.map(c => { const a = new Float32Array(len), b = new Float32Array(len); WL.biquadInto(c, a, kc[0]); WL.biquadInto(a, b, kc[1]); return b; });
