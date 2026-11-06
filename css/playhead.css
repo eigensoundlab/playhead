@@ -30,7 +30,8 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .wrap{max-width:1260px;margin:0 auto;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:22px 72px}
 header{display:flex;flex-wrap:wrap;gap:10px 24px;align-items:flex-end;margin-bottom:14px}
 header .intro{flex:1 1 520px;min-width:0}
-header .langpick{margin-left:auto}
+header .langbox{margin-left:auto;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+.en-term{color:inherit}
 h1{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0;text-wrap:balance}
 header p{margin:6px 0 0;color:var(--ink2);max-width:72ch}
 h2{font-size:14px;font-weight:600;margin:0;text-wrap:balance}

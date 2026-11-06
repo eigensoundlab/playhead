@@ -10,20 +10,33 @@
 (function (root) {
 "use strict";
 const LANGUAGES = { en: "English", cs: "Čeština", de: "Deutsch", es: "Español", pl: "Polski", ru: "Русский" };
-const STORE = "playhead.language";
+const STORE = "playhead.language", STORE_EN = "playhead.englishTerms";
 let DATA = root.PH_I18N_DATA || null;
 if (!DATA && typeof require !== "undefined") { try { DATA = require("./i18n-data.js"); } catch (e) { DATA = null; } }
 DATA = DATA || {};
-let lang = "en", table = {};
+let lang = "en", table = {}, showEn = true;
+try { if (root.localStorage && root.localStorage.getItem(STORE_EN) === "0") showEn = false; } catch (e) { /* storage blocked */ }
 const listeners = [];
 
 function has(k) { return Object.prototype.hasOwnProperty.call(table, k); }
+// [[term|English]] in a translation marks a technical term in an explanation: shown as "term (English)" while English
+// terms are on (the default), else as "term". Labels and buttons never carry it (tools/i18n.js checks).
+const GLOSS = /\[\[([^\]|]+)\|([^\]]+)\]\]/g;
+function gloss(s, html) {
+  return String(s).replace(GLOSS, (m, t, en, at, all) => {
+    if (!showEn) return t;
+    // inside parentheses already: square brackets, so they do not nest
+    const depth = (all.slice(0, at).match(/\(/g) || []).length - (all.slice(0, at).match(/\)/g) || []).length;
+    const b = depth > 0 ? ["[", "]"] : ["(", ")"];
+    return html ? t + ' <span class="en-term" lang="en">' + b[0] + en + b[1] + "</span>" : t + " " + b[0] + en + b[1];
+  });
+}
 function fill(s, vars) { return vars ? String(s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m)) : s; }
 /** The text for key in the current language, else the English default; {name} is replaced from vars. */
 function T(key, en, vars) {
   let s = has(key) ? table[key] : en;
   if (s == null) s = key;
-  return fill(s, vars);
+  return fill(gloss(s), vars);
 }
 /** A count with its noun: key.one, key.few, key.many or key.other by the language's plural rules (Czech, Polish and
  *  Russian need few and many), else the English one/other; {n} is the count. */
@@ -31,8 +44,8 @@ function TP(key, n, one, other, vars) {
   let c = n === 1 ? "one" : "other";
   try { c = new Intl.PluralRules(lang).select(n); } catch (e) { /* no Intl: English rule */ }
   const v = Object.assign({ n: n }, vars || {});
-  if (has(key + "." + c)) return fill(table[key + "." + c], v);
-  if (has(key + ".other")) return fill(table[key + ".other"], v);
+  if (has(key + "." + c)) return fill(gloss(table[key + "." + c]), v);
+  if (has(key + ".other")) return fill(gloss(table[key + ".other"]), v);
   return fill(n === 1 ? one : other, v);
 }
 /** The language to start in: ?lang= in the address, the last choice, then the browser's languages. */
@@ -49,18 +62,18 @@ function applyDom(scope) {
   scope.querySelectorAll("[data-i18n]").forEach(el => {
     if (!el.hasAttribute("data-i18n-en")) el.setAttribute("data-i18n-en", el.textContent);
     const k = el.getAttribute("data-i18n");
-    el.textContent = has(k) ? table[k] : el.getAttribute("data-i18n-en");
+    el.textContent = has(k) ? gloss(table[k]) : el.getAttribute("data-i18n-en");
   });
   scope.querySelectorAll("[data-i18n-html]").forEach(el => {
     if (!el.hasAttribute("data-i18n-en")) el.setAttribute("data-i18n-en", el.innerHTML);
     const k = el.getAttribute("data-i18n-html");
-    el.innerHTML = has(k) ? table[k] : el.getAttribute("data-i18n-en");   // translations ship with the app, never user text
+    el.innerHTML = has(k) ? gloss(table[k], true) : el.getAttribute("data-i18n-en");   // translations ship with the app, never user text
   });
   for (const a of ATTRS) scope.querySelectorAll("[data-i18n-" + a + "]").forEach(el => {
     const keep = "data-i18n-en-" + a;
     if (!el.hasAttribute(keep)) el.setAttribute(keep, el.getAttribute(a) || "");
     const k = el.getAttribute("data-i18n-" + a);
-    el.setAttribute(a, has(k) ? table[k] : el.getAttribute(keep));
+    el.setAttribute(a, has(k) ? gloss(table[k]) : el.getAttribute(keep));
   });
 }
 /** Switch language: remember it, translate the page and the library's labels, and tell the app to redraw. */
@@ -69,16 +82,22 @@ function setLanguage(l, opts) {
   table = lang === "en" ? {} : (DATA[lang] || {});
   if (!(opts && opts.remember === false)) { try { root.localStorage.setItem(STORE, lang); } catch (e) { /* not remembered */ } }
   if (root.document) { root.document.documentElement.lang = lang; applyDom(root.document); }
-  if (root.Playhead && root.Playhead.localize) root.Playhead.localize(lang === "en" ? null : table);
+  if (root.Playhead && root.Playhead.localize) root.Playhead.localize(lang === "en" ? null : Object.fromEntries(Object.entries(table).map(([k, v]) => [k, gloss(v)])));
   for (const fn of listeners) { try { fn(lang); } catch (e) { console.error(e); } }
   return lang;
+}
+/** English terms in brackets after technical terms in explanations: on or off, remembered; redraws like a language change. */
+function setEnglishTerms(on) {
+  showEn = !!on;
+  try { root.localStorage.setItem(STORE_EN, showEn ? "1" : "0"); } catch (e) { /* not remembered */ }
+  return setLanguage(lang, { remember: false });
 }
 /** Languages with translations available, as [[code, native name], ...]. */
 function available() { return Object.keys(LANGUAGES).filter(l => l === "en" || DATA[l]).map(l => [l, LANGUAGES[l]]); }
 /** Share of the English keys a language translates (0..1), for the language menu. */
 function coverage(l, keys) { const d = DATA[l] || {}; return l === "en" ? 1 : keys.length ? keys.filter(k => Object.prototype.hasOwnProperty.call(d, k)).length / keys.length : 0; }
 
-const api = { T, TP, setLanguage, applyDom, preferred, available, coverage, languages: LANGUAGES, get language() { return lang; }, get table() { return table; }, onChange: fn => listeners.push(fn), data: DATA };
+const api = { T, TP, gloss, setLanguage, setEnglishTerms, applyDom, preferred, available, coverage, languages: LANGUAGES, get language() { return lang; }, get englishTerms() { return showEn; }, get table() { return table; }, onChange: fn => listeners.push(fn), data: DATA };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.PHI18N = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

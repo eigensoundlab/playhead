@@ -126,6 +126,14 @@ const loadJSON = f => JSON.parse(fs.readFileSync(f, "utf8"));
 const langFile = l => path.join(DIR, l + ".json");
 const isMeta = k => k.startsWith("_");
 const pluralBase = k => k.replace(/\.(zero|one|two|few|many|other)$/, "");
+// [[term|English]]: the English term after a technical term, in explanations only (see i18n/TRANSLATING.md)
+const GLOSS = /\[\[([^\]|]+)\|([^\]]+)\]\]/g;
+const EXPLAINS = /^(ui\.intro$|sec\.|note\.|guide\.|row\.[\w-]+\.desc$|d3\.|lib\.(look|tool)\.\w+\.desc$|[\w.-]+\.title$|bench\.(need\.|eqNote|saveGh|saveZipNote)|lab\.fTitle$|aria\.)/;
+const glossed = (s, on) => String(s).replace(GLOSS, (m, t, e, at, all) => {
+  if (!on) return t;
+  const depth = (all.slice(0, at).match(/\(/g) || []).length - (all.slice(0, at).match(/\)/g) || []).length;
+  return depth > 0 ? t + " [" + e + "]" : t + " (" + e + ")";     // as src/i18n.js shows it
+});
 
 /** Problems of one translation against the English: unknown keys, placeholders and markup that differ. */
 function problems(en, tr) {
@@ -145,6 +153,9 @@ function problems(en, tr) {
     const want = plural ? [...new Set([".one", ".other"].flatMap(f => ph(en[pluralBase(k) + f] || "").split(" ").filter(Boolean)))].sort().join(" ") : ph(en[base]);
     if (plural ? got.split(" ").some(x => x && !want.split(" ").includes(x)) : want !== got) out.push(k + ": placeholders " + (got || "none") + ", English has " + (want || "none"));
     if (tags(en[base]) !== tags(v)) out.push(k + ": markup differs from the English");
+    const opens = (v.match(/\[\[/g) || []).length, marks = (v.match(GLOSS) || []).length;
+    if (opens !== marks || (v.match(/\]\]/g) || []).length !== marks) out.push(k + ": [[term|English]] is not closed or has no |");
+    else if (marks && !EXPLAINS.test(k)) out.push(k + ": [[term|English]] belongs in explanations, not in labels, buttons or legends");
   }
   return out;
 }
@@ -174,7 +185,8 @@ function libTables() {
   for (const l of LANGS) {
     if (!fs.existsSync(langFile(l))) continue;
     const tr = loadJSON(langFile(l));
-    out[l] = Object.fromEntries(Object.entries(tr).filter(([k]) => k.startsWith("lib.")));
+    // other apps get the explanations with the English terms in brackets, as the lab shows them by default
+    out[l] = Object.fromEntries(Object.entries(tr).filter(([k]) => k.startsWith("lib.")).map(([k, v]) => [k, glossed(v, true)]));
   }
   return out;
 }
@@ -230,7 +242,8 @@ function terms(vocabDir, only) {
       for (const [k, v] of Object.entries(en)) {
         if (!re.test(v.replace(/\{\w+\}/g, "")) || !tr[k] || k.startsWith("_")) continue;
         checked++;
-        if (!forms.some(f => uses(tr[k], f))) misses.push(r.term + " → " + e.term + "   " + k + ": " + tr[k].slice(0, 90));
+        const text = glossed(tr[k], false);
+        if (!forms.some(f => uses(text, f))) misses.push(r.term + " → " + e.term + "   " + k + ": " + text.slice(0, 90));
       }
     }
     total += misses.length;

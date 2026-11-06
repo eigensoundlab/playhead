@@ -13,6 +13,10 @@
   sections and bars as markers and regions; curves as automation through the Playhead Control JSFX, which any effect
   parameter can follow; the tools as new takes; a dockable strip window in any look. Tested against the command line
   in a mock REAPER; not yet run in REAPER itself.
+- **English terms in explanations**: translations can follow a technical term with its English original, "tvrdost
+  (harshness)", written `[[tvrdost|harshness]]`; a checkbox under the language menu turns it off. Czech has it
+  throughout, with the terms its author chose on the vocabulary's review sheet (tvrdost, saturace úderů, srovnat
+  hlasitost událostí, nečekaná změna spektra, změna struktury, tvarování napětí, směr času).
 - Asset checks carry a key and values, so the lab shows them in other languages (`text` stays English).
 
 ### Changed

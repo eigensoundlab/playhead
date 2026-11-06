@@ -3,6 +3,8 @@
  "ui.title": "Playhead – laboratorium przebiegów",
  "ui.intro": "Przebieg pokazuje poziom dźwięku. Playhead dodaje to, co dźwięk robi (jego intensywność, charakter, rytm i strukturę), w postaci krzywych, znaczników i spektrogramu na tej samej osi czasu co przebieg. Można porównać widoki, złożyć własny pasek i wypróbować stanowisko efektów, którego narzędzia działają na zdarzeniach i krzywych znalezionych przez analizę, a nie na stałych częstotliwościach. Wbudowanych jest trzynaście efektów dźwiękowych do gier i trzy muzyczne sygnały testowe o znanej strukturze; własne pliki WAV, OGG, MP3 lub FLAC można przeciągnąć tutaj, aby je porównać. Nic nie opuszcza tej karty.",
  "ui.language": "Język",
+ "ui.englishTerms": "Terminy angielskie",
+ "ui.englishTerms.title": "W objaśnieniach pokazuj angielski termin w nawiasie po terminach fachowych",
  "ui.open": "Otwórz pliki",
  "ui.play": "Odtwórz",
  "ui.cls": "Klasa zasobu",

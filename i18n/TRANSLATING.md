@@ -45,6 +45,21 @@ word if there is one, and add it to the vocabulary rather than inventing it here
   unavoidable, otherwise impersonal; Spanish: "tú"/"usted" consistent with the vocabulary).
 - Keys starting with `_` are notes for other translators and are ignored by the app, e.g. `"_notes": "…"`.
 
+## English terms in explanations
+
+In explanations (descriptions of strips, notes, the guide, tool and look descriptions, tooltips), a technical term can
+carry its English original: write `[[tvrdost|harshness]]`. The lab shows "tvrdost (harshness)", or only "tvrdost" when
+the reader turns English terms off (the checkbox under the language menu). Use it:
+
+- at the first mention of a vocabulary term in each text, not at every mention;
+- for terms a reader may know in English from tools, manuals or papers (waveform, onset, harshness, spectral
+  surprise), not for everyday words (sound, file, time);
+- never on buttons, menus, labels, column heads or legends: `node tools/i18n.js check` rejects it there.
+
+The English inside the brackets is the vocabulary's English term, in lower case, as it is used in English text. A mark
+inside parentheses is shown with square brackets, "(ve tvaru Zwickerova obtěžování [psychoacoustic annoyance])", so
+brackets do not nest.
+
 ## Where the texts appear
 
 | Keys | Where |

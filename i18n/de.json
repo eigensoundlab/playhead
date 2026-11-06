@@ -3,6 +3,8 @@
   "ui.title": "Playhead – Wellenform-Labor",
   "ui.intro": "Eine Wellenform zeigt den Pegel eines Sounds. Playhead ergänzt, was der Sound tut (Intensität, Charakter, Rhythmus und Struktur), als Kurven, Markierungen und Spektrogramm auf der Zeitachse der Wellenform. Hier lassen sich die Ansichten vergleichen, ein eigener Streifen zusammenstellen und das Effektlabor ausprobieren, dessen Werkzeuge auf die Ereignisse und Kurven wirken, die die Analyse findet, statt auf feste Frequenzen. Dreizehn Game-Soundeffekte und drei Musik-Testsignale mit bekannter Struktur sind eingebaut; eigene WAV-, OGG-, MP3- oder FLAC-Dateien lassen sich zum Vergleich hineinziehen. Nichts verlässt diesen Tab.",
   "ui.language": "Sprache",
+  "ui.englishTerms": "Englische Begriffe",
+  "ui.englishTerms.title": "In Erklärungen nach Fachbegriffen den englischen Begriff in Klammern zeigen",
   "ui.open": "Dateien öffnen",
   "ui.play": "Abspielen",
   "ui.cls": "Asset-Klasse",

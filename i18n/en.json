@@ -3,6 +3,8 @@
  "ui.title": "Playhead waveform lab",
  "ui.intro": "A waveform shows a sound's level. Playhead adds what the sound is doing (its intensity, character, rhythm and structure) as curves, marks and a spectrogram on the waveform's own time axis. Compare the views, compose a strip of your own, and try the effects bench, whose tools act on the events and curves the analysis finds rather than on fixed frequencies. Thirteen game sound effects and three music test signals with known structure are built in; drop your own WAV, OGG, MP3 or FLAC files to compare. Nothing leaves this tab.",
  "ui.language": "Language",
+ "ui.englishTerms.title": "In explanations, show the English term in brackets after technical terms",
+ "ui.englishTerms": "English terms",
  "ui.open": "Open files",
  "ui.play": "Play",
  "ui.cls": "Asset class",

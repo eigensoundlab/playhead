@@ -17,7 +17,10 @@
     <h1 data-i18n="ui.title">Playhead waveform lab</h1>
     <p data-i18n="ui.intro">A waveform shows a sound's level. Playhead adds what the sound is doing (its intensity, character, rhythm and structure) as curves, marks and a spectrogram on the waveform's own time axis. Compare the views, compose a strip of your own, and try the effects bench, whose tools act on the events and curves the analysis finds rather than on fixed frequencies. Thirteen game sound effects and three music test signals with known structure are built in; drop your own WAV, OGG, MP3 or FLAC files to compare. Nothing leaves this tab.</p>
   </div>
-  <label class="ctl langpick" for="lang"><span data-i18n="ui.language">Language</span> <select id="lang"></select></label>
+  <div class="langbox">
+    <label class="ctl langpick" for="lang"><span data-i18n="ui.language">Language</span> <select id="lang"></select></label>
+    <label class="chk langen" for="lang-en" hidden data-i18n-title="ui.englishTerms.title" title="In explanations, show the English term in brackets after technical terms"><input type="checkbox" id="lang-en"> <span data-i18n="ui.englishTerms">English terms</span></label>
+  </div>
 </header>
 
 <div class="bar" id="bar">

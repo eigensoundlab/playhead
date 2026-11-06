@@ -1824,6 +1824,12 @@ if (I18N) {
     pick.closest("label").hidden = pick.options.length < 2;
     pick.addEventListener("change", () => I18N.setLanguage(pick.value));
   }
+  const enBox = $("lang-en");
+  if (enBox) {
+    enBox.checked = I18N.englishTerms;
+    enBox.closest("label").hidden = I18N.language === "en";
+    enBox.addEventListener("change", () => I18N.setEnglishTerms(enBox.checked));
+  }
 }
 buildRows();
 buildComposer();
@@ -1832,6 +1838,7 @@ hookScopes();
 render();
 if (I18N) I18N.onChange(lang => {
   if ($("lang")) $("lang").value = lang;
+  if ($("lang-en")) $("lang-en").closest("label").hidden = lang === "en";
   relabelRows();
   buildComposer();
   $("toolpick").innerHTML = "";
