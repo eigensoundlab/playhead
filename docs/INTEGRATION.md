@@ -177,36 +177,15 @@ Two parts:
    Descriptor summaries then become sort keys and filters (impulsive, repetitive, metal-like, long ring, harsh), and `wave` plus two curves are enough to draw a thumbnail without decoding again.
 2. **Front end, for the viewer.** Serve `playhead-core.mjs` from `kurator/static/vendor/`, add a "Playhead" mode to `WAVE_MODES` in `waveview.js`, fetch the stored document from a new endpoint (for example `/api/audio/{id}/playhead`) and draw it with `drawStrip()` at the viewer's zoom (`from`, `to`).
 
-### REAPER (Lua script and the executable)
+### REAPER (Lua scripts and the executable)
 
-`playhead markers <file>` prints tab-separated lines (`kind  start  end  name`) that a script turns into regions and markers at the item's position:
-
-```lua
--- Playhead: sections and downbeats of the selected item as regions and markers (starting point)
-local PLAYHEAD = "playhead"   -- or the full path to playhead.exe
-local item = reaper.GetSelectedMediaItem(0, 0)
-if not item then reaper.ShowMessageBox("Select an item first.", "Playhead", 0) return end
-local take = reaper.GetActiveTake(item)
-local file = reaper.GetMediaSourceFileName(reaper.GetMediaItemTake_Source(take), "")
-local pos, len = reaper.GetMediaItemInfo_Value(item, "D_POSITION"), reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
-local offs, rate = reaper.GetMediaItemTakeInfo_Value(take, "D_STARTOFFS"), reaper.GetMediaItemTakeInfo_Value(take, "D_PLAYRATE")
-local out = reaper.ExecProcess(string.format('"%s" markers "%s" --kinds sections,downbeats', PLAYHEAD, file), 0)
-if not out then return end
-reaper.Undo_BeginBlock()
-for line in out:gmatch("[^\r\n]+") do
-  local kind, s, e, name = line:match("^(%a+)\t([%d%.]+)\t([%d%.]*)\t(.*)$")
-  if kind then
-    local t = pos + (tonumber(s) - offs) / rate
-    if t >= pos and t <= pos + len then
-      if kind == "region" and e ~= "" then reaper.AddProjectMarker2(0, true, t, math.min(pos + len, pos + (tonumber(e) - offs) / rate), name, -1, 0)
-      else reaper.AddProjectMarker2(0, false, t, 0, name, -1, 0) end
-    end
-  end
-end
-reaper.Undo_EndBlock("Playhead markers", -1)
-```
-
-Next steps for REAPER: curves as take or track envelopes (`curveAt` sampled at the envelope's points), and de-harsh's gate written as automation for ReaEQ, the "analysis drives ordinary plug-ins" case from the paper.
+[`integrations/reaper/`](../integrations/reaper/README.md) is a ReaScript package (ReaPack headers included) that
+runs the executable without blocking REAPER and keeps the documents in a cache. Its actions analyse the selected
+items, add events and onsets as take markers and sections and downbeats as regions and markers, write curves as
+automation on a small JSFX (Playhead Control) whose parameters can drive any plug-in through parameter links or
+MIDI CC, render the effects bench tools as new takes, and draw the item in any look in a dockable strip window. All
+of them follow the take's start offset, playback rate, loop and reversed sections. Its Lua core (document reader,
+time mapping, strip renderer, command lines) is tested against the documents and `drawStrip` here.
 
 ### Unity (editor import, runtime curves and events)
 

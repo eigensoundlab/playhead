@@ -115,6 +115,11 @@ level or a break into silence.
 
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
 
+**REAPER.** [integrations/reaper](integrations/reaper/README.md) is a ReaPack package of six actions around the command
+line: analyse the selected items, add their events, sections and bars as markers and regions, write curves as
+automation through a small JSFX (Playhead Control) that any effect parameter can follow, run the tools as new takes,
+and a dockable strip window. Its README has recipes for mixing, mastering and sound-design experiments.
+
 **Languages.** The lab is in English, Czech, German, Polish, Russian and Spanish (the menu in the top bar, or
 `?lang=cs`). The terms follow a shared [sound vocabulary](https://github.com/eigensoundlab/sound-vocabulary), so
 loudness and level, or harshness, sharpness and roughness, stay apart in every language. Apps that draw strips show
@@ -351,6 +356,7 @@ examples/             a host page and an analysis worker using the library bundl
 docs/INTEGRATION.md   API, document schema and recipes for other applications
 tools/serve.js        local static server
 tools/i18n.js         translations: extract the English, build, check, compare with the sound vocabulary
+integrations/reaper/  REAPER actions, the Playhead Control JSFX and their tests (ReaPack package)
 paper/                outline and licence of the accompanying paper (CC BY 4.0); the LaTeX source is kept in a separate repository
 ```
 

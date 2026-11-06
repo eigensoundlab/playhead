@@ -150,5 +150,17 @@ module.exports = async function (check) {
   let sj = null; try { sj = JSON.parse(sin.stdout); } catch (e) { }
   check("cli: raw samples on stdin, nulls filled for engines", sj ? `${sj.events.length} events, ${sj.curves.loudness.filter(v => v === null).length} nulls` : (sin.stderr || "").slice(0, 120),
     !!sj && sj.events.length === g1.events.length && sj.curves.loudness.every(v => v !== null));
+  // --out and --out-dir files are written whole (a temporary file next to the target, then renamed over it), so a host
+  // polling for them (the REAPER scripts) never reads half a file; an existing target is replaced, nothing is left over
+  { const outJson = path.join(tmp, "out.json"), outDir = path.join(tmp, "rendered"), cliJs = path.join(root, "tools/playhead-cli.js");
+    fs.writeFileSync(outJson, "old");
+    const a = spawnSync(process.execPath, [cliJs, "analyze", wav, "--profile", "fast", "--out", outJson], { encoding: "utf8" });
+    const p = spawnSync(process.execPath, [cliJs, "process", wav, "--tool", "level", "--out-dir", outDir], { encoding: "utf8" });
+    let aj = null; try { aj = JSON.parse(fs.readFileSync(outJson, "utf8")); } catch (e) { }
+    const wavs = fs.existsSync(outDir) ? fs.readdirSync(outDir).filter(n => n.endsWith(".wav")) : [];
+    const left = fs.readdirSync(tmp).concat(fs.existsSync(outDir) ? fs.readdirSync(outDir) : []).filter(n => n.endsWith(".tmp"));
+    let rb = null; try { rb = IO.readWav(path.join(outDir, wavs[0])); } catch (e) { }
+    check("cli: --out and --out-dir files are written whole (temporary file, then rename)", `${wavs.join(", ") || "no output"}; ${left.length} temporary files left`,
+      a.status === 0 && p.status === 0 && !!aj && aj.profile === "fast" && wavs.length === 1 && !!rb && rb.length === glass.length && left.length === 0 && /wrote .*glass_level\.wav/.test(p.stderr)); }
   fs.rmSync(tmp, { recursive: true, force: true });
 };

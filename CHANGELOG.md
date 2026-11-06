@@ -9,9 +9,15 @@
   are the same in Playhead, SFX Workbench and the papers. `Playhead.localize(table)` gives other apps the library's
   curve names, looks, legends and tools in these languages (`dist/i18n/<lang>.json`). `node tools/i18n.js` gathers the
   English, builds and checks the translations; [i18n/TRANSLATING.md](i18n/TRANSLATING.md) is the guide.
+- **REAPER** ([integrations/reaper](integrations/reaper/README.md), installable with ReaPack): analyse items; events,
+  sections and bars as markers and regions; curves as automation through the Playhead Control JSFX, which any effect
+  parameter can follow; the tools as new takes; a dockable strip window in any look. Tested against the command line
+  in a mock REAPER; not yet run in REAPER itself.
 - Asset checks carry a key and values, so the lab shows them in other languages (`text` stays English).
 
 ### Changed
+- The command line writes `--out` and `--out-dir` files whole (a temporary file, then renamed), so a host waiting for
+  them never reads half a file.
 - Clearer English: structural change goes down for "a fall or break" (in dance music a "drop" is a loud entry); the
   rule for N tags is YIN aperiodicity under 0.25 with pitch above 60 Hz (the note said "above 250 Hz"); "Curve scale:
   same for every file / fitted to this file" replaces "Secondary scale: library reference / this asset"; N9 shows

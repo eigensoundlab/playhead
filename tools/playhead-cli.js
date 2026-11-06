@@ -14,6 +14,8 @@
 //
 // One file without --out or --out-dir prints the JSON document to stdout. WAV is read directly; other formats
 // need ffmpeg on the PATH. Also available as a single executable built by tools/build.js --cli.
+// Files are written whole: into a temporary file next to the target, then renamed, so a host waiting for one never
+// reads it half-written.
 "use strict";
 const fs = require("fs"), path = require("path");
 const Playhead = global.__PLAYHEAD_BUNDLED__ || (require("../src/analysis.js"), require("../src/descriptors.js"), require("../src/effects.js"), require("../src/playhead.js"));
@@ -62,6 +64,14 @@ function readStdin(o) {
 }
 // replace nulls (silence) in the curves for JSON readers that cannot hold them, such as Unity's JsonUtility
 function fillNull(doc, v) { for (const k of Object.keys(doc.curves)) if (Array.isArray(doc.curves[k])) doc.curves[k] = doc.curves[k].map(x => x == null ? v : x); return doc; }
+// write a file so that no reader (a host polling for it, a cache) ever sees it half-written: into a temporary file
+// next to the target, then renamed over it; a failed write leaves the target as it was and no temporary file
+function writeAtomic(target, write) {
+  const tmp = path.join(path.dirname(target), "." + path.basename(target) + "." + process.pid + ".tmp");
+  try { write(tmp); fs.renameSync(tmp, target); }
+  catch (e) { try { fs.unlinkSync(tmp); } catch (_) { } throw e; }
+}
+const writeText = (target, text) => writeAtomic(target, tmp => fs.writeFileSync(tmp, text));
 
 async function main() {
   const [cmd, ...rest] = process.argv.slice(2), o = parse(rest);
@@ -74,7 +84,7 @@ async function main() {
       const doc = await Playhead.analyze(readStdin(o), opts(o, o.name || "stdin"));
       if (o.fillNull !== undefined) fillNull(doc, Number(o.fillNull));
       const json = JSON.stringify(doc, null, o.pretty ? 1 : 0);
-      if (o.out) fs.writeFileSync(o.out, json + "\n"); else process.stdout.write(json + "\n");
+      if (o.out) writeText(o.out, json + "\n"); else process.stdout.write(json + "\n");
       return;
     }
     const files = IO.listAudio(o._);
@@ -89,7 +99,7 @@ async function main() {
       if (single && !o.out) process.stdout.write(json + "\n");
       else {
         const target = single && o.out ? o.out : path.join(o.outDir || ".", path.basename(f).replace(/\.[^.]+$/, "") + ".playhead.json");
-        fs.writeFileSync(target, json + "\n");
+        writeText(target, json + "\n");
         process.stderr.write(`${path.basename(f)}: ${doc.profile}, ${doc.timing.ms} ms -> ${target}\n`);
       }
     }
@@ -113,7 +123,7 @@ async function main() {
     const dir = o.outDir || "."; fs.mkdirSync(dir, { recursive: true });
     for (const out of r.outputs) {
       const target = path.join(dir, path.basename(f).replace(/\.[^.]+$/, "") + "_" + out.suffix + ".wav");
-      IO.writeWav(target, IO.makeBuffer(out.sampleRate, out.channels), true);
+      writeAtomic(target, tmp => IO.writeWav(tmp, IO.makeBuffer(out.sampleRate, out.channels), true));
       process.stderr.write("wrote " + target + "\n");
     }
     console.log(r.report.join("\n"));

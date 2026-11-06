@@ -1,0 +1,116 @@
+// @noindex
+desc: Playhead Control
+//tags: utility analysis modulation automation
+//author: Daniel Sandner
+//
+// SPDX-License-Identifier: Apache-2.0
+// Copyright 2026 Daniel Sandner
+//
+// Playhead Control: eight analysis curves (0..1) as automatable parameters. Audio and incoming MIDI pass through
+// unchanged. "Playhead - Write curves as automation.lua" writes the curves of an item as envelopes on curve 1..8 and
+// records which curve each slot carries (the hidden "source" sliders, shown in this window).
+//
+// Use the curves to drive any effect parameter:
+//   - Parameter link: in the target effect, Param > Parameter modulation/MIDI link > Link from MIDI or FX parameter,
+//     choose "Playhead Control: curve N" (both effects must be on the same track), set scale and offset.
+//   - MIDI CC: set a CC number for a curve (-1 = off). Its value (0..127) is sent on the chosen channel whenever it
+//     changes, and at the start of playback, to the effects after this one (and through MIDI sends to other tracks).
+
+slider1:c1=0<0,1,0.001>curve 1
+slider2:c2=0<0,1,0.001>curve 2
+slider3:c3=0<0,1,0.001>curve 3
+slider4:c4=0<0,1,0.001>curve 4
+slider5:c5=0<0,1,0.001>curve 5
+slider6:c6=0<0,1,0.001>curve 6
+slider7:c7=0<0,1,0.001>curve 7
+slider8:c8=0<0,1,0.001>curve 8
+slider9:cc1=-1<-1,127,1>curve 1 MIDI CC (-1 = off)
+slider10:cc2=-1<-1,127,1>curve 2 MIDI CC (-1 = off)
+slider11:cc3=-1<-1,127,1>curve 3 MIDI CC (-1 = off)
+slider12:cc4=-1<-1,127,1>curve 4 MIDI CC (-1 = off)
+slider13:cc5=-1<-1,127,1>curve 5 MIDI CC (-1 = off)
+slider14:cc6=-1<-1,127,1>curve 6 MIDI CC (-1 = off)
+slider15:cc7=-1<-1,127,1>curve 7 MIDI CC (-1 = off)
+slider16:cc8=-1<-1,127,1>curve 8 MIDI CC (-1 = off)
+slider17:chan=1<1,16,1>MIDI channel
+slider18:src1=0<0,63,1>-curve 1 source
+slider19:src2=0<0,63,1>-curve 2 source
+slider20:src3=0<0,63,1>-curve 3 source
+slider21:src4=0<0,63,1>-curve 4 source
+slider22:src5=0<0,63,1>-curve 5 source
+slider23:src6=0<0,63,1>-curve 6 source
+slider24:src7=0<0,63,1>-curve 7 source
+slider25:src8=0<0,63,1>-curve 8 source
+
+in_pin:left input
+in_pin:right input
+out_pin:left output
+out_pin:right output
+
+@init
+// last value and CC number sent per slot; reset at the start of playback, so every CC is sent once again
+last = 0; lastcc = 16;
+i = 0; loop(8, last[i] = -1; lastcc[i] = -2; i += 1;);
+// names of the curves by their code (the order of CURVE_ORDER in lib/playhead_core.lua)
+strcpy(1, "loudness"); strcpy(2, "activity"); strcpy(3, "arousal"); strcpy(4, "harshness"); strcpy(5, "tension");
+strcpy(6, "harmonic tension"); strcpy(7, "novelty (spectral surprise)"); strcpy(8, "loudness (LUFS)");
+strcpy(9, "onset strength (hits)"); strcpy(10, "structural change"); strcpy(11, "local pulse"); strcpy(12, "impulsiveness");
+strcpy(13, "repetition rate"); strcpy(14, "spectral motion"); strcpy(15, "periodicity"); strcpy(16, "phase coherence");
+strcpy(17, "time arrow"); strcpy(18, "surprisal"); strcpy(19, "recurrence");
+names = 19;
+gfx_ext_retina = 1;
+
+@block
+i = 0;
+loop(8,
+  cc = floor(slider(i + 9) + 0.5);
+  cc >= 0 && cc <= 127 ? (
+    val = floor(max(0, min(1, slider(i + 1))) * 127 + 0.5);
+    val != last[i] || cc != lastcc[i] ? (
+      midisend(0, $xB0 + max(0, min(15, floor(chan + 0.5) - 1)), cc + val * 256);
+      last[i] = val; lastcc[i] = cc;
+    );
+  ) : (
+    last[i] = -1; lastcc[i] = -2;
+  );
+  i += 1;
+);
+
+@gfx 440 250
+s = gfx_ext_retina > 1 ? 2 : 1;
+gfx_r = 0.13; gfx_g = 0.15; gfx_b = 0.17; gfx_a = 1;
+gfx_rect(0, 0, gfx_w, gfx_h);
+gfx_setfont(1, "Arial", 14 * s);
+gfx_r = gfx_g = gfx_b = 0.9;
+gfx_x = 10 * s; gfx_y = 8 * s;
+gfx_drawstr("Playhead Control: curves written by the Playhead scripts");
+top = 32 * s;
+row = max(12 * s, (gfx_h - top - 6 * s) / 8);
+label_w = min(230 * s, gfx_w * 0.5);
+// @gfx runs in another thread than @block: its own loop variables (gi, gcc), not @block's i and cc
+gi = 0;
+loop(8,
+  y = top + gi * row;
+  v = max(0, min(1, slider(gi + 1)));
+  code = floor(slider(gi + 18) + 0.5);
+  gcc = floor(slider(gi + 9) + 0.5);
+  gfx_r = gfx_g = gfx_b = 0.85;
+  gfx_x = 10 * s; gfx_y = y + (row - gfx_texth) / 2;
+  gfx_drawnumber(gi + 1, 0);
+  gfx_drawstr("  ");
+  code >= 1 && code <= names ? gfx_drawstr(code) : gfx_drawstr("(no curve)");
+  gcc >= 0 ? (
+    gfx_r = gfx_g = gfx_b = 0.6;
+    gfx_drawstr("  CC ");
+    gfx_drawnumber(gcc, 0);
+  );
+  bx = 10 * s + label_w; bw = max(10, gfx_w - bx - 56 * s); bh = max(4, row - 8 * s);
+  gfx_r = 0.3; gfx_g = 0.33; gfx_b = 0.36;
+  gfx_rect(bx, y + (row - bh) / 2, bw, bh);
+  gfx_r = 0.92; gfx_g = 0.41; gfx_b = 0.2;
+  gfx_rect(bx, y + (row - bh) / 2, bw * v, bh);
+  gfx_r = gfx_g = gfx_b = 0.85;
+  gfx_x = bx + bw + 8 * s; gfx_y = y + (row - gfx_texth) / 2;
+  gfx_drawnumber(v, 2);
+  gi += 1;
+);

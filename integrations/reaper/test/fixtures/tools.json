@@ -1,0 +1,610 @@
+[
+ {
+  "id": "cleanup",
+  "name": "Clean up for export",
+  "kind": "Game audio",
+  "description": "Fixes what the asset checks find: removes DC offset, rebuilds clipped peaks, trims silence, adds fades where the file clicks or the tail was cut, folds identical channels to mono, and normalises the peak.",
+  "params": [
+   {
+    "id": "peakDb",
+    "label": "Peak",
+    "type": "number",
+    "min": -12,
+    "max": 0,
+    "step": 0.5,
+    "value": -1,
+    "unit": "dBFS",
+    "options": null
+   },
+   {
+    "id": "mono",
+    "label": "Fold identical channels to mono",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "deharsh",
+  "name": "De-harsh",
+  "kind": "Mixing",
+  "description": "Suppresses narrow resonances between 0.8 and 10 kHz and tilts down the top end while the harshness model (sharpness, roughness and fluctuation in Zwicker's annoyance form) is high. \"Harshest moments of this file\" acts on the top of the file's own harshness range, so it works on mixes; \"Only harsh sounds (absolute)\" uses the absolute scale, where most music never qualifies; \"Always\" ignores the model. The detector can be switched to the level in the same frequency range, which makes it a conventional dynamic EQ, for comparison. The second result is what was removed, raised for listening.",
+  "params": [
+   {
+    "id": "mode",
+    "label": "Act on",
+    "type": "select",
+    "value": "relative",
+    "unit": null,
+    "options": [
+     [
+      "relative",
+      "Harshest moments of this file"
+     ],
+     [
+      "absolute",
+      "Only harsh sounds (absolute)"
+     ],
+     [
+      "always",
+      "Always"
+     ]
+    ]
+   },
+   {
+    "id": "sidechain",
+    "label": "Detector",
+    "type": "select",
+    "value": "harshness",
+    "unit": null,
+    "options": [
+     [
+      "harshness",
+      "Harshness model"
+     ],
+     [
+      "level",
+      "Band level (conventional dynamic EQ)"
+     ]
+    ]
+   },
+   {
+    "id": "amount",
+    "label": "Amount",
+    "type": "number",
+    "min": 0,
+    "max": 1,
+    "step": 0.05,
+    "value": 0.6,
+    "unit": null,
+    "options": null
+   },
+   {
+    "id": "threshold",
+    "label": "Absolute threshold",
+    "type": "number",
+    "min": 0,
+    "max": 1.5,
+    "step": 0.05,
+    "value": 0.15,
+    "unit": "harshness",
+    "options": null
+   },
+   {
+    "id": "maxCut",
+    "label": "Deepest cut",
+    "type": "number",
+    "min": 3,
+    "max": 18,
+    "step": 1,
+    "value": 9,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "match",
+    "label": "Match loudness",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   },
+   {
+    "id": "delta",
+    "label": "Also render what was removed",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "layers",
+  "name": "Layer remix",
+  "kind": "Sound design",
+  "description": "Rebalances the layers found by NMF (row X2) with soft Wiener masks: lift the casing ring, drop the sub, and so on.",
+  "params": "layers"
+ },
+ {
+  "id": "hpss",
+  "name": "Attack and body",
+  "kind": "Sound design",
+  "description": "Splits each moment into percussive and sustained energy with median filtering (Fitzgerald 2010) and sets their levels separately: a transient shaper that follows content, not the envelope.",
+  "params": [
+   {
+    "id": "attackDb",
+    "label": "Attack",
+    "type": "number",
+    "min": -18,
+    "max": 12,
+    "step": 1,
+    "value": 4,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "bodyDb",
+    "label": "Body",
+    "type": "number",
+    "min": -18,
+    "max": 12,
+    "step": 1,
+    "value": -3,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "match",
+    "label": "Match loudness",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "tension",
+  "name": "Tension shaper",
+  "kind": "Mastering",
+  "description": "Turns the tension curve (C5) into gain and brightness automation. Positive contrast makes build-ups rise and releases fall further; negative contrast flattens them.",
+  "params": [
+   {
+    "id": "contrast",
+    "label": "Contrast",
+    "type": "number",
+    "min": -1,
+    "max": 1,
+    "step": 0.05,
+    "value": 0.5,
+    "unit": null,
+    "options": null
+   },
+   {
+    "id": "bright",
+    "label": "Brightness follow",
+    "type": "number",
+    "min": -1,
+    "max": 1,
+    "step": 0.05,
+    "value": 0.4,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "loop",
+  "name": "Loop maker",
+  "kind": "Game audio",
+  "description": "Finds the start and end points whose surroundings match best (on downbeats when the beat is clear), moves them to zero crossings and renders an equal-power seam, so the result wraps without a click.",
+  "params": [
+   {
+    "id": "xfadeMs",
+    "label": "Seam",
+    "type": "number",
+    "min": 10,
+    "max": 400,
+    "step": 10,
+    "value": 120,
+    "unit": "ms",
+    "options": null
+   },
+   {
+    "id": "minLen",
+    "label": "Minimum length",
+    "type": "number",
+    "min": 0.2,
+    "max": 0.9,
+    "step": 0.05,
+    "value": 0.5,
+    "unit": "of file",
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "vars",
+  "name": "Variations",
+  "kind": "Game audio",
+  "description": "Makes copies that differ the way repeated game sounds should: random layer balance, reordered grains inside iterative events, and a small pitch change.",
+  "params": [
+   {
+    "id": "count",
+    "label": "Copies",
+    "type": "number",
+    "min": 2,
+    "max": 6,
+    "step": 1,
+    "value": 4,
+    "unit": null,
+    "options": null
+   },
+   {
+    "id": "layerDb",
+    "label": "Layer spread",
+    "type": "number",
+    "min": 0,
+    "max": 6,
+    "step": 0.5,
+    "value": 3,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "pitch",
+    "label": "Pitch spread",
+    "type": "number",
+    "min": 0,
+    "max": 3,
+    "step": 0.1,
+    "value": 1,
+    "unit": "st",
+    "options": null
+   },
+   {
+    "id": "grains",
+    "label": "Reorder grains",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "tailverb",
+  "name": "Reverb on the tails",
+  "kind": "Sound design",
+  "description": "Sends only the tails of the events into a reverb: each hit from its peak to the end of its decay, so the attack stays dry and punchy and the tail blooms. No EQ can do this, because the tool adds new energy after each sound and spreads it in time.",
+  "params": [
+   {
+    "id": "wetDb",
+    "label": "Reverb level",
+    "type": "number",
+    "min": -30,
+    "max": 0,
+    "step": 1,
+    "value": -8,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "t60",
+    "label": "Decay",
+    "type": "number",
+    "min": 0.3,
+    "max": 6,
+    "step": 0.1,
+    "value": 1.6,
+    "unit": "s",
+    "options": null
+   },
+   {
+    "id": "holdMs",
+    "label": "Start after the peak",
+    "type": "number",
+    "min": 0,
+    "max": 300,
+    "step": 5,
+    "value": 30,
+    "unit": "ms",
+    "options": null
+   },
+   {
+    "id": "toneHz",
+    "label": "Tone",
+    "type": "number",
+    "min": 1500,
+    "max": 16000,
+    "step": 500,
+    "value": 6000,
+    "unit": "Hz",
+    "options": null
+   },
+   {
+    "id": "dryAttacks",
+    "label": "Keep the attacks dry",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "drive",
+  "name": "Drive the hits",
+  "kind": "Sound design",
+  "description": "Saturates only the events (their attacks, their bodies, or all of them) and leaves the rest clean. The saturated part is held at the original level, so what changes is the harmonics, which no EQ can add, not the loudness.",
+  "params": [
+   {
+    "id": "where",
+    "label": "Where",
+    "type": "select",
+    "value": "attack",
+    "unit": null,
+    "options": [
+     [
+      "attack",
+      "Attacks"
+     ],
+     [
+      "body",
+      "Bodies (after the peak)"
+     ],
+     [
+      "whole",
+      "Whole events"
+     ]
+    ]
+   },
+   {
+    "id": "driveDb",
+    "label": "Drive",
+    "type": "number",
+    "min": 0,
+    "max": 30,
+    "step": 1,
+    "value": 18,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "mix",
+    "label": "Mix",
+    "type": "number",
+    "min": 0,
+    "max": 100,
+    "step": 5,
+    "value": 70,
+    "unit": "%",
+    "options": null
+   },
+   {
+    "id": "match",
+    "label": "Match loudness",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "ring",
+  "name": "Ring time",
+  "kind": "Sound design",
+  "description": "Changes how long each event rings, relative to its own peak: longer for metal and glass, shorter for wood and cardboard. Higher partials can ring longer or shorter than lower ones, which moves the material read by the decay descriptor (N9). An EQ sets the same gain at every level; this sets it by how far each partial has decayed since its event's peak.",
+  "params": [
+   {
+    "id": "ratio",
+    "label": "Ring time",
+    "type": "number",
+    "min": 0.25,
+    "max": 4,
+    "step": 0.05,
+    "value": 2,
+    "unit": null,
+    "options": null
+   },
+   {
+    "id": "tilt",
+    "label": "High partials",
+    "type": "number",
+    "min": -0.5,
+    "max": 0.5,
+    "step": 0.05,
+    "value": 0,
+    "unit": null,
+    "options": null
+   },
+   {
+    "id": "maxBoostDb",
+    "label": "Largest lift",
+    "type": "number",
+    "min": 6,
+    "max": 36,
+    "step": 1,
+    "value": 18,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "match",
+    "label": "Keep the peak",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "level",
+  "name": "Level the events",
+  "kind": "Mixing",
+  "description": "Evens out how loud the events are (footsteps, impacts, a burst of shots, debris) with one gain per event, changed only in the moment before each event starts. A compressor reaching the same evenness turns attacks down and makes the background pump; this leaves every event's attack and decay as it was.",
+  "params": [
+   {
+    "id": "amount",
+    "label": "Evenness",
+    "type": "number",
+    "min": 0,
+    "max": 100,
+    "step": 5,
+    "value": 70,
+    "unit": "%",
+    "options": null
+   },
+   {
+    "id": "target",
+    "label": "Towards",
+    "type": "select",
+    "value": "median",
+    "unit": null,
+    "options": [
+     [
+      "median",
+      "The middle event"
+     ],
+     [
+      "loudest",
+      "The loudest event"
+     ],
+     [
+      "quietest",
+      "The quietest event"
+     ]
+    ]
+   },
+   {
+    "id": "maxDb",
+    "label": "Largest change",
+    "type": "number",
+    "min": 3,
+    "max": 24,
+    "step": 1,
+    "value": 12,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "match",
+    "label": "Match loudness",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "mono",
+  "name": "Fold to mono",
+  "kind": "Game audio",
+  "description": "Folds stereo to mono without the losses of a plain (L+R)/2: per frequency, the right channel is turned to the left channel's phase before summing, and the sum is brought back to the channels' energy. Each attack the analysis finds is folded in the time domain with its own delay and polarity between the channels, so there is no pre-echo. The report names the bands and events that cancel in a plain sum, which doubles as a mono-compatibility check. The second result is the plain sum, for comparison.",
+  "params": [
+   {
+    "id": "align",
+    "label": "Line up the phase",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   },
+   {
+    "id": "keepEnergy",
+    "label": "Keep the channels' energy",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   },
+   {
+    "id": "maxBoostDb",
+    "label": "Largest repair",
+    "type": "number",
+    "min": 3,
+    "max": 18,
+    "step": 1,
+    "value": 9,
+    "unit": "dB",
+    "options": null
+   },
+   {
+    "id": "plain",
+    "label": "Also render the plain sum",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
+ },
+ {
+  "id": "widen",
+  "name": "Widen the tails",
+  "kind": "Sound design",
+  "description": "Makes stereo from mono (or widens stereo) by adding a decorrelated copy of the sound (a velvet-noise decorrelator) to the side, only after the attacks the analysis finds: attacks stay centred and punchy, tails and background open up, and the lows stay centred. Only the side changes, so (L+R)/2 gives back the original exactly: the result is fully mono-compatible.",
+  "params": [
+   {
+    "id": "width",
+    "label": "Width",
+    "type": "number",
+    "min": 0,
+    "max": 100,
+    "step": 5,
+    "value": 60,
+    "unit": "%",
+    "options": null
+   },
+   {
+    "id": "where",
+    "label": "Where",
+    "type": "select",
+    "value": "rest",
+    "unit": null,
+    "options": [
+     [
+      "rest",
+      "Tails and background (not the attacks)"
+     ],
+     [
+      "tails",
+      "Only the tails"
+     ],
+     [
+      "all",
+      "Everywhere (attacks too, for comparison)"
+     ]
+    ]
+   },
+   {
+    "id": "holdMs",
+    "label": "Centred after each peak",
+    "type": "number",
+    "min": 0,
+    "max": 200,
+    "step": 5,
+    "value": 25,
+    "unit": "ms",
+    "options": null
+   },
+   {
+    "id": "lowHz",
+    "label": "Lows centred below",
+    "type": "number",
+    "min": 40,
+    "max": 400,
+    "step": 10,
+    "value": 150,
+    "unit": "Hz",
+    "options": null
+   }
+  ]
+ }
+]
