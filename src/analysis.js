@@ -1382,6 +1382,8 @@ const SFX = {
   // riseDb/bandRiseDb 8 (was 6): picked on the tuning half in 19 of 20 repeated splits by tools/tune.js --grid
   eventFloor: 40, riseDb: 8, bandRiseDb: 8, nmfK: 3, nmfIter: 150, nmfCols: 400
 };
+// An asset check: key and vars let the app show it in another language (check.<key> in i18n/<lang>.json); text is English.
+function issue(sev, key, en, vars) { return { sev, key, vars: vars || null, text: vars ? en.replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m)) : en }; }
 const SFX_WORDS = {
   N: { impulse: "tonal hit", sustained: "tone", iterative: "tonal flutter" },
   X: { impulse: "noise hit", sustained: "noise", iterative: "grit" },
@@ -1768,28 +1770,28 @@ function sfxOf(F, buf, name) {
       else { if (run >= 3) { clipN += run; const t = (i - run) / sr; if (!clipT.length || t - clipT[clipT.length - 1] > 0.01) clipT.push(t); } run = 0; }
     }
   }
-  if (clipN) { issues.push({ sev: "bad", text: "Clipped: " + clipN + " samples in " + clipT.length + (clipT.length === 1 ? " place" : " places") }); clipT.forEach(t => marks.push({ t, kind: "clip" })); }
+  if (clipN) { issues.push(clipT.length === 1 ? issue("bad", "clippedOne", "Clipped: {n} samples in one place", { n: clipN }) : issue("bad", "clipped", "Clipped: {n} samples in {k} places", { n: clipN, k: clipT.length })); clipT.forEach(t => marks.push({ t, kind: "clip" })); }
   // DC offset
   let dc = 0;
   for (const ch of chans) { let s = 0; for (let i = 0; i < len; i++) s += ch[i]; dc = Math.max(dc, Math.abs(s / len)); }
-  if (dc > 0.005) issues.push({ sev: "warn", text: "DC offset " + (20 * Math.log10(dc)).toFixed(0) + " dBFS" });
+  if (dc > 0.005) issues.push(issue("warn", "dc", "DC offset {db} dBFS", { db: (20 * Math.log10(dc)).toFixed(0) }));
   // leading and trailing silence (below -60 dBFS)
   let li = len, ti = -1;
   for (let i = 0; i < len; i++) if (Math.max(Math.abs(L[i] - dc), Math.abs(R[i] - dc)) > 0.001) { li = i; break; }
   for (let i = len - 1; i >= 0; i--) if (Math.max(Math.abs(L[i] - dc), Math.abs(R[i] - dc)) > 0.001) { ti = i; break; }
   const lead = li / sr, trail = ti >= 0 ? (len - 1 - ti) / sr : F.dur;
-  if (lead > 0.02) issues.push({ sev: "warn", text: "Leading silence " + (lead * 1000).toFixed(0) + " ms" });
-  if (trail > 0.1) issues.push({ sev: "info", text: "Trailing silence " + (trail * 1000).toFixed(0) + " ms" });
+  if (lead > 0.02) issues.push(issue("warn", "lead", "Leading silence {ms} ms", { ms: (lead * 1000).toFixed(0) }));
+  if (trail > 0.1) issues.push(issue("info", "trail", "Trailing silence {ms} ms", { ms: (trail * 1000).toFixed(0) }));
   // abrupt start and end (a one-shot that starts on a non-zero sample clicks; a cut tail clicks)
   const isLoop = !!(name && /loop|(^|[_\- ])lp([_\- .]|$)/i.test(name));
   const rmsAt = (a, b) => { let s = 0, k = 0; for (let i = Math.max(0, a); i < Math.min(len, b); i++) { const v = 0.5 * (L[i] + R[i]) - dc; s += v * v; k++; } return Math.sqrt(k ? s / k : 0); };
   const endRms = rmsAt(len - Math.round(0.005 * sr), len);
   const abruptStart = !isLoop && Math.max(Math.abs(L[0]), Math.abs(R[0])) > 0.003;
   const abruptEnd = !isLoop && endRms > pkS * Math.pow(10, -35 / 20);
-  if (abruptStart) { issues.push({ sev: "warn", text: "First sample is not zero (click risk)" }); marks.push({ t: 0, kind: "start" }); }
-  if (abruptEnd) { issues.push({ sev: "warn", text: "Ends abruptly: tail cut at " + (20 * Math.log10(endRms / (pkS + 1e-12))).toFixed(0) + " dB below peak" }); marks.push({ t: F.dur, kind: "end" }); }
-  if (pkDb > -0.1 && !clipN) issues.push({ sev: "info", text: "Peak " + pkDb.toFixed(1) + " dBFS (no headroom)" });
-  if (identical) issues.push({ sev: "info", text: "Stereo file with identical channels: could be mono" });
+  if (abruptStart) { issues.push(issue("warn", "firstSample", "First sample is not zero (click risk)")); marks.push({ t: 0, kind: "start" }); }
+  if (abruptEnd) { issues.push(issue("warn", "cutTail", "Ends abruptly: tail cut at {db} dB below peak", { db: (20 * Math.log10(endRms / (pkS + 1e-12))).toFixed(0) })); marks.push({ t: F.dur, kind: "end" }); }
+  if (pkDb > -0.1 && !clipN) issues.push(issue("info", "noHeadroom", "Peak {db} dBFS (no headroom)", { db: pkDb.toFixed(1) }));
+  if (identical) issues.push(issue("info", "identical", "Stereo file with identical channels: could be mono"));
   // loop seam, only for files named as loops
   let seam = null;
   if (isLoop) {
@@ -1804,7 +1806,8 @@ function sfxOf(F, buf, name) {
     for (let m = e; m + 2 * k < n - e; m += k) internal.push(dist(meanWin(m), meanWin(m + k)));
     const ref = Math.max(2, internal.length ? pctl(internal, 0.9) : 2);
     seam = { jump, specDiff: sd, ref, ok: jump < 0.05 && sd <= ref };
-    issues.push(seam.ok ? { sev: "ok", text: "Loop wraps cleanly" } : { sev: "warn", text: "Loop seam: " + (jump >= 0.05 ? "sample jump " + (jump * 100).toFixed(0) + "% of peak" : "change at the wrap " + sd.toFixed(1) + " dB, file's typical " + ref.toFixed(1) + " dB") });
+    issues.push(seam.ok ? issue("ok", "loopClean", "Loop wraps cleanly") : jump >= 0.05 ? issue("warn", "seamJump", "Loop seam: sample jump {p}% of peak", { p: (jump * 100).toFixed(0) })
+      : issue("warn", "seamChange", "Loop seam: change at the wrap {db} dB, file's typical {ref} dB", { db: sd.toFixed(1), ref: ref.toFixed(1) }));
   }
 
   /* ---------- silhouette bands: 6 groups of Bark-pair loudness shares ---------- */

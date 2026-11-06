@@ -12,7 +12,7 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const read = p => fs.readFileSync(path.join(root, p), "utf8");
-const SOURCES = ["src/analysis.js", "src/descriptors.js", "src/probes.js", "src/effects.js", "src/playhead.js", "src/app.js"];
+const SOURCES = ["src/analysis.js", "src/descriptors.js", "src/probes.js", "src/effects.js", "src/playhead.js", "src/i18n-data.js", "src/i18n.js", "src/app.js"];
 const CORE = ["src/analysis.js", "src/descriptors.js", "src/effects.js", "src/playhead.js"];
 const VERSION = require("../package.json").version;
 
@@ -93,6 +93,13 @@ function writeDist(dir) {
   fs.writeFileSync(path.join(dir, "playhead-core.js"), coreUMD());
   fs.writeFileSync(path.join(dir, "playhead-core.mjs"), coreESM());
   fs.writeFileSync(path.join(dir, "playhead-cli.cjs"), cliBundle(), { mode: 0o755 });
+  // the library's labels in other languages, for apps that draw strips: Playhead.localize(table)
+  const lib = require("./i18n.js").libTables();
+  fs.rmSync(path.join(dir, "i18n"), { recursive: true, force: true });
+  if (Object.keys(lib).length) {
+    fs.mkdirSync(path.join(dir, "i18n"), { recursive: true });
+    for (const [l, t] of Object.entries(lib)) fs.writeFileSync(path.join(dir, "i18n", l + ".json"), JSON.stringify(t, null, 1) + "\n");
+  }
 }
 
 function copyDir(src, dst) {

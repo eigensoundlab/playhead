@@ -209,7 +209,8 @@ async function build(F, buf, opts, t0, prog) {
 const FXroot = () => root.WLFX || (typeof require !== "undefined" ? require("./effects.js") : null);
 function tools() {
   const FX = FXroot(); if (!FX) return [];
-  return FX.TOOLS.map(t => ({ id: t.id, name: t.name, kind: t.kind, description: t.desc, params: Array.isArray(t.params) ? t.params.map(p => ({ id: p.id, label: p.label, type: p.type || "number", min: p.min, max: p.max, step: p.step, value: p.value, unit: p.unit || null, options: p.options || null })) : t.params }));
+  const tk = (t, rest, en) => L("lib.tool." + t.id + rest, en);
+  return FX.TOOLS.map(t => ({ id: t.id, name: tk(t, ".name", t.name), kind: t.kind, description: tk(t, ".desc", t.desc), params: Array.isArray(t.params) ? t.params.map(p => ({ id: p.id, label: tk(t, ".param." + p.id, p.label), type: p.type || "number", min: p.min, max: p.max, step: p.step, value: p.value, unit: p.unit || null, options: p.options ? p.options.map(o => [o[0], tk(t, ".opt." + p.id + "." + o[0], o[1])]) : null })) : t.params }));
 }
 async function process(input, toolId, params, opts) {
   const FX = FXroot(); if (!FX) throw new Error("Playhead.process: effects.js is not loaded");
@@ -258,7 +259,7 @@ function toMarkers(doc, opts) {
 //                                      (default [0, 1]; the 5th-95th percentile for the descriptor curves n1-n8)
 //   { type: "lane", curve, signed }   a curve in its own lane under the waveform. signed: for change curves such as
 //                                      structureNovelty; drawn up where the level rises across the change (an entry),
-//                                      down where it falls (a drop, a break into silence) and centred where the level
+//                                      down where it falls (a fall in level, a break into silence) and centred where the level
 //                                      stays and only the material changes, so a break never reads as "more"
 //   { type: "sections" }              boundaries and letters (music profile; a letter repeats when material returns)
 //   { type: "ticks", of: [...] }      marks under the waveform: "events", "onsets", "beats", "downbeats", and from the
@@ -295,7 +296,7 @@ const LOOKS = {
   auto: { name: "Automatic", desc: "Sound effects: harshness as colour, activity as the line, events. Music: activity as colour, tension as the line, sections, downbeats.", code: null },
   plain: { name: "Waveform only", desc: "The waveform without analysis, for comparison.", code: "wave" },
   spectrum: { name: "Spectrogram", desc: "A standard spectrogram (mel scale, 40 Hz to 16 kHz), for comparison.", code: "spec" },
-  structure: { name: "Structure", desc: "Sections, structural change (up: entry, down: drop or break) and the local pulse under a plain waveform.", code: "wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats" },
+  structure: { name: "Structure", desc: "Sections, structural change (up: entry, down: fall or break) and the local pulse under a plain waveform.", code: "wave,sections,lane:structureNovelty~signed,lane:localPulse,ticks:downbeats" },
   rhythm: { name: "Rhythm", desc: "Activity as colour, the local pulse, beats and downbeats.", code: "wave:activity,lane:localPulse,ticks:beats+downbeats" },
   tension: { name: "Tension", desc: "Harshness as colour, tension as the line, sections.", code: "wave:harshness,sections,line:tension,ticks:downbeats" },
   events: { name: "Events", desc: "Harshness as colour, activity in a lane, events marked.", code: "wave:harshness,lane:activity,ticks:events" },
@@ -310,6 +311,24 @@ const LOOKS = {
   hits: { name: "Hits and pulse", desc: "The waveform with onset strength (where the hits are) and the local pulse as lanes, beats and bar lines.", code: "wave,lane:onsetStrength,lane:localPulse,ticks:beats+downbeats" },
   sculpted: { name: "Waveform as loud as it sounds", desc: "The waveform's envelope follows perceived loudness (a dB-like scale) while its detail stays; colour shows harshness, with the ordinary peak outline for comparison.", code: "sculpt:loudness,wave:harshness,outline,ticks:events+novelty" }
 };
+
+/* ---------------- labels in other languages ---------------- */
+// An app passes its translation table to localize(); keys: lib.curve.<name>, lib.look.<id>.name and .desc,
+// lib.tool.<id>.name, .desc, .param.<param>, .opt.<param>.<value>, lib.legend.<phrase>, lib.mark.<kind>.
+// localize(null) restores English. Analysis documents never change: only labels do.
+let LT = null;
+const EN_LABELS = { curves: Object.assign({}, CURVE_LABELS), looks: Object.fromEntries(Object.entries(LOOKS).map(([k, v]) => [k, { name: v.name, desc: v.desc }])) };
+function L(key, en, vars) {
+  let s = LT && Object.prototype.hasOwnProperty.call(LT, key) ? LT[key] : en;
+  if (vars) s = String(s).replace(/\{(\w+)\}/g, (m, k) => (vars[k] != null ? vars[k] : m));
+  return s;
+}
+function localize(table) {
+  LT = table || null;
+  for (const k in EN_LABELS.curves) CURVE_LABELS[k] = L("lib.curve." + k, EN_LABELS.curves[k]);
+  for (const k in EN_LABELS.looks) { LOOKS[k].name = L("lib.look." + k + ".name", EN_LABELS.looks[k].name); LOOKS[k].desc = L("lib.look." + k + ".desc", EN_LABELS.looks[k].desc); }
+  return !!LT;
+}
 const isSfxDoc = doc => doc.profile === "sfx" || doc.assetClass === "sfx";
 // the layers the renderer drew before looks existed; still the default, and still driven by the old options
 function legacyLayers(doc, opts) {
@@ -351,26 +370,27 @@ const optionOf = (layers, type, dflt) => { const l = (layers || []).find(x => x.
 /** Plain-language description of layers, for a legend beside the strip. */
 function describeLook(layers, doc) {
   const lab = k => CURVE_LABELS[k] || k, has = k => !doc || (doc.curves && Array.isArray(doc.curves[k]));
+  const mark = r => r === "downbeats" ? L("lib.mark.downbeats", "bar lines") : L("lib.mark." + r, r);
   const parts = [], form = optionOf(layers, "form", "lanes"), shape = optionOf(layers, "shape", "base");
-  const lanes = (layers || []).filter(l => l.type === "lane");
+  const lanes = (layers || []).filter(l => l.type === "lane"), absent = L("lib.legend.absent", " (not in this analysis)");
   for (const l of layers || []) {
-    if (l.type === "wave") parts.push(l.colour && has(l.colour) ? "colour: " + lab(l.colour) : "waveform");
-    else if (l.type === "spec") parts.push(!doc || doc.spectrum ? "spectrogram (mel, low at the bottom)" : "spectrogram (not in this analysis)");
-    else if (l.type === "outline") parts.push("outline: peak waveform");
-    else if (l.type === "sculpt") parts.push(!(layers || []).some(x => x.type === "wave") ? "height: " + lab(l.curve) + " (shapes the waveform; add it to see)" : has(l.curve) ? "height: " + lab(l.curve) : "height: " + lab(l.curve) + " (not in this analysis)");
-    else if (l.type === "line" && has(l.curve)) parts.push("line: " + lab(l.curve));
-    else if (l.type === "lane") parts.push((form === "overlay" ? ((layers || []).some(x => x.type === "wave" || x.type === "spec") ? "over the waveform: " : "overlaid: ") : "lane: ") + lab(l.curve) + (has(l.curve) ? (l.signed ? " (up: entry, down: drop or break, centred: same level)" : "") : " (not in this analysis)"));
-    else if (l.type === "sections" && (!doc || doc.sections)) parts.push("letters: sections");
+    if (l.type === "wave") parts.push(l.colour && has(l.colour) ? L("lib.legend.colour", "colour: {curve}", { curve: lab(l.colour) }) : L("lib.legend.waveform", "waveform"));
+    else if (l.type === "spec") parts.push(!doc || doc.spectrum ? L("lib.legend.spectrogram", "spectrogram (mel, low at the bottom)") : L("lib.legend.spectrogramAbsent", "spectrogram (not in this analysis)"));
+    else if (l.type === "outline") parts.push(L("lib.legend.outline", "outline: peak waveform"));
+    else if (l.type === "sculpt") parts.push(L("lib.legend.height", "height: {curve}", { curve: lab(l.curve) }) + (!(layers || []).some(x => x.type === "wave") ? L("lib.legend.heightNoWave", " (shapes the waveform; add it to see)") : has(l.curve) ? "" : absent));
+    else if (l.type === "line" && has(l.curve)) parts.push(L("lib.legend.line", "line: {curve}", { curve: lab(l.curve) }));
+    else if (l.type === "lane") parts.push((form === "overlay" ? ((layers || []).some(x => x.type === "wave" || x.type === "spec") ? L("lib.legend.overWave", "over the waveform: {curve}", { curve: lab(l.curve) }) : L("lib.legend.overlaid", "overlaid: {curve}", { curve: lab(l.curve) })) : L("lib.legend.lane", "lane: {curve}", { curve: lab(l.curve) })) + (has(l.curve) ? (l.signed ? L("lib.legend.signed", " (up: entry, down: fall or break, centred: same level)") : "") : absent));
+    else if (l.type === "sections" && (!doc || doc.sections)) parts.push(L("lib.legend.sections", "letters: sections"));
     else if (l.type === "ticks" && l.of) {
       const rh = r => r === "beats" || r === "downbeats";
       const ok = r => !doc || (r === "events" ? !!doc.events : r === "onsets" ? !!doc.onsets : r === "novelty" ? !!(doc.noveltyTicks && doc.noveltyTicks.length) : !!doc.rhythm);
-      const of = l.of.filter(ok).map(r => r === "downbeats" ? "bar lines" : r);
-      if (of.length) parts.push("marks: " + of.join(", ") + (doc && doc.rhythm && !doc.rhythm.reliable && l.of.some(rh) ? " (no steady beat: beats faint)" : ""));
-      const missing = l.of.filter(r => !ok(r)).map(r => r === "downbeats" ? "bar lines" : r);
-      if (missing.length) parts.push(missing.join(", ") + ": not in this analysis" + (missing.some(m => m === "beats" || m === "bar lines") ? " (music only)" : ""));
+      const of = l.of.filter(ok).map(mark);
+      if (of.length) parts.push(L("lib.legend.marks", "marks: {list}", { list: of.join(", ") }) + (doc && doc.rhythm && !doc.rhythm.reliable && l.of.some(rh) ? L("lib.legend.beatsFaint", " (no steady beat: beats faint)") : ""));
+      const missing = l.of.filter(r => !ok(r));
+      if (missing.length) parts.push(L("lib.legend.missing", "{list}: not in this analysis", { list: missing.map(mark).join(", ") }) + (missing.some(rh) ? L("lib.legend.musicOnly", " (music only)") : ""));
     }
   }
-  if (lanes.length && shape !== "base") parts.push(shape === "mirror" ? "curves mirrored like a waveform" : shape === "horizon" ? "horizon charts (darker = higher)" : "curves as lines");
+  if (lanes.length && shape !== "base") parts.push(shape === "mirror" ? L("lib.legend.mirror", "curves mirrored like a waveform") : shape === "horizon" ? L("lib.legend.horizon", "horizon charts (darker = higher)") : L("lib.legend.lines", "curves as lines"));
   return parts.join(" · ");
 }
 function autoRange(name, arr) {
@@ -635,7 +655,7 @@ function drawStrip(ctx, doc, opts) {
   return { code: lookCode(layers), layers, legend: describeLook(layers, doc), items };
 }
 
-const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, drawStrip, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
+const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, drawStrip, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.Playhead = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

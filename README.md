@@ -110,10 +110,16 @@ to three curves, sections and marks), written as a short look code such as
 overlaid on the waveform, drawn from the baseline, mirrored like a waveform, as horizon charts or as lines, and without
 a waveform they take the whole strip. The app's **Compose your own** section builds a look and previews it above the
 ordinary waveform and spectrogram of the same file; the same code works in every host that draws with `drawStrip`, and
-the feedback link sends it with your notes. Structural change is drawn signed: up for an entry, down for a drop or a
-break into silence.
+the feedback link sends it with your notes. Structural change is drawn signed: up for an entry, down for a fall in
+level or a break into silence.
 
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
+
+**Languages.** The lab is in English, Czech, German, Polish, Russian and Spanish (the menu in the top bar, or
+`?lang=cs`). The terms follow a shared [sound vocabulary](https://github.com/eigensoundlab/sound-vocabulary), so
+loudness and level, or harshness, sharpness and roughness, stay apart in every language. Apps that draw strips show
+the library's labels in these languages with `Playhead.localize(table)` and `dist/i18n/<lang>.json`;
+[i18n/TRANSLATING.md](i18n/TRANSLATING.md) says how to add a language.
 
 ## Batch analysis and self-checks
 
@@ -319,10 +325,13 @@ src/analysis.js       feature extraction, curves, rhythm, structure, sound-effec
 src/descriptors.js    cross-field descriptors N1–N9
 src/probes.js         synthetic test signals with ground truth, descriptor tour
 src/effects.js        analysis-driven tools, WAV encoder
-src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process()
+src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process(), localize()
+src/i18n.js           translations at run time; src/i18n-data.js is built from i18n/<lang>.json
 src/app.js            user interface
+i18n/                 the English texts (en.json), the translations and the translators' guide
 test/run-tests.js     regression checks
 test/descriptor-tests.js  analytic reference tests for the descriptors
+test/i18n-tests.js    translations: complete English list, placeholders and markup kept, plurals, library labels
 tools/batch.js        batch analysis, self-checks and tool comparison for folders of files
 tools/selfchecks.js   the self-checks and whole-pipeline analysis shared by batch and tune
 tools/tune.js         threshold calibration with a held-out half
@@ -341,6 +350,7 @@ tools/build-cli.js    one executable for the current platform (Node single execu
 examples/             a host page and an analysis worker using the library bundle
 docs/INTEGRATION.md   API, document schema and recipes for other applications
 tools/serve.js        local static server
+tools/i18n.js         translations: extract the English, build, check, compare with the sound vocabulary
 paper/                outline and licence of the accompanying paper (CC BY 4.0); the LaTeX source is kept in a separate repository
 ```
 

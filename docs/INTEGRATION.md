@@ -39,6 +39,7 @@ const r = await Playhead.process(sound, "deharsh", { amount: 0.6 });   // r.outp
 | `curveAt(doc, name, t, fallback)` | a curve's value at time `t`, interpolated: for driving generator and effect parameters |
 | `process(input, toolId, params)` | runs one of the effects bench tools: `{ outputs: [{ suffix, sampleRate, channels }], report }` |
 | `tools()` | the tools and their parameters (id, label, range, default) |
+| `localize(table)` | shows the curve names, looks, legends and tools in another language; `table` is `dist/i18n/<lang>.json` (Czech, German, Polish, Russian, Spanish), `null` returns to English. Documents are unaffected: only labels change |
 
 **Profiles** (one core of the development machine, stereo 44.1 kHz; document size in brackets):
 
@@ -86,7 +87,7 @@ text that hosts can store, offer in a menu, paste between apps and send with fee
 | waveform | `wave` or `wave:<curve>` | the waveform, plain or tinted along the theme's ramp (`waveLow` → `waveHigh`) by a 0–1 curve; over a spectrogram, its outline |
 | spectrogram | `spec` | the document's mel spectrogram (40 bands, 40 Hz–16 kHz, low at the bottom, colours from `specRamp`) |
 | line | `line:<curve>` | a curve over the waveform (descriptor curves on their 5th–95th percentile) |
-| lane | `lane:<curve>` or `lane:<curve>~signed` | a curve in its own lane under the waveform (up to three lanes share about half the height). `~signed` is for change curves such as `structureNovelty`: drawn up where the level rises across the change (an entry), down where it falls (a drop, a break into silence) and centred where only the material changes, so a break never reads as "more" |
+| lane | `lane:<curve>` or `lane:<curve>~signed` | a curve in its own lane under the waveform (up to three lanes share about half the height). `~signed` is for change curves such as `structureNovelty`: drawn up where the level rises across the change (an entry), down where it falls (a fall in level, a break into silence) and centred where only the material changes, so a break never reads as "more" |
 | sections | `sections` | boundaries and letters (music profile) |
 | marks | `ticks:<kinds>` | `events`, `onsets`, `beats` under the waveform, `downbeats` as ticks with faint bar lines through the strip, and `novelty` (the strongest spectral surprises) from the top edge, joined with `+`. Beats and bar lines are faint where the beat is not steady and missing for sound effects (the legend says so) |
 | outline | `outline` | the ordinary peak waveform as a contour over what is drawn before it (theme key `outline`) |

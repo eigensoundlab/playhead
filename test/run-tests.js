@@ -152,6 +152,7 @@ const finite = buf => { for (let c = 0; c < buf.numberOfChannels; c++) for (cons
     check("release: version in package.json, CITATION.cff, .zenodo.json, API, footer, citation", [v, cff, zen, api, foot, cite].join(" / "), [cff, zen, api, foot, cite].every(x => x === v));
   }
 
+  await require("./i18n-tests.js")(check);
   await require("./descriptor-tests.js")(check);
   await require("./integration-tests.js")(check);
 

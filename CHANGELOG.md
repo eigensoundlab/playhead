@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Languages**: the lab in Czech, German, Polish, Russian and Spanish, from a menu in the top bar or `?lang=` in the
+  address. Missing texts fall back to English, counts follow each language's plural rules and numbers its decimal
+  comma. The terms follow the shared [sound vocabulary](https://github.com/eigensoundlab/sound-vocabulary), so they
+  are the same in Playhead, SFX Workbench and the papers. `Playhead.localize(table)` gives other apps the library's
+  curve names, looks, legends and tools in these languages (`dist/i18n/<lang>.json`). `node tools/i18n.js` gathers the
+  English, builds and checks the translations; [i18n/TRANSLATING.md](i18n/TRANSLATING.md) is the guide.
+- Asset checks carry a key and values, so the lab shows them in other languages (`text` stays English).
+
+### Changed
+- Clearer English: structural change goes down for "a fall or break" (in dance music a "drop" is a loud entry); the
+  rule for N tags is YIN aperiodicity under 0.25 with pitch above 60 Hz (the note said "above 250 Hz"); "Curve scale:
+  same for every file / fitted to this file" replaces "Secondary scale: library reference / this asset"; N9 shows
+  decay time (T60).
+
 ## 0.2.0 (2026-11-05)
 
 The first release with a library API, so other apps can embed Playhead, and with looks: the strip is now composed

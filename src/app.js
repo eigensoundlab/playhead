@@ -5,6 +5,23 @@
 "use strict";
 (function () {
 const $ = id => document.getElementById(id);
+// Translations (src/i18n.js): T("key", "English", { name: value }); a missing translation falls back to the English.
+const I18N = window.PHI18N || null;
+// numbers in the reader's style: 0,42 where the language writes a decimal comma (clock times keep their dot)
+const dec = x => { const t = String(x); if (!I18N || I18N.language === "en" || !/\d\.\d/.test(t)) return t; let c = ","; try { c = (1.5).toLocaleString(I18N.language).charAt(1); } catch (e) { /* no Intl */ } return c === "." ? t : t.replace(/(\d)\.(\d)/g, "$1" + c + "$2"); };
+const decVars = v => { if (!v) return v; const o = {}; for (const k in v) o[k] = typeof v[k] === "number" || /^[-−+]?\d+\.\d+$/.test(v[k]) ? dec(v[k]) : v[k]; return o; };
+const T = (k, en, v) => (I18N ? I18N.T(k, en, decVars(v)) : v ? String(en).replace(/\{(\w+)\}/g, (m, x) => (v[x] != null ? v[x] : m)) : en);
+const TP = (k, n, one, other, v) => (I18N ? I18N.TP(k, n, one, other, decVars(v)) : T(k, n === 1 ? one : other, Object.assign({ n }, v)));
+const rowName = s => T("row." + s.id + ".name", s.name), rowDesc = s => (s.desc ? T("row." + s.id + ".desc", s.desc) : "");
+const word = w => T("word." + w, w);
+const clsLabel = k => T("ui.cls." + k, WL.CLASSES[k].label);
+// a label inside a sentence: lower case, except in German, where nouns keep their capital
+const midSentence = t => (I18N && I18N.language === "de" ? t : t.toLowerCase());
+// the tools' texts are the library's (lib.tool.<id>.*), shared with Playhead.tools()
+const toolName = t => T("lib.tool." + t.id + ".name", t.name), toolDesc = t => T("lib.tool." + t.id + ".desc", t.desc);
+const toolKind = t => T("lib.kind." + t.kind.toLowerCase().replace(/\s+(\w)/g, (m, c) => c.toUpperCase()), t.kind);
+const paramLabel = (t, p) => T("lib.tool." + t.id + ".param." + p.id, p.label);
+const optLabel = (t, p, v, en) => T("lib.tool." + t.id + ".opt." + p.id + "." + v, en);
 const store = {
   get(k, d) { try { const v = localStorage.getItem("pwl." + k); return v === null ? d : JSON.parse(v); } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem("pwl." + k, JSON.stringify(v)); } catch (e) { /* storage unavailable */ } }
@@ -55,7 +72,7 @@ function rampCSS(P) { return "linear-gradient(90deg," + P.ramp.map(c => "rgb(" +
 /* ---------------- strip definitions ---------------- */
 const SINGLE = [
   { id: "c1", code: "C1", name: "Loudness", desc: "K-weighted level in LUFS, absolute scale from −60 to 0.", key: "c1", pool: "max" },
-  { id: "c2", code: "C2", name: "Activity", desc: "Rising spectral change plus onsets per second. Independent of level.", key: "c2", pool: "mean" },
+  { id: "c2", code: "C2", name: "Activity", desc: "Spectral change where energy rises (positive spectral flux) plus onsets per second. Independent of level.", key: "c2", pool: "mean" },
   { id: "c3", code: "C3", name: "Arousal", desc: "Loudness 50%, loudness variation 15%, activity 20%, noisiness 15%.", key: "c3", pool: "mean" },
   { id: "c4", code: "C4", name: "Harshness-weighted loudness", desc: "Loudness raised by sharpness, roughness and fluctuation (Zwicker annoyance form).", key: "c4", pool: "max" },
   { id: "c5", code: "C5", name: "Tension", desc: "Integrated trends of loudness, sharpness, roughness and harmony (Farbood model).", key: "c5", pool: "mean", needs: "tension" },
@@ -88,7 +105,7 @@ const STR = [
   { id: "s2", code: "S2", name: "Sections", desc: "Segments between boundaries, lettered by similarity. The same letter means returning material.", kind: "sections" }
 ];
 const DESCROWS = [
-  { id: "n1", code: "N1", name: "Impulsiveness", desc: "Spectral kurtosis (machine diagnostics). Line at 0 is noise; down to −1 is a steady tone; up is clicks and crackle, coloured by the band that carries them. Dashed: noise level for this window.", kind: "n1" },
+  { id: "n1", code: "N1", name: "Impulsiveness", desc: "Spectral kurtosis (machine diagnostics). Line at 0 is noise; down to −1 is a steady tone; up is clicks and crackle, coloured by the band that carries them. Dashed: the value that noise would give in this window.", kind: "n1" },
   { id: "n2", code: "N2", name: "Repetition rate", desc: "Envelope spectrum per band (machine diagnostics): height is how clearly the level repeats, colour the rate from 0.5 Hz (dark) to 150 Hz (light). Firing rates, rattles, footsteps.", kind: "n2" },
   { id: "n3", code: "N3", name: "Event statistics", desc: "STA/LTA trigger from seismology: each bar is an event from trigger to release, height its peak. Labels give rate, burstiness (−1 regular, 0 random, above 0 clustered) and the b-value (many small vs few big).", kind: "n3" },
   { id: "n4", code: "N4", name: "Spectral motion", desc: "Optimal-transport velocity on a log-frequency axis: up is rising (risers, sweeps, Doppler), down falling, scale ±6 oct/s. Shaded: reshaping that is not a shift.", kind: "n4" },
@@ -96,7 +113,7 @@ const DESCROWS = [
   { id: "n6", code: "N6", name: "Arrow of time", desc: "Third-moment asymmetry of the log envelope: up for impacts and plucks (fast rise, slow fall), down for swells and reversed sounds, centre for anything that would sound the same backwards.", kind: "n6" },
   { id: "n7", code: "N7", name: "Interest", desc: "Information dynamics (Abdallah & Plumbley) on timbre symbols: height is predictive information, high when what you hear changes what comes next. Line: learning, high when material is new, falling as it repeats.", kind: "n7" },
   { id: "n8", code: "N8", name: "Recurrence", desc: "How often this moment's timbre and harmony recur elsewhere in the file. Line: laminarity, 1 while a state is held (drone, held chord, steady noise).", kind: "n8" },
-  { id: "n9", code: "N9", name: "Decay and material", desc: "Ring time (T60 from band decays, log scale 20 ms to 5 s) for each impact, coloured by Klatzky damping: blue damped (rubber, wood), green glass-like, orange metal-like, grey not modal. Reverb reads as metal.", kind: "n9" }
+  { id: "n9", code: "N9", name: "Decay and material", desc: "Decay time (T60 from band decays, log scale 20 ms to 5 s) for each impact, coloured by Klatzky damping: blue damped (rubber, wood), green glass-like, orange metal-like, grey not modal. Reverb reads as metal.", kind: "n9" }
 ];
 const DESIGNS = [
   { id: "d1", code: "D1", name: "Energy", desc: "Height arousal (C3), colour activity (C2).", h: "c3", col: "activity", lab: ["calm", "busy"] },
@@ -113,19 +130,30 @@ function mkRow(container, spec, group) {
   const lab = document.createElement("div"); lab.className = "lab";
   const tl = document.createElement("div"); tl.className = "titleline";
   if (spec.code) { const c = document.createElement("span"); c.className = "code"; c.textContent = spec.code; tl.appendChild(c); }
-  const nm = document.createElement("span"); nm.className = "name"; nm.textContent = spec.name; tl.appendChild(nm);
+  const nm = document.createElement("span"); nm.className = "name"; nm.textContent = rowName(spec); tl.appendChild(nm);
   lab.appendChild(tl);
-  const ds = document.createElement("div"); ds.className = "desc"; ds.id = "ds-" + spec.id; ds.textContent = spec.desc || ""; lab.appendChild(ds);
+  const ds = document.createElement("div"); ds.className = "desc"; ds.id = "ds-" + spec.id; ds.textContent = rowDesc(spec); lab.appendChild(ds);
   const ml = document.createElement("div"); ml.className = "metaline"; ml.id = "ml-" + spec.id; lab.appendChild(ml);
   const sc = document.createElement("div"); sc.className = "scope";
   const w = document.createElement("div"); w.className = "cvw";
   const cv = document.createElement("canvas"); cv.className = "strip"; cv.id = "cv-" + spec.id;
-  cv.setAttribute("role", "img"); cv.setAttribute("aria-label", (spec.code ? spec.code + " " : "") + spec.name + " strip; click to seek");
+  cv.setAttribute("role", "img"); cv.setAttribute("aria-label", stripAria(spec));
   const ph = document.createElement("div"); ph.className = "ph";
   const hv = document.createElement("div"); hv.className = "hv";
   w.appendChild(cv); w.appendChild(ph); w.appendChild(hv); sc.appendChild(w);
   container.appendChild(lab); container.appendChild(sc);
   scopes.push({ w, cv, ph, hv, spec, group });
+}
+function stripAria(spec) { return T("aria.strip", "{name} strip; click to seek", { name: (spec.code ? spec.code + " " : "") + rowName(spec) }); }
+// after a language change: row titles, descriptions and the strips' names for screen readers
+function relabelRows() {
+  for (const sc of scopes) {
+    if (sc.group === "ruler") { sc.cv.setAttribute("aria-label", T("aria.ruler", "Time ruler; click to seek")); continue; }
+    const lab = sc.w.parentNode.previousElementSibling, nm = lab && lab.querySelector(".name");
+    if (nm) nm.textContent = rowName(sc.spec);
+    const ds = $("ds-" + sc.spec.id); if (ds && sc.spec.id !== "compose") ds.textContent = rowDesc(sc.spec);
+    sc.cv.setAttribute("aria-label", stripAria(sc.spec));
+  }
 }
 function buildRows() {
   const rr = $("rows-ruler");
@@ -133,7 +161,7 @@ function buildRows() {
   lab.innerHTML = '<div class="rulerlab" id="rulerlab">0:00</div>';
   const sc = document.createElement("div"); sc.className = "scope";
   const w = document.createElement("div"); w.className = "cvw";
-  const cv = document.createElement("canvas"); cv.className = "strip"; cv.id = "cv-ruler"; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "Time ruler; click to seek");
+  const cv = document.createElement("canvas"); cv.className = "strip"; cv.id = "cv-ruler"; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", T("aria.ruler", "Time ruler; click to seek"));
   const ph = document.createElement("div"); ph.className = "ph";
   const hv = document.createElement("div"); hv.className = "hv";
   w.appendChild(cv); w.appendChild(ph); w.appendChild(hv); sc.appendChild(w);
@@ -472,7 +500,7 @@ function drawDesc(x, P, w, h, k, f, v, cols) {
 }
 function drawKind(x, P, w, h, spec, f, v, C, cols, opts) {
   const R = v.R, St = v.St, E = v.E, X = v.X;
-  if (spec.minDur && f.dur < spec.minDur) { drawOff(x, P, w, h, "Off for clips under " + spec.minDur + " s"); return; }
+  if (spec.minDur && f.dur < spec.minDur) { drawOff(x, P, w, h, T("off.short", "Off for clips under {s} s", { s: spec.minDur })); return; }
   const k = spec.kind;
   if (k === "events") {
     drawValues(x, P, w, h, v.c1, cols, null, P.dim);
@@ -485,7 +513,7 @@ function drawKind(x, P, w, h, spec, f, v, C, cols, opts) {
   }
   if (k === "dp") {
     drawValues(x, P, w, h, v.c1, cols, null, P.dim);
-    if (!R.beatTimes.length) { drawOff(x, P, w, h, "No steady beat found"); return; }
+    if (!R.beatTimes.length) { drawOff(x, P, w, h, T("off.noBeat", "No steady beat found")); return; }
     const beatPx = (60 / Math.max(1, R.tempo)) / f.dur * w;
     const n = f.F.nF, cl = t => R.clarity[Math.min(n - 1, Math.round(t / f.F.dt))];
     const aFn = t => cl(t) >= WL.RHYTHM.clarityMin ? 0.65 : 0.22;
@@ -507,21 +535,21 @@ function drawKind(x, P, w, h, spec, f, v, C, cols, opts) {
     return;
   }
   if (k === "snov") {
-    if (St.tooShort) { drawOff(x, P, w, h, "Too short for sections"); return; }
+    if (St.tooShort) { drawOff(x, P, w, h, T("off.noSections", "Too short for sections")); return; }
     drawValues(x, P, w, h, v.snov, cols, null, P.ink);
     vlines(x, w, h, f, St.bounds, P.mark, 1, 2);
     return;
   }
   if (k === "sections") {
-    if (St.tooShort) { drawOff(x, P, w, h, "Too short for sections"); return; }
+    if (St.tooShort) { drawOff(x, P, w, h, T("off.noSections", "Too short for sections")); return; }
     drawSections(x, P, w, h, f, St);
     return;
   }
-  if (/^n[1-9]$/.test(k)) { if (!v.D) { drawOff(x, P, w, h, "Not measured yet"); return; } drawDesc(x, P, w, h, k, f, v, cols); return; }
-  if (["silhouette", "layers", "motion", "phases", "objects", "space", "checks", "d5"].includes(k) && !X) { drawOff(x, P, w, h, "Needs the decoded audio"); return; }
+  if (/^n[1-9]$/.test(k)) { if (!v.D) { drawOff(x, P, w, h, T("off.notMeasured", "Not measured yet")); return; } drawDesc(x, P, w, h, k, f, v, cols); return; }
+  if (["silhouette", "layers", "motion", "phases", "objects", "space", "checks", "d5"].includes(k) && !X) { drawOff(x, P, w, h, T("off.needsAudio", "Needs the decoded audio")); return; }
   if (k === "silhouette") { drawSilhouette(x, P, w, h, v, cols); return; }
   if (k === "layers") {
-    if (!X.layers.length) { drawOff(x, P, w, h, "No layers found"); return; }
+    if (!X.layers.length) { drawOff(x, P, w, h, T("off.noLayers", "No layers found")); return; }
     const order = X.layers.map((l, i) => i).sort((a, b) => X.layers[b].share - X.layers[a].share);
     const cw = w / cols;
     for (const i of order) {
@@ -579,7 +607,7 @@ function drawKind(x, P, w, h, spec, f, v, C, cols, opts) {
   }
   if (k === "space") {
     drawValues(x, P, w, h, v.c1, cols, null, P.dim);
-    if (!X.stereo || X.identical) { if (h >= 13) { x.fillStyle = P.off; x.font = "11px 'IBM Plex Sans', system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(X.stereo ? "Identical channels" : "Mono", w / 2, h / 2 + 0.5); } return; }
+    if (!X.stereo || X.identical) { if (h >= 13) { x.fillStyle = P.off; x.font = "11px 'IBM Plex Sans', system-ui, sans-serif"; x.textAlign = "center"; x.textBaseline = "middle"; x.fillText(X.stereo ? T("off.identical", "Identical channels") : T("off.mono", "Mono"), w / 2, h / 2 + 0.5); } return; }
     const cw = w / cols, half = h / 2 - 2;
     x.fillStyle = P.mid; x.fillRect(0, Math.round(h / 2), w, 1);
     for (let c = 0; c < cols; c++) {
@@ -644,11 +672,11 @@ function drawStripFor(cv, spec, f, cols, h, P, opts) {
   let hk, colk = null, ticks = false, solid = P.ink;
   if (spec.key) {
     hk = spec.key; ticks = !!spec.ticks;
-    if (spec.needs && !C[spec.needs]) { drawOff(x, P, w, h, "Off for " + C.label.toLowerCase()); return; }
+    if (spec.needs && !C[spec.needs]) { drawOff(x, P, w, h, T("off.class", "Off for {cls}", { cls: midSentence(clsLabel(v.cls)) })); return; }
   } else {
     const d = spec.auto ? D3MAP[v.cls] : spec;
     hk = d.h; colk = d.col; ticks = !!d.ticks;
-    if ((hk === "c5" && !C.tension) || (colk === "harmony" && !C.harmony)) { drawOff(x, P, w, h, "Off for " + C.label.toLowerCase()); return; }
+    if ((hk === "c5" && !C.tension) || (colk === "harmony" && !C.harmony)) { drawOff(x, P, w, h, T("off.class", "Off for {cls}", { cls: midSentence(clsLabel(v.cls)) })); return; }
   }
   if (!S.ghost || opts.thumb) {
     drawValues(x, P, w, h, v[hk], cols, colk ? v[colk] : null, solid);
@@ -672,7 +700,9 @@ const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), 
 const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"]];
 const CMP_FORMS = [["lanes", "Separate, each in its own band"], ["overlay", "Overlaid on the waveform"]];
 const CMP_SHAPES = [["base", "From the baseline"], ["mirror", "Mirrored, like a waveform"], ["horizon", "Horizon (folded bands)"], ["line", "Line"]];
-const cmpLabel = k => k ? (PHAPI && PHAPI.curveLabels[k]) || k : "None";
+const cmpLabel = k => k ? (PHAPI && PHAPI.curveLabels[k]) || k : T("cmp.none", "None");
+const cmpOpts = (group, list) => list.map(([v, t]) => [v, T("cmp." + group + "." + v, t)]);
+let cmpShow = null;
 // look code <-> control state
 function cmpState(code) {
   const st = { bg: "none", colour: "", line: "", lanes: [], signed: true, marks: new Set(), form: "lanes", shape: "base", sculpt: "", outline: false };
@@ -732,9 +762,9 @@ let repaintQueued = false;
 function repaintSoon() { if (repaintQueued) return; repaintQueued = true; requestAnimationFrame(() => { repaintQueued = false; render(); }); }
 // look: null for the composer's look, or a fixed look for the comparison rows; thumb: library thumbnails (no legend)
 function drawCompose(x, P, w, h, f, look, thumb) {
-  if (!PHAPI) { drawOff(x, P, w, h, "The Playhead API (src/playhead.js) is not loaded"); return; }
+  if (!PHAPI) { drawOff(x, P, w, h, T("off.noApi", "The Playhead API (src/playhead.js) is not loaded")); return; }
   const ent = composeDoc(f);
-  if (!ent.doc) { drawOff(x, P, w, h, ent.err ? "Could not prepare this file: " + ent.err : "Preparing…"); return; }
+  if (!ent.doc) { drawOff(x, P, w, h, ent.err ? T("off.prepFailed", "Could not prepare this file: {err}", { err: ent.err }) : T("off.preparing", "Preparing…")); return; }
   const r = PHAPI.drawStrip(x, ent.doc, { width: w, height: h, look: look || cmpEffective(CMP.code), theme: themeOf(P) });
   if (!look && !thumb) { const ds = $("ds-compose"); if (ds) ds.textContent = r.legend; }
 }
@@ -752,39 +782,40 @@ function showCompareRows() {
 function buildComposer() {
   const box = $("composer");
   if (!box) return;
-  if (!PHAPI) { box.textContent = "The composer needs src/playhead.js."; return; }
+  box.innerHTML = "";
+  if (!PHAPI) { box.textContent = T("cmp.noApi", "The composer needs src/playhead.js."); return; }
   const sel = (id, label, opts, title) => {
     const l = el("label", "ctl"); l.htmlFor = id; l.appendChild(document.createTextNode(label + " "));
     const s = el("select"); s.id = id; if (title) l.title = title;
     for (const [v, t] of opts) { const o = el("option", "", t); o.value = v; s.appendChild(o); }
     l.appendChild(s); return [l, s];
   };
-  const lookOpts = [["", "Your own"]].concat(Object.entries(PHAPI.looks).map(([k, L]) => [k, L.name]));
-  const [lLook, sLook] = sel("cmp-look", "Start from", lookOpts, "Ready-made looks; changing anything below makes it your own");
-  const [lBg, sBg] = sel("cmp-bg", "Behind", CMP_BG, "What the strip shows behind the curves: the waveform, a spectrogram, or nothing so the curves take the whole strip");
-  const [lCol, sCol] = sel("cmp-colour", "Waveform colour", CMP_COLOURS.map(k => [k, cmpLabel(k)]), "A curve that tints the waveform, from the low to the high end of the colour ramp");
-  const [lForm, sForm] = sel("cmp-form", "Lanes", CMP_FORMS, "Separate: each curve in its own band, like a stack of waveforms. Overlaid: the curves drawn on the waveform itself, to compare their shapes with it");
-  const [lShape, sShape] = sel("cmp-shape", "Shape", CMP_SHAPES, "How each lane's curve is drawn: filled from the baseline, mirrored around the middle like a waveform, folded into a horizon chart (compact), or as a line");
-  const [lH, sH] = sel("cmp-height", "Height", CMP_HEIGHTS.map(v => [String(v), v + " px"]), "Height of the strips in this section");
-  const refL = el("label", "chk"), refs = el("input"); refs.type = "checkbox"; refs.id = "cmp-refs"; refL.htmlFor = "cmp-refs"; refL.append(refs, document.createTextNode(" Show the waveform and the spectrogram under it for comparison"));
-  const [lLine, sLine] = sel("cmp-line", "Line", CMP_LINES.map(k => [k, cmpLabel(k)]), "A curve drawn over the waveform");
-  const [lSc, sSc] = sel("cmp-sculpt", "Waveform height from", CMP_SCULPT.map(k => [k, k ? cmpLabel(k) : "Peaks (ordinary)"]), "Reshape the waveform: its envelope follows this curve while its detail stays. Loudness gives a waveform as loud as it sounds");
-  const olL = el("label", "chk"), outl = el("input"); outl.type = "checkbox"; outl.id = "cmp-outline"; olL.htmlFor = "cmp-outline"; olL.append(outl, document.createTextNode(" Waveform outline"));
-  olL.title = "The ordinary peak waveform as a contour over the strip; the same switch as in the top bar";
-  const lanes = el("fieldset"); lanes.appendChild(el("legend", "", "Curves (up to " + CMP_MAX_LANES + ")"));
+  const lookOpts = [["", T("cmp.yourOwn", "Your own")]].concat(Object.entries(PHAPI.looks).map(([k, L]) => [k, L.name]));
+  const [lLook, sLook] = sel("cmp-look", T("cmp.look", "Start from"), lookOpts, T("cmp.look.title", "Ready-made looks; changing anything below makes it your own"));
+  const [lBg, sBg] = sel("cmp-bg", T("cmp.bg", "Behind"), cmpOpts("bg", CMP_BG), T("cmp.bg.title", "What the strip shows behind the curves: the waveform, a spectrogram, or nothing so the curves take the whole strip"));
+  const [lCol, sCol] = sel("cmp-colour", T("cmp.colour", "Waveform colour"), CMP_COLOURS.map(k => [k, cmpLabel(k)]), T("cmp.colour.title", "A curve that tints the waveform, from the low to the high end of the colour ramp"));
+  const [lForm, sForm] = sel("cmp-form", T("cmp.form", "Lanes"), cmpOpts("forms", CMP_FORMS), T("cmp.form.title", "Separate: each curve in its own band, like a stack of waveforms. Overlaid: the curves drawn on the waveform itself, to compare their shapes with it"));
+  const [lShape, sShape] = sel("cmp-shape", T("cmp.shape", "Shape"), cmpOpts("shapes", CMP_SHAPES), T("cmp.shape.title", "How each lane's curve is drawn: filled from the baseline, mirrored around the middle like a waveform, folded into a horizon chart (compact), or as a line"));
+  const [lH, sH] = sel("cmp-height", T("cmp.height", "Height"), CMP_HEIGHTS.map(v => [String(v), v + " px"]), T("cmp.height.title", "Height of the strips in this section"));
+  const refL = el("label", "chk"), refs = el("input"); refs.type = "checkbox"; refs.id = "cmp-refs"; refL.htmlFor = "cmp-refs"; refL.append(refs, document.createTextNode(" " + T("cmp.refs", "Show the waveform and the spectrogram under it for comparison")));
+  const [lLine, sLine] = sel("cmp-line", T("cmp.line", "Line"), CMP_LINES.map(k => [k, cmpLabel(k)]), T("cmp.line.title", "A curve drawn over the waveform"));
+  const [lSc, sSc] = sel("cmp-sculpt", T("cmp.sculpt", "Waveform height from"), CMP_SCULPT.map(k => [k, k ? cmpLabel(k) : T("cmp.sculpt.none", "Peaks (ordinary)")]), T("cmp.sculpt.title", "Reshape the waveform: its envelope follows this curve while its detail stays. Loudness gives a waveform as loud as it sounds"));
+  const olL = el("label", "chk"), outl = el("input"); outl.type = "checkbox"; outl.id = "cmp-outline"; olL.htmlFor = "cmp-outline"; olL.append(outl, document.createTextNode(" " + T("cmp.outline", "Waveform outline")));
+  olL.title = T("cmp.outline.title", "The ordinary peak waveform as a contour over the strip; the same switch as in the top bar");
+  const lanes = el("fieldset"); lanes.appendChild(el("legend", "", T("cmp.lanes", "Curves (up to {n})", { n: CMP_MAX_LANES })));
   const laneBoxes = CMP_LANES.map(k => { const l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.value = k; l.appendChild(c); l.appendChild(document.createTextNode(" " + cmpLabel(k))); lanes.appendChild(l); return c; });
   const sl = el("label", "chk"), signed = el("input"); signed.type = "checkbox"; sl.appendChild(signed);
-  sl.appendChild(document.createTextNode(" Structural change: up for an entry, down for a drop or break"));
-  sl.title = "Change curves are direction-free: a break into silence is as new as a drop. With this on, the lane shows which way the level goes, so a break never reads as more.";
+  sl.appendChild(document.createTextNode(" " + T("cmp.signed", "Structural change: up where the sound enters, down where it falls away or breaks off")));
+  sl.title = T("cmp.signed.title", "Change curves are direction-free: a break into silence is as new as an entry. With this on, the lane shows which way the level goes, so a break never reads as more.");
   lanes.appendChild(sl);
-  const marks = el("fieldset"); marks.appendChild(el("legend", "", "Marks"));
-  const markBoxes = CMP_MARKS.map(([k, t]) => { const l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.value = k; l.appendChild(c); l.appendChild(document.createTextNode(" " + t)); marks.appendChild(l); return c; });
+  const marks = el("fieldset"); marks.appendChild(el("legend", "", T("cmp.marks", "Marks")));
+  const markBoxes = cmpOpts("marks", CMP_MARKS).map(([k, t]) => { const l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.value = k; l.appendChild(c); l.appendChild(document.createTextNode(" " + t)); marks.appendChild(l); return c; });
   const codeRow = el("div", "cmp-code");
-  const cl = el("label", "ctl"); cl.htmlFor = "cmp-code"; cl.appendChild(document.createTextNode("Look code "));
-  const code = el("input"); code.id = "cmp-code"; code.spellcheck = false; code.title = "Paste a look code and press Enter. The same codes work in SFX Workbench and kurator.";
+  const cl = el("label", "ctl"); cl.htmlFor = "cmp-code"; cl.appendChild(document.createTextNode(T("cmp.code", "Look code") + " "));
+  const code = el("input"); code.id = "cmp-code"; code.spellcheck = false; code.title = T("cmp.code.title", "Paste a look code and press Enter. The same codes work in SFX Workbench and kurator.");
   cl.appendChild(code);
-  const copy = el("button", "", "Copy"); copy.type = "button";
-  const fb = el("a", "", "Tell us if this helps"); fb.target = "_blank"; fb.rel = "noopener";
+  const copy = el("button", "", T("cmp.copy", "Copy")); copy.type = "button";
+  const fb = el("a", "", T("cmp.feedback", "Tell us if this helps")); fb.target = "_blank"; fb.rel = "noopener";
   codeRow.append(cl, copy, fb);
   const row1 = el("div", "cmp-row"), row2 = el("div", "cmp-row");
   row1.append(lLook, lBg, lCol, lSc, lLine, olL);
@@ -825,14 +856,14 @@ function buildComposer() {
   });
   [sBg, sCol, sLine, sSc, sForm, sShape, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
   outl.addEventListener("change", () => { S.ghost = outl.checked; store.set("ghost", S.ghost); $("ghost").checked = S.ghost; show(); render(); });
-  $("ghost").addEventListener("change", show);
+  cmpShow = show;   // the top bar's outline switch (hooked once, at start) updates this composer
   sH.addEventListener("change", () => { CMP.h = parseInt(sH.value, 10) || 128; store.set("lookHeight", CMP.h); redrawCompose(); });
   refs.addEventListener("change", () => { CMP.refs = refs.checked; store.set("lookRefs", CMP.refs); showCompareRows(); redrawCompose(); });
   code.addEventListener("change", () => { const ls = PHAPI.parseLook(code.value); if (ls && ls.length) set(PHAPI.lookCode(ls)); else show(); });
   copy.addEventListener("click", async () => {
-    try { await navigator.clipboard.writeText(CMP.code); copy.textContent = "Copied"; }
-    catch (e) { code.focus(); code.select(); copy.textContent = "Selected, now copy it"; }
-    setTimeout(() => { copy.textContent = "Copy"; }, 2000);
+    try { await navigator.clipboard.writeText(CMP.code); copy.textContent = T("ui.copied", "Copied"); }
+    catch (e) { code.focus(); code.select(); copy.textContent = T("ui.selectCopy", "Selected, now copy it"); }
+    setTimeout(() => { copy.textContent = T("cmp.copy", "Copy"); }, 2000);
   });
   show();
   showCompareRows();
@@ -878,18 +909,18 @@ function drawRuler(cv, f, cols, P) {
 const FX = window.WLFX;
 function analysisOf(f) { return { F: f.F, cur: curvesOf(f), R: WL.rhythmOf(f.F), St: WL.structureOf(f.F), X: f.buf ? WL.sfxOf(f.F, f.buf, f.name) : null }; }
 function toolAvail(t, f) {
-  if (!f || !f.F) return "Load or select a file first.";
-  if (t.needs === "tension" && !WL.CLASSES[effClass(f)].tension) return "Tension needs a music or ambience class. Set the asset class above to try it on this file.";
-  if (t.id === "layers") { const X = WL.sfxOf(f.F, f.buf, f.name); if (!X.layers.length) return "No layers were found in this file."; }
-  if (t.id === "loop" && f.dur < 1) return "Needs at least 1 s of audio.";
-  if (t.id === "hpss" && f.dur > 180) return "Attack and body is limited to files under 3 minutes in the browser.";
+  if (!f || !f.F) return T("bench.need.file", "Load or select a file first.");
+  if (t.needs === "tension" && !WL.CLASSES[effClass(f)].tension) return T("bench.need.tension", "{tool} follows the tension curve, which needs a music or ambience class. Set the asset class above to try it on this file.", { tool: toolName(t) });
+  if (t.id === "layers") { const X = WL.sfxOf(f.F, f.buf, f.name); if (!X.layers.length) return T("bench.need.layers", "No layers were found in this file."); }
+  if (t.id === "loop" && f.dur < 1) return T("bench.need.loop", "Needs at least 1 s of audio.");
+  if (t.id === "hpss" && f.dur > 180) return T("bench.need.hpss", "{tool} is limited to files under 3 minutes in the browser.", { tool: toolName(t) });
   return "";
 }
 function paramDefs(t, f) {
   if (t.params !== "layers") return t.params;
   const X = f && f.F ? WL.sfxOf(f.F, f.buf, f.name) : null;
-  const defs = (X ? X.layers : []).map((l, i) => ({ id: "g" + i, label: l.name + " " + (l.hz >= 1000 ? (l.hz / 1000).toFixed(1) + " kHz" : Math.round(l.hz) + " Hz") + " (" + Math.round(l.share * 100) + "%)", min: -24, max: 12, step: 1, value: 0, unit: "dB" }));
-  defs.push({ id: "match", label: "Match loudness", type: "bool", value: true });
+  const defs = (X ? X.layers : []).map((l, i) => ({ id: "g" + i, label: layerName(l) + " " + (l.hz >= 1000 ? (l.hz / 1000).toFixed(1) + " kHz" : Math.round(l.hz) + " Hz") + " (" + Math.round(l.share * 100) + "%)", min: -24, max: 12, step: 1, value: 0, unit: "dB" }));
+  defs.push({ id: "match", label: T("bench.match", "Match loudness"), type: "bool", value: true });
   return defs;
 }
 function renderToolPicker() {
@@ -897,7 +928,7 @@ function renderToolPicker() {
   if (!box.childElementCount) {
     for (const t of FX.TOOLS) {
       const b = el("button", ""); b.type = "button"; b.dataset.id = t.id;
-      b.appendChild(el("span", "", t.name)); b.appendChild(el("span", "k", t.kind));
+      b.appendChild(el("span", "", toolName(t))); b.appendChild(el("span", "k", toolKind(t)));
       b.addEventListener("click", () => { S.fx = t.id; store.set("fx", t.id); renderBench(); });
       box.appendChild(b);
     }
@@ -907,7 +938,7 @@ function renderToolPicker() {
 function renderBench() {
   renderToolPicker();
   const t = FX.TOOLS.find(x => x.id === S.fx) || FX.TOOLS[0], f = S.sel;
-  $("tooldesc").textContent = t.desc;
+  $("tooldesc").textContent = toolDesc(t);
   const box = $("params"); box.innerHTML = "";
   const vals = S.fxVals[t.id] = S.fxVals[t.id] || {};
   const defs = paramDefs(t, f);
@@ -918,18 +949,18 @@ function renderBench() {
       const lab = el("label", "param bool"); lab.htmlFor = id;
       const cb = el("input"); cb.type = "checkbox"; cb.id = id; cb.checked = !!vals[p.id];
       cb.addEventListener("change", () => { vals[p.id] = cb.checked; });
-      lab.appendChild(cb); lab.appendChild(el("span", "", p.label)); box.appendChild(lab);
+      lab.appendChild(cb); lab.appendChild(el("span", "", paramLabel(t, p))); box.appendChild(lab);
     } else if (p.type === "select") {
       const lab = el("label", "param"); lab.htmlFor = id;
-      lab.appendChild(el("span", "", p.label));
+      lab.appendChild(el("span", "", paramLabel(t, p)));
       const sel = el("select"); sel.id = id;
-      for (const [v, t] of p.options) { const o = el("option", "", t); o.value = v; sel.appendChild(o); }
+      for (const [v, en] of p.options) { const o = el("option", "", optLabel(t, p, v, en)); o.value = v; sel.appendChild(o); }
       sel.value = vals[p.id];
       sel.addEventListener("change", () => { vals[p.id] = sel.value; });
       lab.appendChild(sel); box.appendChild(lab);
     } else {
       const lab = el("label", "param"); lab.htmlFor = id;
-      lab.appendChild(el("span", "", p.label));
+      lab.appendChild(el("span", "", paramLabel(t, p)));
       const out = el("span", "val");
       const fmt = v => (Math.abs(p.step) < 1 ? Number(v).toFixed(p.step < 0.1 ? 2 : 1) : String(Math.round(v))) + (p.unit ? " " + p.unit : "");
       out.textContent = fmt(vals[p.id]);
@@ -940,8 +971,8 @@ function renderBench() {
   }
   const why = toolAvail(t, f);
   $("runfx").disabled = false;
-  $("runfx").textContent = "Render" + (f && f.F ? " " + t.name.toLowerCase() : "");
-  if (!S.fxBusy) $("fxstatus").textContent = why || (f && f.F ? "Works on " + f.name + "." : "");
+  $("runfx").textContent = f && f.F ? T("bench.renderTool", "Render {tool}", { tool: midSentence(toolName(t)) }) : T("bench.render", "Render");
+  if (!S.fxBusy) $("fxstatus").textContent = why || (f && f.F ? T("bench.worksOn", "Works on {file}.", { file: f.name }) : "");
   renderFxResult();
 }
 function fxMetrics(f) {
@@ -953,10 +984,10 @@ function fxMetrics(f) {
   const lt = Array.from(cur.lufs).filter((_, m) => g[m]).sort((a, b) => a - b);
   const lra = lt.length ? lt[Math.floor(0.95 * (lt.length - 1))] - lt[Math.floor(0.10 * (lt.length - 1))] : 0;
   return [
-    ["Length", f.dur, "s", 2], ["Loudness", lufs, "LUFS", 1], ["Peak", X.pkDb, "dBFS", 1], ["Loudness range", lra, "LU", 1],
-    ["Harshness factor", mean(cur.raw.hfac), "", 2], ["Harshness, harshest 10%", p90(cur.raw.hfac), "", 2], ["Sharpness", mean(cur.raw.sharp), "acum", 2], ["Roughness", mean(cur.raw.Rr), "asper", 2],
-    ["Activity", mean(cur.curves.c2), "", 2], ["Problems found", X.issues.filter(i => i.sev === "bad" || i.sev === "warn").length, "", 0],
-    ["Events", X.events.map(e => e.tag).join(" ").slice(0, 40) || "–", "", -1], ["Layers", X.layers.map(l => l.name + " " + Math.round(l.share * 100) + "%").join(", ") || "–", "", -1]
+    [T("metric.length", "Length"), f.dur, "s", 2], [T("metric.loudness", "Loudness"), lufs, "LUFS", 1], [T("metric.peak", "Peak"), X.pkDb, "dBFS", 1], [T("metric.lra", "Loudness range"), lra, "LU", 1],
+    [T("metric.harshness", "Harshness factor"), mean(cur.raw.hfac), "", 2], [T("metric.harshnessP90", "Harshness, harshest 10%"), p90(cur.raw.hfac), "", 2], [T("metric.sharpness", "Sharpness"), mean(cur.raw.sharp), "acum", 2], [T("metric.roughness", "Roughness"), mean(cur.raw.Rr), "asper", 2],
+    [T("metric.activity", "Activity"), mean(cur.curves.c2), "", 2], [T("metric.problems", "Problems found"), X.issues.filter(i => i.sev === "bad" || i.sev === "warn").length, "", 0],
+    [T("metric.events", "Events"), X.events.map(e => e.tag).join(" ").slice(0, 40) || "–", "", -1], [T("metric.layers", "Layers"), X.layers.map(l => layerName(l) + " " + Math.round(l.share * 100) + "%").join(", ") || "–", "", -1]
   ];
 }
 function renderFxResult() {
@@ -965,32 +996,32 @@ function renderFxResult() {
   const src = S.files.find(x => x.id === L.srcId), outs = L.outIds.map(id => S.files.find(x => x.id === id)).filter(Boolean);
   if (!src || !outs.length) return;
   const P = PANELS[S.panel];
-  const head = el("p", "tooldesc"); head.appendChild(el("b", "", L.tool + ": ")); head.appendChild(document.createTextNode(L.report.join(". ") + ".")); box.appendChild(head);
-  const row = (f, label) => {
+  const head = el("p", "tooldesc"); head.appendChild(el("b", "", (FX.TOOLS.some(x => x.id === L.tool) ? toolName(FX.TOOLS.find(x => x.id === L.tool)) : L.tool) + ": ")); head.appendChild(document.createTextNode(L.report.join(". ") + ".")); box.appendChild(head);
+  const row = (f, label, isSrc) => {
     const r = el("div", "fxrow"); r.dataset.fid = f.id;
     const a = el("div", ""); const nm = el("div", "nm", f.name); nm.appendChild(el("small", "", label)); a.appendChild(nm);
     const acts = el("div", "acts");
-    const pb = el("button", "abplay", AB.f === f ? "Pause" : "Play"); pb.type = "button"; pb.addEventListener("click", () => audition(f)); acts.appendChild(pb);
-    const sb = el("button", "", "Select"); sb.type = "button"; sb.addEventListener("click", () => { if (f.F) { S.sel = f; stopAudio(); offset = 0; render(); } }); acts.appendChild(sb);
-    if ((ALLOW_SAVE || HOST_DL) && label !== "original" && f.buf) { const wb = el("button", "", ALLOW_SAVE ? "Save WAV" : "Save WAV (.zip)"); wb.type = "button"; wb.addEventListener("click", () => saveWav(f, wb)); acts.appendChild(wb); }
+    const pb = el("button", "abplay", AB.f === f ? T("ui.pause", "Pause") : T("ui.play", "Play")); pb.type = "button"; pb.addEventListener("click", () => audition(f)); acts.appendChild(pb);
+    const sb = el("button", "", T("bench.select", "Select")); sb.type = "button"; sb.addEventListener("click", () => { if (f.F) { S.sel = f; stopAudio(); offset = 0; render(); } }); acts.appendChild(sb);
+    if ((ALLOW_SAVE || HOST_DL) && !isSrc && f.buf) { const wb = el("button", "", ALLOW_SAVE ? T("bench.saveWav", "Save WAV") : T("bench.saveZip", "Save WAV (.zip)")); wb.type = "button"; wb.addEventListener("click", () => saveWav(f, wb)); acts.appendChild(wb); }
     a.appendChild(acts); r.appendChild(a);
-    const cv = el("canvas", "strip"); cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "Overview of " + f.name + ". Click to play from that point.");
+    const cv = el("canvas", "strip"); cv.setAttribute("role", "img"); cv.setAttribute("aria-label", T("aria.fxThumb", "Overview of {file}. Click to play from that point.", { file: f.name }));
     const wrap = el("div", "fxthumb"); wrap.appendChild(cv); wrap.appendChild(el("div", "ph fxph")); r.appendChild(wrap);
     cv.addEventListener("click", e => { if (!f.buf) return; const rc = cv.getBoundingClientRect(); audition(f, Math.max(0, Math.min(1, (e.clientX - rc.left) / rc.width)) * f.dur); });
     box.appendChild(r);
     requestAnimationFrame(() => { const cols = Math.max(50, Math.floor(cv.clientWidth || 600)); const th = f.F && effClass(f) === "sfx" ? "d5" : "d4"; drawStripFor(cv, DESIGNS.find(d => d.id === th), f.F ? f : null, cols, 32, P, { thumb: true }); drawAbHead(f); });
   };
-  row(src, "original");
-  outs.forEach(o => row(o, o.F ? "result" : "analysing…"));
+  row(src, T("bench.original", "original"), true);
+  outs.forEach(o => row(o, o.F ? T("bench.result", "result") : T("bench.analysing", "analysing…")));
   if (src.F && outs.every(o => o.F)) {
     const mb = fxMetrics(src), ma = outs.map(fxMetrics);
     const wrap = el("div", "tablewrap"), tb = el("table", "fxmetrics");
-    const hr = el("tr"); hr.appendChild(el("th", "", "Measure")); hr.appendChild(el("th", "", "Original")); outs.forEach((o, i) => hr.appendChild(el("th", "", outs.length > 1 ? "Result " + (i + 1) : "Result")));
+    const hr = el("tr"); hr.appendChild(el("th", "", T("bench.measure", "Measure"))); hr.appendChild(el("th", "", T("bench.originalCol", "Original"))); outs.forEach((o, i) => hr.appendChild(el("th", "", outs.length > 1 ? T("bench.resultN", "Result {n}", { n: i + 1 }) : T("bench.resultCol", "Result"))));
     const th = el("thead"); th.appendChild(hr); tb.appendChild(th);
     const body = el("tbody");
     mb.forEach((m, k) => {
       const tr = el("tr"); tr.appendChild(el("td", "", m[0]));
-      const fmt = (v, d) => d < 0 ? String(v) : (typeof v === "number" ? v.toFixed(d) : v) + (m[2] ? " " + m[2] : "");
+      const fmt = (v, d) => d < 0 ? String(v) : dec(typeof v === "number" ? v.toFixed(d) : v) + (m[2] ? " " + m[2] : "");
       tr.appendChild(el("td", "", fmt(m[1], m[3])));
       ma.forEach(arr => {
         const v = arr[k][1], td = el("td", "", fmt(v, m[3]));
@@ -1000,15 +1031,15 @@ function renderFxResult() {
       body.appendChild(tr);
     });
     if (L.eq && L.eq.some(Boolean)) {
-      const tr = el("tr"); tr.appendChild(el("td", "", "Same change from a fixed EQ")); tr.appendChild(el("td", "", "–"));
-      L.eq.forEach(e => { const td = el("td", "", e && e.eqShare != null ? Math.round(e.eqShare * 100) + "% of " + e.change.toFixed(1) + " dB" : "–"); if (e && e.eqBands) td.title = "Best static EQ (third-octave): " + e.eqBands.filter(b => Math.abs(b[1]) >= 0.5).map(b => (b[0] >= 1000 ? (b[0] / 1000).toFixed(1) + "k" : b[0]) + " " + (b[1] > 0 ? "+" : "") + b[1]).join(", "); tr.appendChild(td); });
+      const tr = el("tr"); tr.appendChild(el("td", "", T("bench.eqRow", "Same change from a fixed EQ"))); tr.appendChild(el("td", "", "–"));
+      L.eq.forEach(e => { const td = el("td", "", e && e.eqShare != null ? T("bench.eqShare", "{p}% of {db} dB", { p: Math.round(e.eqShare * 100), db: e.change.toFixed(1) }) : "–"); if (e && e.eqBands) td.title = T("bench.eqTitle", "Best static EQ (third-octave): {bands}", { bands: e.eqBands.filter(b => Math.abs(b[1]) >= 0.5).map(b => (b[0] >= 1000 ? (b[0] / 1000).toFixed(1) + "k" : b[0]) + " " + (b[1] > 0 ? "+" : "") + b[1]).join(", ") }); tr.appendChild(td); });
       body.appendChild(tr);
     }
     tb.appendChild(body); wrap.appendChild(tb); box.appendChild(wrap);
-    if (L.eq && L.eq.some(Boolean)) box.appendChild(el("p", "fxnote", "\"Same change from a fixed EQ\" is the share of the tool's average spectrogram change (in dB) that the single best static EQ reproduces. Near 100% means an ordinary EQ would do the same here; low values mean the change follows time and content. Hover for that EQ curve."));
+    if (L.eq && L.eq.some(Boolean)) box.appendChild(el("p", "fxnote", T("bench.eqNote", "\"{row}\" is the share of the tool's average spectrogram change (in dB) that the single best static EQ reproduces. Near 100% means an ordinary EQ would do the same here; low values mean the change follows time and content. Hover for that EQ curve.", { row: T("bench.eqRow", "Same change from a fixed EQ") })));
   }
-  if (!ALLOW_SAVE && !HOST_DL) box.appendChild(el("p", "fxnote", "Saving results as WAV works in the GitHub Pages build of Playhead."));
-  else if (!ALLOW_SAVE) box.appendChild(el("p", "fxnote", "Here results are saved as a .zip holding the WAV, because this viewer does not accept audio downloads."));
+  if (!ALLOW_SAVE && !HOST_DL) box.appendChild(el("p", "fxnote", T("bench.saveGh", "Saving results as WAV works in the GitHub Pages build of Playhead.")));
+  else if (!ALLOW_SAVE) box.appendChild(el("p", "fxnote", T("bench.saveZipNote", "Here results are saved as a .zip holding the WAV, because the page around this app does not allow audio downloads.")));
 }
 /* Bench audition shares one transport with the main player: starting either stops the other,
    and selecting or loading a file stops both. Each bench strip keeps its own play position. */
@@ -1039,7 +1070,7 @@ function drawAbHead(f) {
   const ph = row.querySelector(".fxph"), btn = row.querySelector("button.abplay");
   const live = AB.f === f, t = live ? abTime() : (AB.pos.get(f.id) || 0);
   if (ph) { ph.style.transform = "translateX(" + (Math.min(1, t / (f.dur || 1)) * ph.parentNode.clientWidth) + "px)"; ph.classList.toggle("on", live || t > 0); }
-  if (btn) btn.textContent = live ? "Pause" : "Play";
+  if (btn) btn.textContent = live ? T("ui.pause", "Pause") : T("ui.play", "Play");
 }
 async function saveWav(f, btn) {
   const ab = FX.encodeWav(f.buf, false), base = f.name.replace(/\.[a-z0-9]+$/i, "");
@@ -1047,12 +1078,12 @@ async function saveWav(f, btn) {
     if (!HOST_DL) return;
     const zip = FX.zipStore([{ name: base + ".wav", data: new Uint8Array(ab) }]);
     const label = btn ? btn.textContent : "";
-    try { await HOST_DL.save({ filename: base + ".zip", data: new Blob([zip]) }); if (btn) { btn.textContent = "Saved"; setTimeout(() => { btn.textContent = label; }, 1500); } }
+    try { await HOST_DL.save({ filename: base + ".zip", data: new Blob([zip]) }); if (btn) { btn.textContent = T("bench.saved", "Saved"); setTimeout(() => { btn.textContent = label; }, 1500); } }
     catch (e) {
       const code = e && e.code;
       if (code === "declined") return;
-      if (code === "rate_limited") { $("fxstatus").textContent = "A save prompt is already open."; return; }
-      HOST_DL = null; $("fxstatus").textContent = "Saving is not available in this view."; renderFxResult();
+      if (code === "rate_limited") { $("fxstatus").textContent = T("bench.savePrompt", "A save prompt is already open."); return; }
+      HOST_DL = null; $("fxstatus").textContent = T("bench.saveNone", "Saving is not available in this view."); renderFxResult();
     }
     return;
   }
@@ -1069,20 +1100,20 @@ async function runFx() {
   const vals = Object.assign({}, S.fxVals[t.id] || {});
   if (t.params === "layers") { vals.gains = WL.sfxOf(f.F, f.buf, f.name).layers.map((_, i) => vals["g" + i] || 0); }
   try {
-    $("fxstatus").textContent = "Rendering " + t.name.toLowerCase() + "…";
+    $("fxstatus").textContent = T("bench.rendering", "Rendering {tool}…", { tool: midSentence(toolName(t)) });
     await paint();
-    const res = await t.run(f.buf, analysisOf(f), vals, p => { $("fxstatus").textContent = "Rendering " + t.name.toLowerCase() + ": " + Math.round(p * 100) + "%"; });
+    const res = await t.run(f.buf, analysisOf(f), vals, p => { $("fxstatus").textContent = T("bench.renderingP", "Rendering {tool}: {p}%", { tool: midSentence(toolName(t)), p: Math.round(p * 100) }); });
     if (!res.outputs.length) { $("fxstatus").textContent = res.report.join(". "); return; }
     const base = f.name.replace(/\.[a-z0-9]+$/i, "");
     const recs = res.outputs.map(o => ({ name: base + "_" + o.suffix + ".wav", kind: "fx", buf: o.buf, segments: Math.abs(o.buf.duration - f.dur) < 0.01 ? f.segments : null, truth: null, sfxTruth: null, dur: o.buf.duration, cls: f.cls || null }));
-    S.fxLast = { srcId: f.id, outIds: [], report: res.report, tool: t.name };
+    S.fxLast = { srcId: f.id, outIds: [], report: res.report, tool: t.id };
     let q;
     recs.forEach((r, i) => { q = addFile(r, false); S.fxLast.outIds.push(r.id); });
     renderFxResult();
     await q;
     // how much of the change a fixed EQ could have made (skipped for the "removed" listening copy and long files)
     if (f.dur <= 180) {
-      $("fxstatus").textContent = "Comparing with a static EQ…"; await paint();
+      $("fxstatus").textContent = T("bench.comparingEq", "Comparing with a static EQ…"); await paint();
       const dry = []; for (let c = 0; c < f.buf.numberOfChannels; c++) dry.push(f.buf.getChannelData(c));
       S.fxLast.eq = [];
       for (const r of recs) {
@@ -1091,9 +1122,9 @@ async function runFx() {
         S.fxLast.eq.push(await FX.eqExplained(dry, wet, f.buf.sampleRate));
       }
     }
-    $("fxstatus").textContent = "Done. " + (recs.length > 1 ? recs.length + " results are" : "The result is") + " in the library below.";
+    $("fxstatus").textContent = TP("bench.done", recs.length, "Done. The result is in the library below.", "Done. {n} results are in the library below.");
   } catch (e) {
-    $("fxstatus").textContent = "Rendering failed: " + (e && e.message ? e.message : e);
+    $("fxstatus").textContent = T("bench.failed", "Rendering failed: {err}", { err: e && e.message ? e.message : e });
   } finally {
     S.fxBusy = false; $("runfx").disabled = false;
     renderFxResult();
@@ -1142,23 +1173,23 @@ function updateLabels() {
     const ml = $("ml-" + s.id);
     ml.innerHTML = "";
     if (!ready) continue;
-    if (s.id === "c1") { const b = document.createElement("span"); b.className = "badge ref"; b.textContent = "reference"; ml.appendChild(b); continue; }
-    if (s.needs && !C[s.needs]) { const b = document.createElement("span"); b.className = "mut"; b.textContent = "Not computed for " + C.label.toLowerCase() + "."; ml.appendChild(b); continue; }
+    if (s.id === "c1") { const b = document.createElement("span"); b.className = "badge ref"; b.textContent = T("lab.reference", "reference"); ml.appendChild(b); continue; }
+    if (s.needs && !C[s.needs]) { const b = document.createElement("span"); b.className = "mut"; b.textContent = T("lab.notComputed", "Not computed for {cls}.", { cls: midSentence(clsLabel(cls)) }); ml.appendChild(b); continue; }
     const r = Math.abs(d.r[s.id]);
     const b = document.createElement("span");
-    if (!isFinite(r)) { b.className = "badge ref"; b.textContent = "flat"; }
+    if (!isFinite(r)) { b.className = "badge ref"; b.textContent = T("lab.flat", "flat"); }
     else {
       b.className = "badge " + (r < 0.3 ? "new" : r < 0.6 ? "mid" : "dep");
-      b.textContent = r < 0.3 ? "moves on its own" : r < 0.6 ? "partly follows loudness" : "follows loudness";
-      const n = document.createElement("b"); n.textContent = r.toFixed(2); b.appendChild(n);
-      b.title = "How closely this curve's column-to-column changes follow loudness's: " + r.toFixed(2) + " (0 unrelated, 1 lockstep)";
+      b.textContent = indepText(r);
+      const n = document.createElement("b"); n.textContent = dec(r.toFixed(2)); b.appendChild(n);
+      b.title = indepTitle(r);
     }
     ml.appendChild(b);
     const ts = d.dis[s.id] || [];
     for (const t of ts) {
       const c = document.createElement("button"); c.className = "chip"; c.type = "button";
       c.textContent = fmtT(t);
-      c.setAttribute("aria-label", "Play from " + fmtT(Math.max(0, t - 1)) + ", where " + s.name + " is high relative to loudness");
+      c.setAttribute("aria-label", T("aria.chip", "Play from {t}, where {name} is high relative to loudness", { t: fmtT(Math.max(0, t - 1)), name: midSentence(rowName(s)) }));
       c.addEventListener("click", () => { seek(Math.max(0, t - 1), true); });
       ml.appendChild(c);
     }
@@ -1170,32 +1201,32 @@ function updateLabels() {
     const ml = $("ml-" + s.id);
     ml.innerHTML = "";
     const spec = s.auto ? D3MAP[cls] : s;
-    if (s.auto) $("ds-" + s.id).textContent = ready ? spec.text : "Picks height and colour by asset class.";
+    if (s.auto) $("ds-" + s.id).textContent = ready ? T("d3." + cls, spec.text) : T("row.d3.auto", "Picks height and colour by asset class.");
     if (!ready) continue;
     const lg = document.createElement("span"); lg.className = "legend";
-    const a = document.createElement("span"); a.textContent = spec.lab[0];
+    const a = document.createElement("span"); a.textContent = word(spec.lab[0]);
     const sw = document.createElement("span"); sw.className = "swatch"; sw.style.background = rampCSS(P);
-    const b = document.createElement("span"); b.textContent = spec.lab[1];
+    const b = document.createElement("span"); b.textContent = word(spec.lab[1]);
     lg.appendChild(a); lg.appendChild(sw); lg.appendChild(b);
     ml.appendChild(lg);
     if (s.kind === "d5") {
       lg.innerHTML = "";
-      lg.appendChild(el("span", "", "low"));
+      lg.appendChild(el("span", "", word("low")));
       const sw2 = el("span", "swatch"); sw2.style.background = "linear-gradient(90deg," + P.spec6.join(",") + ")"; lg.appendChild(sw2);
-      lg.appendChild(el("span", "", "high"));
+      lg.appendChild(el("span", "", word("high")));
       const l2 = el("span", "legend"); const ls = el("span", "lineswatch"); ls.style.setProperty("--lc", P.line);
-      l2.appendChild(ls); l2.appendChild(el("span", "", "pitch")); ml.appendChild(l2);
+      l2.appendChild(ls); l2.appendChild(el("span", "", word("pitch"))); ml.appendChild(l2);
     }
     if (s.kind === "d4") {
       const l2 = document.createElement("span"); l2.className = "legend";
       const ls = document.createElement("span"); ls.className = "lineswatch"; ls.style.setProperty("--lc", P.line);
-      const lt = document.createElement("span"); lt.textContent = C.harmony ? "harmonic tension" : "no harmony line for " + C.label.toLowerCase();
+      const lt = document.createElement("span"); lt.textContent = C.harmony ? T("lab.harmonyLine", "harmonic tension") : T("lab.noHarmonyLine", "no harmony line for {cls}", { cls: midSentence(clsLabel(cls)) });
       l2.appendChild(ls); l2.appendChild(lt); ml.appendChild(l2);
     }
   }
   // class select
   const sel = $("cls");
-  sel.options[0].textContent = ready ? "Auto (" + WL.CLASSES[f.F.guess].label + ")" : "Auto";
+  sel.options[0].textContent = ready ? T("ui.cls.autoOf", "Auto ({cls})", { cls: clsLabel(f.F.guess) }) : T("ui.cls.auto", "Auto");
   sel.value = ready && f.cls ? f.cls : "auto";
   // now line
   const now = $("now");
@@ -1203,35 +1234,45 @@ function updateLabels() {
   if (f) {
     const b = document.createElement("b"); b.textContent = f.name; now.appendChild(b);
     const m = document.createElement("span");
-    m.textContent = "  " + fmtT(f.dur) + (f.dur < 60 ? " (" + f.dur.toFixed(2) + " s)" : "") + "  " + f.buf.sampleRate + " Hz  " + (f.buf.numberOfChannels > 1 ? "stereo" : "mono") + (f.ms ? "  analysed in " + (f.ms / 1000).toFixed(1) + " s" + (POOL.state === "ready" ? " (worker)" : "") : "");
+    m.textContent = "  " + fmtT(f.dur) + (f.dur < 60 ? " (" + dec(f.dur.toFixed(2)) + " s)" : "") + "  " + f.buf.sampleRate + " Hz  " + (f.buf.numberOfChannels > 1 ? T("now.stereo", "stereo") : T("now.mono", "mono")) + (f.ms ? "  " + T("now.analysed", "analysed in {s} s", { s: (f.ms / 1000).toFixed(1) }) + (POOL.state === "ready" ? " " + T("now.worker", "(worker)") : "") : "");
     now.appendChild(m);
   }
 }
 function el(tag, cls, text) { const e = document.createElement(tag); if (cls) e.className = cls; if (text !== undefined) e.textContent = text; return e; }
-function num(label, value, unit) { const s = el("span", "num"); if (label) s.appendChild(document.createTextNode(label + " ")); s.appendChild(el("b", "", value)); if (unit) s.appendChild(document.createTextNode(" " + unit)); return s; }
+function num(label, value, unit) { const s = el("span", "num"); if (label) s.appendChild(document.createTextNode(label + " ")); s.appendChild(el("b", "", dec(value))); if (unit) s.appendChild(document.createTextNode(" " + unit)); return s; }
 function fBadge(label, r) {
   const b = el("span", "badge " + (r.f >= 0.9 ? "new" : r.f >= 0.7 ? "mid" : "dep"), label);
-  const n = el("b", "", r.f.toFixed(2)); b.appendChild(n);
-  b.title = "F-measure " + r.f.toFixed(2) + ": precision " + r.p.toFixed(2) + ", recall " + r.r.toFixed(2) + " (" + r.n + " found, " + r.ref + " true, ±70 ms)";
+  const n = el("b", "", dec(r.f.toFixed(2))); b.appendChild(n);
+  b.title = T("lab.fTitle", "F-measure {f}: precision {p}, recall {r} ({n} found, {ref} true, ±70 ms)", { f: r.f.toFixed(2), p: r.p.toFixed(2), r: r.r.toFixed(2), n: r.n, ref: r.ref });
   return b;
+}
+function indepText(r) { return r < 0.3 ? T("lab.indep.own", "moves on its own") : r < 0.6 ? T("lab.indep.partly", "partly follows loudness") : T("lab.indep.follows", "follows loudness"); }
+function indepTitle(r) { return T("lab.indep.title", "How closely this curve's column-to-column changes follow loudness's: {r} (0 unrelated, 1 lockstep)", { r: r.toFixed(2) }); }
+const layerName = l => T("layer." + l.name, l.name);
+// an event's word ("noise hit up"): the object type from Schaeffer's typology and its direction
+const DIRS = { "up": "up", "down": "down", "up and down": "upDown" };
+function eventWord(e) {
+  const dir = e.dir || "", base = dir && e.word.endsWith(" " + dir) ? e.word.slice(0, -dir.length - 1) : e.word;
+  return T("obj." + e.mass + "." + e.facture, base) + (dir ? " " + T("obj.dir." + (DIRS[dir] || dir), dir) : "");
 }
 function indepBadge(ml, d, key, name) {
   const r = Math.abs(d.r[key]);
   if (!isFinite(r)) return;
-  const b = el("span", "badge " + (r < 0.3 ? "new" : r < 0.6 ? "mid" : "dep"), r < 0.3 ? "moves on its own" : r < 0.6 ? "partly follows loudness" : "follows loudness");
-  b.appendChild(el("b", "", r.toFixed(2)));
-  b.title = "How closely this curve's column-to-column changes follow loudness's: " + r.toFixed(2);
+  const b = el("span", "badge " + (r < 0.3 ? "new" : r < 0.6 ? "mid" : "dep"), indepText(r));
+  b.appendChild(el("b", "", dec(r.toFixed(2))));
+  b.title = indepTitle(r);
   ml.appendChild(b);
   for (const t of (d.dis[key] || [])) {
     const c = el("button", "chip", fmtT(t)); c.type = "button";
-    c.setAttribute("aria-label", "Play from " + fmtT(Math.max(0, t - 1)) + ", where " + name + " is high relative to loudness");
+    c.setAttribute("aria-label", T("aria.chip", "Play from {t}, where {name} is high relative to loudness", { t: fmtT(Math.max(0, t - 1)), name }));
     c.addEventListener("click", () => seek(Math.max(0, t - 1), true));
     ml.appendChild(c);
   }
 }
-function fmtS(t, dur) { return dur < 60 ? t.toFixed(2) + " s" : fmtT(t, true); }
+const matKey = m => ({ "damped (rubber, wood)": "damped", "glass-like": "glass", "metal-like": "metal", "not modal": "notModal" })[m] || m;
+function fmtS(t, dur) { return dur < 60 ? dec(t.toFixed(2)) + " s" : fmtT(t, true); }
 const BAND6 = ["20–400 Hz", "400–920 Hz", "0.9–1.7 kHz", "1.7–3.2 kHz", "3.2–6.4 kHz", "6.4–15.5 kHz"];
-function issueBadge(it) { return el("span", "badge " + ({ bad: "dep", warn: "mid", info: "ref", ok: "new" })[it.sev], it.text); }
+function issueBadge(it) { return el("span", "badge " + ({ bad: "dep", warn: "mid", info: "ref", ok: "new" })[it.sev], it.key ? T("check." + it.key, it.text, it.vars) : it.text); }
 function sfxLabels(f, ready) {
   const P = PANELS[S.panel];
   for (const s of SFXROWS) $("ml-" + s.id).innerHTML = "";
@@ -1242,17 +1283,17 @@ function sfxLabels(f, ready) {
     const ml = $("ml-x1"), tot = [0, 0, 0, 0, 0, 0];
     for (let m = 0; m < f.F.nF; m++) { const wgt = Math.pow(10, X.lev[m] / 20); for (let k = 0; k < 6; k++) tot[k] += X.bands6[k][m] * wgt; }
     const best = tot.indexOf(Math.max(...tot));
-    const lg = el("span", "legend"); lg.appendChild(el("span", "", "low"));
+    const lg = el("span", "legend"); lg.appendChild(el("span", "", word("low")));
     const sw = el("span", "swatch"); sw.style.background = "linear-gradient(90deg," + P.spec6.join(",") + ")"; lg.appendChild(sw);
-    lg.appendChild(el("span", "", "high")); ml.appendChild(lg);
-    ml.appendChild(num("most loudness in", BAND6[best]));
+    lg.appendChild(el("span", "", word("high"))); ml.appendChild(lg);
+    ml.appendChild(num(T("lab.mostLoudnessIn", "most loudness in"), BAND6[best]));
   }
   // X2: layers
   {
     const ml = $("ml-x2");
     for (const l of X.layers) {
       const s = el("span", "num"); const sw = el("span", "swatch"); sw.style.width = "10px"; sw.style.background = specColor(P, l.hz); sw.style.marginRight = "5px";
-      s.appendChild(sw); s.appendChild(el("b", "", l.name + " " + (l.hz >= 1000 ? (l.hz / 1000).toFixed(1) + " kHz" : Math.round(l.hz) + " Hz")));
+      s.appendChild(sw); s.appendChild(el("b", "", layerName(l) + " " + (l.hz >= 1000 ? (l.hz / 1000).toFixed(1) + " kHz" : Math.round(l.hz) + " Hz")));
       s.appendChild(document.createTextNode(" " + Math.round(l.share * 100) + "%, " + fmtS(l.span[0], dur) + "–" + fmtS(l.span[1], dur)));
       ml.appendChild(s);
     }
@@ -1265,17 +1306,17 @@ function sfxLabels(f, ready) {
       tonal.sort((a, b) => a - b);
       const lo = tonal[Math.floor(0.05 * (tonal.length - 1))], hi = tonal[Math.floor(0.95 * (tonal.length - 1))];
       const fmt = hz => hz >= 1000 ? (hz / 1000).toFixed(1) + " kHz" : Math.round(hz) + " Hz";
-      ml.appendChild(num("pitch", fmt(lo) + (hi / lo > 1.06 ? "–" + fmt(hi) : "")));
-    } else ml.appendChild(el("span", "mut", "No stable pitch; brightness only."));
+      ml.appendChild(num(T("lab.pitch", "pitch"), fmt(lo) + (hi / lo > 1.06 ? "–" + fmt(hi) : "")));
+    } else ml.appendChild(el("span", "mut", T("lab.noStablePitchBrightness", "No stable pitch; brightness only.")));
   }
   // X4: envelope numbers
   {
     const ml = $("ml-x4");
-    ml.appendChild(num("attack", (X.attack * 1000).toFixed(0), "ms"));
-    ml.appendChild(num("effective", fmtS(X.eff, dur)));
-    ml.appendChild(num("centre", fmtS(X.tcent, dur)));
-    if (X.t20 !== null) ml.appendChild(num("−20 dB after", fmtS(X.t20, dur)));
-    if (X.t40 !== null) ml.appendChild(num("−40 dB after", fmtS(X.t40, dur)));
+    ml.appendChild(num(T("lab.attack", "attack"), (X.attack * 1000).toFixed(0), "ms"));
+    ml.appendChild(num(T("lab.effective", "effective"), fmtS(X.eff, dur)));
+    ml.appendChild(num(T("lab.centre", "centre"), fmtS(X.tcent, dur)));
+    if (X.t20 !== null) ml.appendChild(num(T("lab.minus20DBAfter", "−20 dB after"), fmtS(X.t20, dur)));
+    if (X.t40 !== null) ml.appendChild(num(T("lab.minus40DBAfter", "−40 dB after"), fmtS(X.t40, dur)));
   }
   // X5: events, tags and score
   {
@@ -1286,41 +1327,41 @@ function sfxLabels(f, ready) {
         let bi = -1, bd = 1e9; X.events.forEach((x, i) => { const dd = Math.abs(x.t0 - e.t); if (!used.has(i) && dd < bd) { bd = dd; bi = i; } });
         if (bi >= 0 && bd <= 0.04) { used.add(bi); hit++; if (e.tag.split("|").includes(X.events[bi].tag)) tag++; }
       }
-      const b1 = el("span", "badge " + (hit === tr.length ? "new" : "mid"), "events found"); b1.appendChild(el("b", "", hit + " of " + tr.length)); ml.appendChild(b1);
-      const b2 = el("span", "badge " + (tag === tr.length ? "new" : "mid"), "tags right"); b2.appendChild(el("b", "", tag + " of " + tr.length)); ml.appendChild(b2);
-      b1.title = "True events: " + tr.map(e => e.t.toFixed(2) + " s " + e.tag).join(", ");
+      const b1 = el("span", "badge " + (hit === tr.length ? "new" : "mid"), T("lab.eventsFound", "events found")); b1.appendChild(el("b", "", T("lab.nOf", "{k} of {n}", { k: hit, n: tr.length }))); ml.appendChild(b1);
+      const b2 = el("span", "badge " + (tag === tr.length ? "new" : "mid"), T("lab.tagsRight", "tags right")); b2.appendChild(el("b", "", T("lab.nOf", "{k} of {n}", { k: tag, n: tr.length }))); ml.appendChild(b2);
+      b1.title = T("lab.trueEvents", "True events: {list}", { list: tr.map(e => e.t.toFixed(2) + " s " + e.tag).join(", ") });
     }
     X.events.slice(0, 8).forEach(e => {
-      const c = el("button", "chip", fmtS(e.t0, dur) + " " + e.tag + " " + e.word); c.type = "button";
-      c.title = e.profile + " profile, effective " + (e.eff * 1000).toFixed(0) + " ms" + (e.grains.length > 1 ? ", " + e.grains.length + " grains" : "") + (e.f0 ? ", pitch " + Math.round(e.f0) + " Hz" : "");
+      const c = el("button", "chip", fmtS(e.t0, dur) + " " + e.tag + " " + eventWord(e)); c.type = "button";
+      c.title = T("lab.evTitle", "{profile} profile, effective {ms} ms", { profile: T("profile." + e.profile.replace("/", "-"), e.profile), ms: (e.eff * 1000).toFixed(0) }) + (e.grains.length > 1 ? ", " + TP("lab.grains", e.grains.length, "{n} grain", "{n} grains") : "") + (e.f0 ? ", " + T("lab.evPitch", "pitch {hz} Hz", { hz: Math.round(e.f0) }) : "");
       c.addEventListener("click", () => seek(Math.max(0, e.t0 - 0.05), true));
       ml.appendChild(c);
     });
-    if (X.events.length > 8) ml.appendChild(el("span", "mut", "+" + (X.events.length - 8) + " more"));
+    if (X.events.length > 8) ml.appendChild(el("span", "mut", T("lab.more", "+{n} more", { n: X.events.length - 8 })));
   }
   // X6: space
   {
     const ml = $("ml-x6");
-    if (!X.stereo) ml.appendChild(el("span", "mut", "Mono file."));
-    else if (X.identical) ml.appendChild(el("span", "mut", "Both channels identical."));
+    if (!X.stereo) ml.appendChild(el("span", "mut", T("lab.monoFile", "Mono file.")));
+    else if (X.identical) ml.appendChild(el("span", "mut", T("lab.bothChannelsIdentical", "Both channels identical.")));
     else {
       const g = []; for (let m = 0; m < f.F.nF; m++) if (X.lev[m] >= X.pk - 20) g.push(m);
       if (g.length) {
         const pf = p => (p < -0.05 ? "L " : p > 0.05 ? "R " : "C ") + Math.round(Math.abs(p) * 100) + "%";
         const k3 = Math.max(1, Math.floor(g.length / 5));
         const p0 = g.slice(0, k3).reduce((a, m) => a + X.pan[m], 0) / k3, p1 = g.slice(-k3).reduce((a, m) => a + X.pan[m], 0) / k3;
-        ml.appendChild(num("pan", pf(p0) + (Math.abs(p1 - p0) > 0.2 ? " → " + pf(p1) : "")));
+        ml.appendChild(num(T("lab.pan", "pan"), pf(p0) + (Math.abs(p1 - p0) > 0.2 ? " → " + pf(p1) : "")));
         let wmax = 0; for (const m of g) wmax = Math.max(wmax, X.width[m]);
-        ml.appendChild(num("max width", wmax.toFixed(2)));
+        ml.appendChild(num(T("lab.maxWidth", "max width"), wmax.toFixed(2)));
       }
     }
   }
   // X7: checks
   {
     const ml = $("ml-x7");
-    if (!X.issues.length) { const b = el("span", "badge new", "No problems found"); ml.appendChild(b); }
+    if (!X.issues.length) { const b = el("span", "badge new", T("lab.noProblems", "No problems found")); ml.appendChild(b); }
     X.issues.forEach(it => ml.appendChild(issueBadge(it)));
-    ml.appendChild(num("peak", X.pkDb.toFixed(1), "dBFS"));
+    ml.appendChild(num(T("lab.peak", "peak"), X.pkDb.toFixed(1), "dBFS"));
   }
 }
 function rhythmLabels(f, ready, d, C) {
@@ -1330,44 +1371,44 @@ function rhythmLabels(f, ready, d, C) {
   const R = WL.rhythmOf(f.F), St = WL.structureOf(f.F), E = WL.eventsOf(f.F);
   const truth = f.truth;
   let ml = $("ml-r1");
-  ml.appendChild(num("", String(R.onsetTimes.length), "onsets"));
-  ml.appendChild(num("sound from", fmtS(E.start, f.dur)));
-  ml.appendChild(num("−30 dB at", fmtS(E.end30, f.dur)));
+  ml.appendChild(num("", String(R.onsetTimes.length), TP("lab.onsets", R.onsetTimes.length, "onset", "onsets")));
+  ml.appendChild(num(T("lab.soundFrom", "sound from"), fmtS(E.start, f.dur)));
+  ml.appendChild(num(T("lab.minus30DBAt", "−30 dB at"), fmtS(E.end30, f.dur)));
   const short = f.dur < 5;
   ml = $("ml-r2");
   if (!short) {
     if (R.tempo > 0) ml.appendChild(num("", R.tempo.toFixed(1), "BPM"));
-    if (!R.reliable) ml.appendChild(el("span", "mut", "Weak pulse: beats are a guess."));
+    if (!R.reliable) ml.appendChild(el("span", "mut", T("lab.weakPulseBeatsAre", "Weak pulse: beats are a guess.")));
     if (truth) {
       const fb = WL.beatF(R.beatTimes, truth.beats, truth.regions);
       const fd = WL.beatF(R.downTimes, truth.downbeats, truth.regions);
-      if (fb) ml.appendChild(fBadge("beats F", fb));
-      if (fd) ml.appendChild(fBadge("downbeats F", fd));
+      if (fb) ml.appendChild(fBadge(T("lab.beatsF", "beats F"), fb));
+      if (fd) ml.appendChild(fBadge(T("lab.downbeatsF", "downbeats F"), fd));
     } else if (R.beatTimes.length && R.plpTimes.length) {
       const ag = WL.beatF(R.plpTimes, R.beatTimes, null);
-      if (ag) { const b = el("span", "badge ref", "agrees with R3"); b.appendChild(el("b", "", ag.f.toFixed(2))); b.title = "F-measure between R2 and R3 beats, ±70 ms. No true beats are known for this file."; ml.appendChild(b); }
+      if (ag) { const b = el("span", "badge ref", T("lab.agreesR3", "agrees with R3")); b.appendChild(el("b", "", dec(ag.f.toFixed(2)))); b.title = T("lab.agreesR3.title", "F-measure between R2 and R3 beats, ±70 ms. No true beats are known for this file."); ml.appendChild(b); }
     }
   }
   ml = $("ml-r3");
   if (!short) {
     if (R.tempoRange[1] > 0) ml.appendChild(num("", Math.round(R.tempoRange[0]) + (Math.abs(R.tempoRange[1] - R.tempoRange[0]) >= 2 ? "–" + Math.round(R.tempoRange[1]) : ""), "BPM"));
-    if (truth) { const fp = WL.beatF(R.plpTimes, truth.beats, truth.regions); if (fp) ml.appendChild(fBadge("beats F", fp)); }
+    if (truth) { const fp = WL.beatF(R.plpTimes, truth.beats, truth.regions); if (fp) ml.appendChild(fBadge(T("lab.beatsF", "beats F"), fp)); }
   }
   ml = $("ml-r4");
   if (!short) {
-    ml.appendChild(num("median", R.medClar.toFixed(2)));
+    ml.appendChild(num(T("lab.median", "median"), R.medClar.toFixed(2)));
     const lg = el("span", "legend");
     lg.appendChild(el("span", "", "60"));
     const sw = el("span", "swatch"); sw.style.background = rampCSS(P); lg.appendChild(sw);
     lg.appendChild(el("span", "", "180 BPM"));
     ml.appendChild(lg);
-    indepBadge(ml, d, "r4", "pulse clarity");
+    indepBadge(ml, d, "r4", T("lab.name.r4", "pulse clarity"));
   }
   ml = $("ml-s1");
   if (!St.tooShort) {
-    ml.appendChild(num("", String(St.bounds.length), St.bounds.length === 1 ? "boundary" : "boundaries"));
-    ml.appendChild(num("kernel ±", (St.L * St.blk).toFixed(1), "s"));
-    indepBadge(ml, d, "s1", "structural novelty");
+    ml.appendChild(num("", String(St.bounds.length), TP("lab.boundaries", St.bounds.length, "boundary", "boundaries")));
+    ml.appendChild(num(T("lab.kernelPm", "kernel ±"), (St.L * St.blk).toFixed(1), "s"));
+    indepBadge(ml, d, "s1", T("lab.name.s1", "structural novelty"));
   }
   ml = $("ml-s2");
   if (!St.tooShort) {
@@ -1376,7 +1417,7 @@ function rhythmLabels(f, ready, d, C) {
     if (truth && f.segments) {
       const tb = f.segments.slice(1).map(s => s.t0);
       const hit = tb.filter(t => St.bounds.some(b => Math.abs(b - t) <= 1)).length;
-      ml.appendChild(num("true boundaries found", hit + " of " + tb.length));
+      ml.appendChild(num(T("lab.trueBounds", "true boundaries found"), T("lab.nOf", "{k} of {n}", { k: hit, n: tb.length })));
     }
   }
 }
@@ -1385,42 +1426,42 @@ function descLabels(f, ready, d) {
   if (!ready || !f.F._desc) return;
   const S2 = f.F._desc.summary, fx = (v, n) => Number.isFinite(v) ? v.toFixed(n) : "–";
   let ml = $("ml-n1"), K = S2.kurtosis;
-  ml.appendChild(num("K", fx(K.K, 2)));
-  if (K.band) ml.appendChild(num("most impulsive", (K.band[0] >= 1000 ? K.band[0] / 1000 + "–" + K.band[1] / 1000 + " kHz" : K.band[0] + "–" + K.band[1] + " Hz"), "(K " + fx(K.Kmax, 1) + ")"));
-  ml.appendChild(el("span", "mut", K.K < -0.5 ? "tonal" : K.K < 0.5 ? "noise-like" : K.K < 5 ? "intermittent" : "impulsive"));
-  indepBadge(ml, d, "n1", "impulsiveness");
+  ml.appendChild(num(T("lab.k", "K"), fx(K.K, 2)));
+  if (K.band) ml.appendChild(num(T("lab.mostImpulsive", "most impulsive"), (K.band[0] >= 1000 ? K.band[0] / 1000 + "–" + K.band[1] / 1000 + " kHz" : K.band[0] + "–" + K.band[1] + " Hz"), "(K " + fx(K.Kmax, 1) + ")"));
+  ml.appendChild(el("span", "mut", K.K < -0.5 ? T("lab.kurt.tonal", "tonal") : K.K < 0.5 ? T("lab.kurt.noise", "noise-like") : K.K < 5 ? T("lab.kurt.intermittent", "intermittent") : T("lab.kurt.impulsive", "impulsive")));
+  indepBadge(ml, d, "n1", T("lab.name.n1", "impulsiveness"));
   ml = $("ml-n2"); const Rp = S2.repetition;
-  if (Number.isFinite(Rp.hz)) { ml.appendChild(num("", fx(Rp.hz, Rp.hz < 10 ? 2 : 1), "Hz")); if (Rp.hz < 4) ml.appendChild(num("", fx(Rp.hz * 60, 0), "per minute")); ml.appendChild(num("clarity", fx(Rp.prom, 0), "dB")); if (Number.isFinite(Rp.cycles) && f.dur < 30) ml.appendChild(num("loop", fx(Rp.cycles, 2), "cycles")); }
-  else ml.appendChild(el("span", "mut", "No steady repetition"));
-  if (Number.isFinite(Rp.speech)) { ml.appendChild(num("speech-rate modulation", (Rp.speech >= 0 ? "+" : "") + fx(Rp.speech, 0), "dB")); ml.appendChild(el("span", "mut", "experimental")); }
-  indepBadge(ml, d, "n2", "repetition");
+  if (Number.isFinite(Rp.hz)) { ml.appendChild(num("", fx(Rp.hz, Rp.hz < 10 ? 2 : 1), "Hz")); if (Rp.hz < 4) ml.appendChild(num("", fx(Rp.hz * 60, 0), T("lab.perMinute", "per minute"))); ml.appendChild(num(T("lab.clarity", "clarity"), fx(Rp.prom, 0), "dB")); if (Number.isFinite(Rp.cycles) && f.dur < 30) ml.appendChild(num(T("lab.loop", "loop"), fx(Rp.cycles, 2), T("lab.cycles", "cycles"))); }
+  else ml.appendChild(el("span", "mut", T("lab.noSteadyRepetition", "No steady repetition")));
+  if (Number.isFinite(Rp.speech)) { ml.appendChild(num(T("lab.speechRateModulation", "speech-rate modulation"), (Rp.speech >= 0 ? "+" : "") + fx(Rp.speech, 0), "dB")); ml.appendChild(el("span", "mut", T("lab.experimental", "experimental"))); }
+  indepBadge(ml, d, "n2", T("lab.name.n2", "repetition"));
   ml = $("ml-n3"); const E = S2.events;
-  ml.appendChild(num("", String(E.n), E.n === 1 ? "event" : "events")); ml.appendChild(num("", fx(E.rate, 1), "/s"));
-  if (Number.isFinite(E.meanDur)) ml.appendChild(num("mean", fx(E.meanDur * 1000, 0), "ms"));
-  if (Number.isFinite(E.B)) ml.appendChild(num("burstiness", fx(E.B, 2), E.B < -0.5 ? "regular" : E.B < 0.2 ? "random" : "clustered"));
-  if (Number.isFinite(E.bValue) && E.bN >= 50) ml.appendChild(num("b-value", fx(E.bValue, 2), E.bValue > 1.5 ? "many small" : E.bValue < 0.8 ? "few big" : ""));
-  ml.appendChild(num("temporal entropy", fx(E.Ht, 2), E.Ht < 0.7 ? "transient" : E.Ht > 0.95 ? "steady" : ""));
+  ml.appendChild(num("", String(E.n), TP("lab.events", E.n, "event", "events"))); ml.appendChild(num("", fx(E.rate, 1), "/s"));
+  if (Number.isFinite(E.meanDur)) ml.appendChild(num(T("lab.mean", "mean"), fx(E.meanDur * 1000, 0), "ms"));
+  if (Number.isFinite(E.B)) ml.appendChild(num(T("lab.burstiness", "burstiness"), fx(E.B, 2), E.B < -0.5 ? T("lab.b.regular", "regular") : E.B < 0.2 ? T("lab.b.random", "random") : T("lab.b.clustered", "clustered")));
+  if (Number.isFinite(E.bValue) && E.bN >= 50) ml.appendChild(num(T("lab.bValue", "b-value"), fx(E.bValue, 2), E.bValue > 1.5 ? T("lab.bv.manySmall", "many small") : E.bValue < 0.8 ? T("lab.bv.fewBig", "few big") : ""));
+  ml.appendChild(num(T("lab.temporalEntropy", "temporal entropy"), fx(E.Ht, 2), E.Ht < 0.7 ? T("lab.ht.transient", "transient") : E.Ht > 0.95 ? T("lab.ht.steady", "steady") : ""));
   ml = $("ml-n4"); const Mo = S2.motion;
-  ml.appendChild(num("rise", fx(Mo.up, 1), "oct/s")); ml.appendChild(num("fall", fx(Mo.down, 1), "oct/s"));
-  if (Number.isFinite(Mo.net)) ml.appendChild(num("net glide", (Mo.net >= 0 ? "+" : "") + fx(Mo.net, 1), "oct"));
-  indepBadge(ml, d, "n4", "spectral motion");
+  ml.appendChild(num(T("lab.rise", "rise"), fx(Mo.up, 1), "oct/s")); ml.appendChild(num(T("lab.fall", "fall"), fx(Mo.down, 1), "oct/s"));
+  if (Number.isFinite(Mo.net)) ml.appendChild(num(T("lab.netGlide", "net glide"), (Mo.net >= 0 ? "+" : "") + fx(Mo.net, 1), "oct"));
+  indepBadge(ml, d, "n4", T("lab.name.n4", "spectral motion"));
   ml = $("ml-n5"); const Pe = S2.periodicity;
-  ml.appendChild(num("CPP", fx(Pe.cpp, 0), "dB")); ml.appendChild(num("phase coherence", fx(Pe.pci, 2)));
-  indepBadge(ml, d, "n5", "periodicity");
+  ml.appendChild(num(T("lab.cpp", "CPP"), fx(Pe.cpp, 0), "dB")); ml.appendChild(num(T("lab.phaseCoherence", "phase coherence"), fx(Pe.pci, 2)));
+  indepBadge(ml, d, "n5", T("lab.name.n5", "periodicity"));
   ml = $("ml-n6"); const Ar = S2.arrow;
-  if (Number.isFinite(Ar.T20)) { ml.appendChild(num("T(5, 20, 80 ms)", [Ar.T5, Ar.T20, Ar.T80].map(v => fx(v, 1)).join(", "))); ml.appendChild(el("span", "mut", Ar.T20 > 0.5 ? "impact-like" : Ar.T20 < -0.5 ? "swell or reversed" : "no clear direction")); }
-  else ml.appendChild(el("span", "mut", "Steady: no direction"));
-  indepBadge(ml, d, "n6", "arrow of time");
+  if (Number.isFinite(Ar.T20)) { ml.appendChild(num(T("lab.t52080", "T(5, 20, 80 ms)"), [Ar.T5, Ar.T20, Ar.T80].map(v => fx(v, 1)).join(" / "))); ml.appendChild(el("span", "mut", Ar.T20 > 0.5 ? T("lab.arrow.impact", "impact-like") : Ar.T20 < -0.5 ? T("lab.arrow.swell", "swell or reversed") : T("lab.arrow.none", "no clear direction"))); }
+  else ml.appendChild(el("span", "mut", T("lab.steadyNoDirection", "Steady: no direction")));
+  indepBadge(ml, d, "n6", T("lab.name.n6", "arrow of time"));
   ml = $("ml-n7"); const In = S2.info;
-  if (In.K) { ml.appendChild(num("predictive information", fx(In.pir, 2), "nats")); ml.appendChild(num("surprisal", fx(In.surprisal, 2), "nats")); ml.appendChild(num("", String(In.K), "timbre symbols")); }
-  indepBadge(ml, d, "n7", "interest");
+  if (In.K) { ml.appendChild(num(T("lab.predictiveInformation", "predictive information"), fx(In.pir, 2), "nats")); ml.appendChild(num(T("lab.surprisal", "surprisal"), fx(In.surprisal, 2), "nats")); ml.appendChild(num("", String(In.K), TP("lab.timbreSymbols", In.K, "timbre symbol", "timbre symbols"))); }
+  indepBadge(ml, d, "n7", T("lab.name.n7", "interest"));
   ml = $("ml-n8"); const Rc = S2.recurrence;
-  if (Number.isFinite(Rc.RR)) { ml.appendChild(num("recurs", fx(Rc.RR * 100, 0), "%")); ml.appendChild(num("determinism", fx(Rc.DET, 2))); ml.appendChild(num("laminarity", fx(Rc.LAM, 2))); if (Number.isFinite(Rc.TT)) ml.appendChild(num("held", fx(Rc.TT, 1), "s")); }
-  else ml.appendChild(el("span", "mut", "Too short"));
-  indepBadge(ml, d, "n8", "recurrence");
+  if (Number.isFinite(Rc.RR)) { ml.appendChild(num(T("lab.recurrenceRate", "recurrence rate"), fx(Rc.RR * 100, 0), "%")); ml.appendChild(num(T("lab.determinism", "determinism"), fx(Rc.DET, 2))); ml.appendChild(num(T("lab.laminarity", "laminarity"), fx(Rc.LAM, 2))); if (Number.isFinite(Rc.TT)) ml.appendChild(num(T("lab.held", "held"), fx(Rc.TT, 1), "s")); }
+  else ml.appendChild(el("span", "mut", T("lab.tooShort", "Too short")));
+  indepBadge(ml, d, "n8", T("lab.name.n8", "recurrence"));
   ml = $("ml-n9"); const De = S2.decay;
-  if (De.n) { ml.appendChild(num("ring time", De.t60 < 1 ? fx(De.t60 * 1000, 0) : fx(De.t60, 2), De.t60 < 1 ? "ms" : "s")); if (Number.isFinite(De.logTau)) ml.appendChild(num("log τd", fx(De.logTau, 2))); if (De.material) ml.appendChild(num("", De.material)); if (De.material && effClass(f) !== "sfx") ml.appendChild(el("span", "mut", "unreliable on mixes")); ml.appendChild(num("", String(De.n), De.n === 1 ? "decay" : "decays")); }
-  else ml.appendChild(el("span", "mut", "No free decays found"));
+  if (De.n) { ml.appendChild(num(T("lab.decayTime", "decay time"), De.t60 < 1 ? fx(De.t60 * 1000, 0) : fx(De.t60, 2), De.t60 < 1 ? "ms" : "s")); if (Number.isFinite(De.logTau)) ml.appendChild(num(T("lab.logTaud", "log τd"), fx(De.logTau, 2))); if (De.material) ml.appendChild(num("", T("mat." + matKey(De.material), De.material))); if (De.material && effClass(f) !== "sfx") ml.appendChild(el("span", "mut", T("lab.unreliableMixes", "unreliable on mixes"))); ml.appendChild(num("", String(De.n), TP("lab.decays", De.n, "decay", "decays"))); }
+  else ml.appendChild(el("span", "mut", T("lab.noFreeDecaysFound", "No free decays found")));
 }
 function renderMatrix() {
   const t = $("matrix");
@@ -1428,7 +1469,8 @@ function renderMatrix() {
   const f = S.sel;
   if (!f || !f.F) return;
   const d = diagOf(f);
-  const label = { peak: "Peak", c1: "C1 Loudness", c2: "C2 Activity", c3: "C3 Arousal", c4: "C4 Harshness", c5: "C5 Tension", c6: "C6 Harmony", c7: "C7 Novelty", r4: "R4 Clarity", s1: "S1 Structure", n1: "N1 Impulsiveness", n2: "N2 Repetition", n4: "N4 Motion", n5: "N5 Periodicity", n6: "N6 Arrow", n7: "N7 Interest", n8: "N8 Recurrence" };
+  const label0 = { peak: "Peak", c1: "C1 Loudness", c2: "C2 Activity", c3: "C3 Arousal", c4: "C4 Harshness", c5: "C5 Tension", c6: "C6 Harmony", c7: "C7 Novelty", r4: "R4 Clarity", s1: "S1 Structure", n1: "N1 Impulsiveness", n2: "N2 Repetition", n4: "N4 Motion", n5: "N5 Periodicity", n6: "N6 Arrow", n7: "N7 Interest", n8: "N8 Recurrence" };
+  const label = Object.fromEntries(Object.entries(label0).map(([k, v]) => [k, T("matrix." + k, v)]));
   const head = document.createElement("tr");
   head.appendChild(document.createElement("th"));
   d.names.forEach(n => { const th = document.createElement("th"); th.textContent = label[n].split(" ")[0]; th.title = label[n]; head.appendChild(th); });
@@ -1467,7 +1509,7 @@ function renderLibrary() {
       const n = document.createElement("div"); n.className = "fname"; n.textContent = f.name; a.appendChild(n);
       const m = document.createElement("div"); m.className = "fmeta"; m.id = "fm-" + f.id; a.appendChild(m);
       const b = document.createElement("div");
-      const cv = document.createElement("canvas"); cv.className = "strip"; cv.id = "th-" + f.id; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", "Thumbnail of " + f.name);
+      const cv = document.createElement("canvas"); cv.className = "strip"; cv.id = "th-" + f.id; cv.setAttribute("role", "img"); cv.setAttribute("aria-label", T("aria.thumb", "Thumbnail of {file}", { file: f.name }));
       b.appendChild(cv);
       row.appendChild(a); row.appendChild(b);
       const pick = () => { if (f.F) { S.sel = f; stopAudio(); offset = 0; render(); } };
@@ -1481,7 +1523,7 @@ function renderLibrary() {
     if (!row) continue;
     row.classList.toggle("sel", f === S.sel);
     const m = $("fm-" + f.id);
-    m.textContent = f.F ? fmtS(f.dur, f.dur) + "  " + WL.CLASSES[effClass(f)].label : (f.error ? f.error : "Analysing…");
+    m.textContent = f.F ? fmtS(f.dur, f.dur) + "  " + clsLabel(effClass(f)) : (f.error ? f.error : T("status.analysingShort", "Analysing…"));
     const cv = $("th-" + f.id);
     const cols = Math.max(50, Math.floor(cv.clientWidth || 600));
     const th = S.thumb === "auto" ? (f.F && effClass(f) === "sfx" ? "d5" : "d4") : S.thumb;
@@ -1566,16 +1608,20 @@ function analyseInWorker(rec, progress) {
   return new Promise((resolve, reject) => { POOL.waiting.push({ id: POOL.next++, buf: rec.buf, name: rec.name, progress, resolve, reject }); pumpPool(); });
 }
 async function analyseOnMainThread(rec) {
-  const F = await WL.analyse(rec.buf, p => setStatus("Analysing " + rec.name + ": " + Math.round(p * 100) + "%"));
-  setStatus("Finding beats and sections in " + rec.name + "…"); await paint();
+  const F = await WL.analyse(rec.buf, p => setStatus(T("status.analysingP", "Analysing {file}: {p}%", { file: rec.name, p: Math.round(p * 100) })));
+  setStatus(T("status.rhythm", "Finding beats and sections in {file}…", { file: rec.name })); await paint();
   WL.rhythmOf(F); WL.structureOf(F); WL.eventsOf(F);
-  setStatus("Describing sound objects in " + rec.name + "…"); await paint();
+  setStatus(T("status.sfx", "Describing sound objects in {file}…", { file: rec.name })); await paint();
   WL.sfxOf(F, rec.buf, rec.name);
-  setStatus("Describing " + rec.name + " with cross-field measures…"); await paint();
+  setStatus(T("status.descriptors", "Describing {file} with cross-field measures…", { file: rec.name })); await paint();
   await PHD.describe(F, rec.buf);
   return F;
 }
-const STAGE_TEXT = { features: "Analysing", rhythm: "Finding beats and sections in", sfx: "Describing sound objects in", descriptors: "Describing" };
+const stageText = (stage, file, p) => {
+  const v = { file }, base = stage === "rhythm" ? T("status.stage.rhythm", "Finding beats and sections in {file}", v) : stage === "sfx" ? T("status.stage.sfx", "Describing sound objects in {file}", v)
+    : stage === "descriptors" ? T("status.stage.descriptors", "Describing {file} with cross-field measures", v) : T("status.stage.features", "Analysing {file}", v);
+  return p !== undefined ? base + ": " + Math.round(p * 100) + "%" : base + "…";
+};
 function addFile(rec, select) {
   rec.id = S.nextId++;
   S.files.push(rec);
@@ -1584,11 +1630,11 @@ function addFile(rec, select) {
   const finish = () => { S.active--; if (!S.active) setStatus(""); };
   const job = async useWorker => {
     try {
-      setStatus("Analysing " + rec.name + "…");
+      setStatus(T("status.analysing", "Analysing {file}…", { file: rec.name }));
       let F = null;
       if (useWorker) {
         const t0 = performance.now();
-        try { F = await analyseInWorker(rec, (stage, p) => setStatus((STAGE_TEXT[stage] || "Analysing") + " " + rec.name + (p !== undefined ? ": " + Math.round(p * 100) + "%" : "…") + (S.active > 1 ? " (" + S.active + " files in progress)" : ""))); rec.ms = performance.now() - t0; }
+        try { F = await analyseInWorker(rec, (stage, p) => setStatus(stageText(stage, rec.name, p) + (S.active > 1 ? " " + TP("status.inProgress", S.active, "(one file in progress)", "({n} files in progress)") : ""))); rec.ms = performance.now() - t0; }
         catch (e) { if (!e.fallback) throw e; }
       }
       if (!F) { await paint(); const t0 = performance.now(); F = await analyseOnMainThread(rec); rec.ms = performance.now() - t0; }
@@ -1599,17 +1645,17 @@ function addFile(rec, select) {
       render();
       if (S.fxLast && S.fxLast.outIds.includes(rec.id)) renderFxResult();
     } catch (e) {
-      rec.error = "Analysis failed";
-      setStatus("Couldn't analyse " + rec.name + ". " + (e && e.message ? e.message : ""), true);
+      rec.error = T("status.failedShort", "Analysis failed");
+      setStatus(T("status.failed", "Couldn't analyse {file}.", { file: rec.name }) + " " + (e && e.message ? e.message : ""), true);
       renderLibrary();
-    } finally { finish(); if (rec.error) setStatus("Couldn't analyse " + rec.name + ".", true); }
+    } finally { finish(); if (rec.error) setStatus(T("status.failed", "Couldn't analyse {file}.", { file: rec.name }), true); }
   };
   // workers run files in parallel; the main-thread fallback runs them one after another
   const p = poolReady().then(ok => ok ? job(true) : (S.queue = S.queue.then(() => job(false))));
   return p;
 }
 async function addKit(selectName) {
-  setStatus("Building the SFX kit…");
+  setStatus(T("status.kit", "Building the SFX kit…"));
   await paint();
   const kit = WLProbes.makeSfxKit(44100, WL.kFilterCoeffs);
   let last;
@@ -1617,7 +1663,7 @@ async function addKit(selectName) {
   return last;
 }
 async function addProbe(kind, select) {
-  setStatus(kind === "arc" ? "Building the cue arc…" : kind === "ramp" ? "Building the tempo ramp…" : kind === "tour" ? "Building the descriptor tour…" : "Building the probe suite…");
+  setStatus(kind === "arc" ? T("status.arc", "Building the cue arc…") : kind === "ramp" ? T("status.ramp", "Building the tempo ramp…") : kind === "tour" ? T("status.tour", "Building the descriptor tour…") : T("status.probe", "Building the probe suite…"));
   await paint();
   const buf = kind === "arc" ? WLProbes.makeCueArc(44100, WL.kFilterCoeffs) : kind === "ramp" ? WLProbes.makeTempoRamp(44100, WL.kFilterCoeffs) : kind === "tour" ? WLProbes.makeDescriptorTour(44100) : WLProbes.makeProbeSuite(44100, WL.kFilterCoeffs);
   return addFile({ name: buf.name, kind: "probe", buf, segments: buf.segments, truth: buf.truth || null, dur: buf.duration }, select);
@@ -1634,13 +1680,13 @@ async function loadFiles(list) {
   const files = Array.from(list).filter(f => f && f.size);
   let first = true;
   for (const file of files) {
-    setStatus("Decoding " + file.name + "…");
+    setStatus(T("status.decoding", "Decoding {file}…", { file: file.name }));
     try {
       const buf = await decodeFile(file);
       addFile({ name: file.name, kind: "file", buf, audio: buf, dur: buf.duration }, first);
       first = false;
     } catch (e) {
-      setStatus("Couldn't decode " + file.name + ". Try WAV, OGG, MP3 or FLAC; Safari can't decode OGG.", true);
+      setStatus(T("status.decodeFailed", "Couldn't decode {file}. Try WAV, OGG, MP3 or FLAC; Safari can't decode OGG.", { file: file.name }), true);
     }
   }
 }
@@ -1660,7 +1706,7 @@ function stopAudio() {
   stopAudition();
   if (src) { try { src.onended = null; src.stop(); } catch (e) { /* already stopped */ } src.disconnect(); src = null; }
   playing = false; cancelAnimationFrame(raf);
-  $("play").textContent = "Play";
+  $("play").textContent = T("ui.play", "Play");
 }
 function play() {
   const f = S.sel; if (!f || !f.F) return;
@@ -1672,7 +1718,7 @@ function play() {
   src = c.createBufferSource(); src.buffer = b; src.connect(c.destination);
   src.start(0, offset);
   startAt = c.currentTime; playing = true;
-  $("play").textContent = "Pause";
+  $("play").textContent = T("ui.pause", "Pause");
   src.onended = () => { if (playing) { offset = 0; stopAudio(); placeHead(0); } };
   loop();
 }
@@ -1717,9 +1763,9 @@ $("open").addEventListener("click", () => $("file").click());
 // footer: copy the citation (falls back to selecting it where the clipboard is blocked, e.g. in sandboxed frames)
 if ($("copycite")) $("copycite").addEventListener("click", async () => {
   const b = $("copycite"), text = $("ph-cite").textContent.replace(/\s+/g, " ").trim();
-  try { await navigator.clipboard.writeText(text); b.textContent = "Copied"; }
-  catch (e) { const r = document.createRange(); r.selectNodeContents($("ph-cite")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = "Selected, now copy it"; }
-  setTimeout(() => { b.textContent = "Copy citation"; }, 2500);
+  try { await navigator.clipboard.writeText(text); b.textContent = T("ui.copied", "Copied"); }
+  catch (e) { const r = document.createRange(); r.selectNodeContents($("ph-cite")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = T("ui.selectCopy", "Selected, now copy it"); }
+  setTimeout(() => { b.textContent = T("foot.copy", "Copy citation"); }, 2500);
 });
 $("file").addEventListener("change", e => { if (e.target.files.length) loadFiles(e.target.files); e.target.value = ""; });
 $("play").addEventListener("click", () => { playing ? pause() : play(); });
@@ -1768,10 +1814,31 @@ window.addEventListener("resize", () => {
   }, 120);
 });
 
+// language: ?lang=, the last choice, or the browser's; the menu lists the languages that have translations
+if (I18N) {
+  I18N.setLanguage(I18N.preferred(), { remember: false });
+  const pick = $("lang");
+  if (pick) {
+    for (const [code, name] of I18N.available()) { const o = el("option", "", name); o.value = code; o.lang = code; pick.appendChild(o); }
+    pick.value = I18N.language;
+    pick.closest("label").hidden = pick.options.length < 2;
+    pick.addEventListener("change", () => I18N.setLanguage(pick.value));
+  }
+}
 buildRows();
 buildComposer();
+$("ghost").addEventListener("change", () => { if (cmpShow) cmpShow(); });
 hookScopes();
 render();
+if (I18N) I18N.onChange(lang => {
+  if ($("lang")) $("lang").value = lang;
+  relabelRows();
+  buildComposer();
+  $("toolpick").innerHTML = "";
+  setStatus("");
+  render();
+  $("play").textContent = playing ? T("ui.pause", "Pause") : T("ui.play", "Play");
+});
 (async () => {
   await addKit("Gun_Pistol_Shot_02.wav");
   await addProbe("arc", false);
