@@ -1760,13 +1760,14 @@ $("ghost").checked = !!S.ghost;
 $("ghost").addEventListener("change", e => { S.ghost = e.target.checked; store.set("ghost", S.ghost); render(); });
 $("cls").addEventListener("change", e => { const f = S.sel; if (!f) return; f.cls = e.target.value === "auto" ? null : e.target.value; render(); });
 $("open").addEventListener("click", () => $("file").click());
-// footer: copy the citation (falls back to selecting it where the clipboard is blocked, e.g. in sandboxed frames)
-if ($("copycite")) $("copycite").addEventListener("click", async () => {
-  const b = $("copycite"), text = $("ph-cite").textContent.replace(/\s+/g, " ").trim();
+// footer: copy a citation, the software's or the paper's (falls back to selecting it where the clipboard is blocked,
+// e.g. in sandboxed frames)
+document.querySelectorAll("button[data-copy]").forEach(b => b.addEventListener("click", async () => {
+  const src = $(b.dataset.copy), label = b.textContent, text = src.textContent.replace(/\s+/g, " ").trim();
   try { await navigator.clipboard.writeText(text); b.textContent = T("ui.copied", "Copied"); }
-  catch (e) { const r = document.createRange(); r.selectNodeContents($("ph-cite")); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = T("ui.selectCopy", "Selected, now copy it"); }
-  setTimeout(() => { b.textContent = T("foot.copy", "Copy citation"); }, 2500);
-});
+  catch (e) { const r = document.createRange(); r.selectNodeContents(src); const s = getSelection(); s.removeAllRanges(); s.addRange(r); b.textContent = T("ui.selectCopy", "Selected, now copy it"); }
+  setTimeout(() => { b.textContent = label; }, 2500);
+}));
 $("file").addEventListener("change", e => { if (e.target.files.length) loadFiles(e.target.files); e.target.value = ""; });
 $("play").addEventListener("click", () => { playing ? pause() : play(); });
 $("loadArc").addEventListener("click", () => addProbe("arc", true));
@@ -1824,6 +1825,10 @@ if (I18N) {
     pick.closest("label").hidden = pick.options.length < 2;
     pick.addEventListener("change", () => I18N.setLanguage(pick.value));
   }
+  // "Comment on the translation": a GitHub form, with the language filled in
+  const comment = $("lang-comment");
+  const commentLink = l => { if (!comment) return; comment.hidden = l === "en"; comment.href = "https://github.com/eigensoundlab/playhead/issues/new?template=translation.yml&title=" + encodeURIComponent("Translation (" + (I18N.languages[l] || l) + "): ") + "&language=" + encodeURIComponent(l); };
+  commentLink(I18N.language); I18N.onChange(commentLink);
   const enBox = $("lang-en");
   if (enBox) {
     enBox.checked = I18N.englishTerms;

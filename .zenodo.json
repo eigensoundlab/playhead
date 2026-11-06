@@ -26,5 +26,13 @@
     "Web Audio",
     "digital signal processing"
   ],
-  "notes": "The corpus, ESC-50 and EQ-comparison results reported in README.md, experiments/ and paper/ were produced with version 0.1.0 (10.5281/zenodo.23932626); the comparison of event levelling with a compressor (experiments/compression) with this version. Third-party audio used in the experiments (ESC-50, Sonic Pi samples, librosa examples) is not included; tools/fetch-corpus.sh and experiments/esc50/README.md describe how to obtain it."
+  "notes": "The corpus, ESC-50 and EQ-comparison results reported in README.md, experiments/ and paper/ were produced with version 0.1.0 (10.5281/zenodo.23932626); the comparison of event levelling with a compressor (experiments/compression) with this version. Third-party audio used in the experiments (ESC-50, Sonic Pi samples, librosa examples) is not included; tools/fetch-corpus.sh and experiments/esc50/README.md describe how to obtain it.",
+  "related_identifiers": [
+    {
+      "identifier": "10.5281/zenodo.24008127",
+      "relation": "isDescribedBy",
+      "resource_type": "publication-preprint",
+      "scheme": "doi"
+    }
+  ]
 }

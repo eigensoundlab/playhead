@@ -1,0 +1,51 @@
+name: Translation
+description: A better word, a clumsy sentence or a mistake in a translation of the lab
+title: "Translation: "
+labels: ["translation"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you. For a technical term (harshness, look, onset …) you can also choose between the alternatives on the
+        [sound vocabulary's review sheet](https://eigensoundlab.github.io/sound-vocabulary/), which every app and
+        document uses; this form is for everything else, and for terms too if you prefer.
+  - type: input
+    id: language
+    attributes:
+      label: Language
+      description: cs, de, es, pl, ru (filled in by the lab)
+    validations:
+      required: true
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What is it about?
+      options:
+        - A term
+        - Wording or style
+        - A mistake
+        - Text still in English
+        - Too long, cut off or overlapping
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: The section, strip, tool or button, e.g. "C4", "De-harsh", "the composer".
+  - type: textarea
+    id: current
+    attributes:
+      label: The text now
+  - type: textarea
+    id: suggestion
+    attributes:
+      label: Your suggestion
+    validations:
+      required: true
+  - type: dropdown
+    id: native
+    attributes:
+      label: Is this your native language?
+      options:
+        - "Yes"
+        - "No, but I work in it"
+        - "No"

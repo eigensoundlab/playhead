@@ -3,6 +3,7 @@
 **A waveform plus one or two lines that show what the waveform can't: intensity, busyness, tension, beats, sections and the kind of event, for music and game sound effects. The same analysis then drives editing, mixing and mastering tools.**
 
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23932625.svg)](https://doi.org/10.5281/zenodo.23932625)
+[![Paper](https://img.shields.io/badge/paper-10.5281%2Fzenodo.24008127-blue)](https://doi.org/10.5281/zenodo.24008127)
 
 Live: <https://eigensoundlab.github.io/playhead/> · Author: Daniel Sandner ([ORCID 0000-0002-1041-814X](https://orcid.org/0000-0002-1041-814X)) · Licence: Apache-2.0
 
@@ -390,7 +391,11 @@ The Asset Store submission guidelines (§1.2.b) currently exclude packages carry
 - `experiments/paper/robot-hit-steel.wav`, a sound by the author used for one of the paper's figures: CC BY 4.0.
 - Audio you process with Playhead is yours; the tool claims no rights in its output.
 
-Cite the version you used. The corpus, ESC-50 and EQ-comparison results reported here were produced with 0.1.0:
+The method and its evaluation are described in the paper (preprint):
+
+> Sandner, D. (2026). *Playhead Beyond the Waveform: Cross-Field Descriptors for Sound Design* [Preprint]. Zenodo. https://doi.org/10.5281/zenodo.24008128
+
+All versions of the paper: [10.5281/zenodo.24008127](https://doi.org/10.5281/zenodo.24008127). To cite the software, cite the version you used. The corpus, ESC-50 and EQ-comparison results reported here were produced with 0.1.0:
 
 > Sandner, D. (2026). *Playhead: overview curves and analysis-driven tools for music and game audio* (Version 0.1.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23932626
 
@@ -398,11 +403,11 @@ For 0.2.0:
 
 > Sandner, D. (2026). *Playhead: overview curves and analysis-driven tools for music and game audio* (Version 0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23985438
 
-To refer to the software in general, use the concept DOI [10.5281/zenodo.23932625](https://doi.org/10.5281/zenodo.23932625), which always resolves to the latest version. [CITATION.cff](CITATION.cff) lists them all (GitHub shows a "Cite this repository" button).
+To refer to the software in general, use the concept DOI [10.5281/zenodo.23932625](https://doi.org/10.5281/zenodo.23932625), which always resolves to the latest version. [CITATION.cff](CITATION.cff) lists them all, with the paper as the preferred citation (GitHub's "Cite this repository" button shows it).
 
 ### Releasing
 
 1. Set the new version in `package.json`, `CITATION.cff`, `.zenodo.json` and the footer and citation in `index.html`; `npm test` fails if they disagree.
 2. Tag `vX.Y.Z` and publish a GitHub release. With the repository switched on in Zenodo's GitHub settings, Zenodo archives the release and mints a DOI, using `.zenodo.json` (which takes precedence over `CITATION.cff`).
 3. Zenodo mints a new version DOI for each release; the concept DOI (10.5281/zenodo.23932625) stays the same. After the release, add the new version DOI to `CITATION.cff` (`identifiers`) and to the footer citation in `index.html`, and update `date-released`. GitHub Pages serves the main branch, so the live app shows it even though the archived release cannot contain its own DOI.
-4. When the paper is out, add it as `preferred-citation` in `CITATION.cff`, as a related identifier (`isDescribedBy`) in `.zenodo.json`, and as a link in the footer.
+4. The paper is the `preferred-citation` in `CITATION.cff`, a related identifier (`isDescribedBy`) in `.zenodo.json` and a link in the footer; a new version of the paper changes its version DOI in those three places and in this section.

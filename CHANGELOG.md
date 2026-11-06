@@ -17,6 +17,10 @@
   (harshness)", written `[[tvrdost|harshness]]`; a checkbox under the language menu turns it off. Czech has it
   throughout, with the terms its author chose on the vocabulary's review sheet (tvrdost, saturace úderů, srovnat
   hlasitost událostí, nečekaná změna spektra, změna struktury, tvarování napětí, směr času).
+- **The paper** (preprint, [10.5281/zenodo.24008127](https://doi.org/10.5281/zenodo.24008127)) is linked in the footer,
+  with its citation beside the software's, and is the preferred citation in `CITATION.cff`. The footer also links the
+  sound vocabulary, and "Comment on the translation" under the language menu opens a GitHub form with the language
+  filled in.
 - Asset checks carry a key and values, so the lab shows them in other languages (`text` stays English).
 
 ### Changed

@@ -26,6 +26,20 @@ identifiers:
     value: 10.5281/zenodo.23985438
     description: "Version 0.2.0"
 license: Apache-2.0
+preferred-citation:
+  type: article
+  status: preprint
+  title: "Playhead Beyond the Waveform: Cross-Field Descriptors for Sound Design"
+  authors:
+    - family-names: Sandner
+      given-names: Daniel
+      orcid: "https://orcid.org/0000-0002-1041-814X"
+  year: 2026
+  month: 11
+  publisher:
+    name: Zenodo
+  doi: 10.5281/zenodo.24008128
+  url: "https://doi.org/10.5281/zenodo.24008127"
 repository-code: "https://github.com/eigensoundlab/playhead"
 url: "https://eigensoundlab.github.io/playhead/"
 keywords:
