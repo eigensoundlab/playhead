@@ -8,7 +8,13 @@
   the sample where the level starts to rise, mark the attacks; the first 30 ms of each are copied unchanged and placed
   at onset × length, and only the sound between them is stretched (WSOLA). Tested on five hits ×2 and ×0.5: each attack
   within 1 ms of its place and copied sample for sample, where a plain stretch, rendered beside it, moves them by up to
-  25 ms. In all six languages.
+  25 ms. In all six languages. In REAPER the new takes start at the same moment of the sound, and the item is
+  lengthened (or shortened) to play them.
+- **REAPER: the views of rhythm and form in the strip window** (package 0.2.0): bar raster, tempogram, repetition,
+  modulation spectrogram and curve rhythms, drawn by the Lua port as the library draws them (checked at 38,300 points
+  of 26 strips against `drawStrip`, and as numbers against `Playhead.view`). On the bar raster the cursors are drawn
+  in the row of their bar, and a click moves the edit cursor to that point of that bar. A view the analysis does not
+  have leaves the waveform in its place, as in the library.
 
 ## 0.3.0 (2026-11-07)
 

@@ -1,11 +1,12 @@
 -- @description Playhead: strip window (the selected item drawn in a Playhead look, dockable)
--- @version 0.1.0
+-- @version 0.2.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about
 --   A dockable window that draws the selected item as a Playhead strip: waveform, curves in lanes or over the
---   waveform, events, onsets, beats, bar lines, sections and novelty marks, in a ready-made look or your own look
---   code, with the edit and play cursors. Click to move the edit cursor; right-click for looks and options.
+--   waveform, events, onsets, beats, bar lines, sections and novelty marks, or a view of rhythm and form (bar raster,
+--   tempogram, repetition, modulation spectrogram, curve rhythms), in a ready-made look or your own look code, with
+--   the edit and play cursors. Click to move the edit cursor; right-click for looks and options.
 --   Packaged by "Playhead - Analyse selected items.lua".
 
 -- SPDX-License-Identifier: Apache-2.0
@@ -14,7 +15,8 @@
 -- The strip follows the take: its start offset, playback rate, loop and reversed sections. Items without an
 -- analysis are analysed in the background when selected (switch this off in the menu or in Playhead - Settings).
 -- The strip is drawn once into an image and redrawn only when the item, the look, the window size or the theme
--- changes; cursors are drawn over it.
+-- changes; cursors are drawn over it. On the bar raster (a row per bar, top to bottom) the cursors are drawn in the
+-- row of the bar they are in, and a click moves the edit cursor to that point of that bar.
 
 local source = debug.getinfo(1, "S").source
 local dir = source:match("^@?(.*[/\\])") or ""
@@ -38,7 +40,8 @@ local st = {
   render = true, screen = true, w = 0, h = 0,
   theme = nil, theme_key = nil, colours = nil,
   next_theme = 0, next_selection = 0, next_cache = 0, next_status = 0,
-  edit_x = nil, play_x = nil, left = false, right = false, legend = ""
+  edit = nil, play = nil, left = false, right = false, legend = "",
+  raster = nil                                             -- the rows of the bar raster drawn ({ {start, stop}, ... }), if one is
 }
 
 local function scale() return math.max(1, gfx.ext_retina or 1) end
@@ -165,30 +168,6 @@ local function look_title()
   return "custom look"
 end
 
-local function render_strip()
-  local _, _, W, H = strip_box()
-  gfx.setimgdim(IMG, W, H)                                 -- contents are undefined after a resize: filled below
-  gfx.dest = IMG
-  R.set_colour(st.theme.background)
-  gfx.rect(0, 0, W, H, 1)
-  if st.doc and st.info then
-    local column, to_x = core.item_columns(st.info.map, W)
-    local ok_r, r = pcall(core.render_strip, st.doc, R.gfx_sink(0, 0, scale()),
-      { width = W, height = H, look = st.look, theme = st.theme, column = column, to_x = to_x, fill = false })
-    if ok_r then st.legend = r.legend else st.legend = ""; st.message = "Could not draw this look: " .. tostring(r) end
-  end
-  gfx.dest = -1
-  st.render = false
-end
-
-local function cursor_x(T)
-  if not st.info or not T then return nil end
-  local m = st.info.map
-  if T < m.pos or T > m.pos + m.len then return nil end
-  local _, _, W = strip_box()
-  return math.floor((T - m.pos) / m.len * W + 0.5)
-end
-
 local function draw_text(x, y, text, colour, alpha, size, max_w)
   R.set_colour(colour, alpha)
   gfx.setfont(1, "Arial", math.floor(size * scale() + 0.5))
@@ -199,6 +178,54 @@ local function draw_text(x, y, text, colour, alpha, size, max_w)
   gfx.x, gfx.y = x, y
   gfx.drawstr(t)
 end
+
+local function render_strip()
+  local _, _, W, H = strip_box()
+  gfx.setimgdim(IMG, W, H)                                 -- contents are undefined after a resize: filled below
+  gfx.dest = IMG
+  R.set_colour(st.theme.background)
+  gfx.rect(0, 0, W, H, 1)
+  if st.doc and st.info then
+    local slow = core.slow_views(st.doc, st.look)
+    if slow then                                           -- the window cannot redraw while this is worked out: say so first
+      local x0, top = strip_box()
+      gfx.dest = -1
+      R.set_colour(st.theme.background)
+      gfx.rect(x0, top, W, H, 1)
+      draw_text(x0 + 8 * scale(), top + 8 * scale(), "Working out " .. slow .. " (once for this item)...", st.theme.text, 0.85, 13, W - 16 * scale())
+      gfx.update()
+      gfx.dest = IMG
+    end
+    local column, to_x = core.item_columns(st.info.map, W)
+    local ok_r, r = pcall(core.render_strip, st.doc, R.gfx_sink(0, 0, scale()),
+      { width = W, height = H, look = st.look, theme = st.theme, column = column, to_x = to_x, fill = false })
+    if ok_r then st.legend, st.raster = r.legend, r.raster and r.raster.rows or nil
+    else st.legend, st.raster = "", nil; st.message = "Could not draw this look: " .. tostring(r) end
+  else
+    st.raster = nil
+  end
+  gfx.dest = -1
+  st.render = false
+end
+
+-- where a cursor at project time T is drawn: a vertical line { x, y0, y1, key }, or nil outside the item (or, on the
+-- bar raster, outside the bars drawn)
+local function cursor_mark(T)
+  if not st.info or not T then return nil end
+  local m = st.info.map
+  if T < m.pos or T > m.pos + m.len then return nil end
+  local _, top, W, H = strip_box()
+  if st.raster then
+    local x, y, rh = core.raster_xy(st.raster, core.project_to_file(m, T), W, H)
+    if not x then return nil end
+    x = math.floor(x + 0.5)
+    local y0, y1 = top + math.floor(y + 0.5), top + math.floor(y + rh + 0.5)
+    return { x = x, y0 = y0, y1 = y1, key = x .. "/" .. y0 }
+  end
+  local x = math.floor((T - m.pos) / m.len * W + 0.5)
+  return { x = x, y0 = top, y1 = top + H, key = tostring(x) }
+end
+local function mark_key(c) return c and c.key or "" end
 
 local function draw_screen()
   local th = st.theme
@@ -214,8 +241,8 @@ local function draw_screen()
     gfx.blit(IMG, 1, 0)
     local ec = st.colours and st.colours.edit_cursor or { 220, 60, 60 }
     local pc = st.colours and st.colours.play_cursor or th.text
-    if st.edit_x then R.set_colour(ec, 1); gfx.line(st.edit_x, top, st.edit_x, top + H, 0) end
-    if st.play_x then R.set_colour(pc, 0.9); gfx.line(st.play_x, top, st.play_x, top + H, 0) end
+    if st.edit then R.set_colour(ec, 1); gfx.line(st.edit.x, st.edit.y0, st.edit.x, st.edit.y1, 0) end
+    if st.play then R.set_colour(pc, 0.9); gfx.line(st.play.x, st.play.y0, st.play.x, st.play.y1, 0) end
     draw_text(8 * s, top + H + 2 * s, st.legend or "", th.text, 0.75, 11, gfx.w - 16 * s)
   else
     local msg = st.message or ""
@@ -242,7 +269,9 @@ local function custom_look()
     R.message("No layer was recognised in \"" .. v[1] .. "\".\n\nExample: wave:harshness lane:activity ticks:events\n" ..
       "Parts: wave or wave:<curve>, spec, line:<curve>, lane:<curve> (add ~signed for change curves), sections, " ..
       "ticks:events+onsets+beats+downbeats+novelty, outline, sculpt:<curve>, form:lanes or form:overlay, " ..
-      "shape:base, shape:mirror, shape:horizon or shape:line.")
+      "shape:base, shape:mirror, shape:horizon or shape:line.\n" ..
+      "Views: spec:tempo (add ~cyclic to fold the octaves), spec:lag, spec:mod, scalogram:<curve>, " ..
+      "raster:<curve> (add ~4bars for a row per 4 bars).")
     return
   end
   st.look = core.look_code(layers)
@@ -306,8 +335,17 @@ local function handle_mouse()
   if left and not st.left then st.drag = inside end        -- a press inside the strip starts moving the cursor
   if left and st.drag and st.info then
     local m = st.info.map
-    local T = m.pos + math.max(0, math.min(1, (gfx.mouse_x - x0) / W)) * m.len
-    reaper.SetEditCurPos(T, false, not st.left)            -- seek playback on the press, not while dragging
+    local T
+    if st.raster then                                      -- the bar raster: that point of the bar in that row
+      local f = core.raster_time(st.raster, gfx.mouse_x - x0, gfx.mouse_y - top, W, H)
+      local cur = reaper.GetCursorPosition()
+      for _, t in ipairs(f and core.file_to_project(m, f, 2000) or {}) do     -- (looped: the time nearest the cursor)
+        if not T or math.abs(t - cur) < math.abs(T - cur) then T = t end
+      end
+    else
+      T = m.pos + math.max(0, math.min(1, (gfx.mouse_x - x0) / W)) * m.len
+    end
+    if T then reaper.SetEditCurPos(T, false, not st.left) end     -- seek playback on the press, not while dragging
   end
   if not left then st.drag = false end
   st.left = left
@@ -331,10 +369,10 @@ local function loop()
   end
   if st.job and now >= st.next_status then st.next_status = now + 0.25; st.screen = true end
   handle_mouse()
-  local ex = cursor_x(reaper.GetCursorPosition())
-  local px = (math.floor(reaper.GetPlayState()) & 1 == 1) and cursor_x(reaper.GetPlayPosition()) or nil
-  if ex ~= st.edit_x or px ~= st.play_x then st.edit_x, st.play_x, st.screen = ex, px, true end
   if st.render and st.theme then render_strip(); st.screen = true end
+  local ec = cursor_mark(reaper.GetCursorPosition())
+  local pc = (math.floor(reaper.GetPlayState()) & 1 == 1) and cursor_mark(reaper.GetPlayPosition()) or nil
+  if mark_key(ec) ~= mark_key(st.edit) or mark_key(pc) ~= mark_key(st.play) then st.edit, st.play, st.screen = ec, pc, true end
   if st.screen and st.theme then draw_screen() end
   reaper.defer(loop)
 end

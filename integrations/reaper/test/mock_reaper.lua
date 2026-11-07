@@ -470,6 +470,7 @@ function Mock.new(T, opts)
   function G.rect(x, y, w, h, f) gcount("rect"); for _, v in ipairs({ x, y, w, h }) do if type(v) ~= "number" or v ~= v then err("gfx.rect: bad argument") end end end
   function G.line(x1, y1, x2, y2, aa) gcount("line"); for _, v in ipairs({ x1, y1, x2, y2 }) do if type(v) ~= "number" or v ~= v then err("gfx.line: bad argument") end end end
   function G.triangle(...) gcount("triangle"); if select("#", ...) < 6 then err("gfx.triangle: fewer than 6 coordinates") end end
+  function G.circle(x, y, r, fill, aa) gcount("circle"); for _, v in ipairs({ x, y, r }) do if type(v) ~= "number" or v ~= v then err("gfx.circle: bad argument") end end end
   function G.drawstr(s) gcount("drawstr"); if type(s) ~= "string" then err("gfx.drawstr: not a string: " .. tostring(s)) end; env.texts = env.texts or {}; env.texts[#env.texts + 1] = s end
   function G.measurestr(s) gcount("measurestr"); return #tostring(s) * 7, 12 end
   function G.setfont(i, face, size) gcount("setfont"); if size and (type(size) ~= "number" or size <= 0) then err("gfx.setfont: bad size") end end

@@ -606,5 +606,60 @@
     "options": null
    }
   ]
+ },
+ {
+  "id": "stretch",
+  "name": "Stretch keeping the attacks",
+  "kind": "Sound design",
+  "description": "Changes the length without changing the pitch and keeps every attack as it is. Playhead's onsets (or only its event starts) mark the attacks; the first milliseconds of each are copied unchanged and only the sound between them is stretched, so hits stay sharp and land where the stretched rhythm puts them. A plain stretch smears or doubles hits and moves them: the comparison render lets you hear it.",
+  "params": [
+   {
+    "id": "ratio",
+    "label": "Length",
+    "type": "number",
+    "min": 0.25,
+    "max": 4,
+    "step": 0.05,
+    "value": 1.5,
+    "unit": "×",
+    "options": null
+   },
+   {
+    "id": "attackMs",
+    "label": "Attack kept",
+    "type": "number",
+    "min": 5,
+    "max": 150,
+    "step": 5,
+    "value": 30,
+    "unit": "ms",
+    "options": null
+   },
+   {
+    "id": "from",
+    "label": "Attacks",
+    "type": "select",
+    "value": "onsets",
+    "unit": null,
+    "options": [
+     [
+      "onsets",
+      "Every onset"
+     ],
+     [
+      "events",
+      "Event starts only"
+     ]
+    ]
+   },
+   {
+    "id": "plain",
+    "label": "Also render a plain stretch",
+    "type": "bool",
+    "value": true,
+    "unit": null,
+    "options": null
+   }
+  ]
  }
 ]

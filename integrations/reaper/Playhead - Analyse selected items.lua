@@ -1,5 +1,5 @@
 -- @description Playhead for REAPER: analysis curves, markers, automation, processing tools and a strip view
--- @version 0.1.0
+-- @version 0.2.0
 -- @author Daniel Sandner
 -- @about
 --   # Playhead for REAPER
@@ -24,7 +24,9 @@
 --   [nomain] lib/playhead_reaper.lua
 --   [effect] Playhead Control.jsfx
 -- @changelog
---   First version.
+--   The views of rhythm and form in the strip window: bar raster (the cursors in the row of their bar, clicks
+--   seek within the bar), tempogram, repetition (lag view), modulation spectrogram and curve rhythms (scalogram).
+--   The tool "Stretch keeping the attacks" in Process selected items (with Playhead 0.3.0 or later).
 
 -- SPDX-License-Identifier: Apache-2.0
 -- Copyright 2026 Daniel Sandner

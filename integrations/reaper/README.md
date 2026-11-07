@@ -87,7 +87,8 @@ take in the same item, named after the tool ("De-harsh", "De-harsh (removed)"), 
 first result made active. The new takes keep the original take's offset, rate, pitch, volume and pan. The files go
 to the project's media folder, in `Playhead/`; each run keeps its own files. The tool's report (what it changed, by
 how much) is printed to the console. The active take is what is processed, so a processed take can be processed
-again.
+again. **Stretch keeping the attacks** changes the length: its takes start at the same moment of the sound, and the
+item is lengthened (or shortened) by the same factor to play them; the other takes keep their timing.
 
 **Playhead - Strip window.** A dockable window that draws the selected item as a Playhead strip in a chosen look:
 the waveform (plain, tinted by a curve or sculpted by loudness), the spectrogram, curves as lanes or over the
@@ -95,10 +96,20 @@ waveform (filled, mirrored, horizon or line), events, onsets, beats, bar lines, 
 legend under the strip. It follows the take (offset, rate, loop, reversed sections), shows the edit and play
 cursors, and moves the edit cursor where you click. Right-click for the ready-made looks (those a file cannot show
 are greyed), your own look code (for example `wave:harshness lane:activity ticks:events`; codes from the Playhead
-app can be pasted; the views of rhythm and form, such as the bar raster, the tempogram and the modulation spectrogram,
-are not drawn here yet and the waveform stands in for them), analysing again, automatic analysis of newly selected
-items, and docking. Space starts and stops
-playback. Colours follow the REAPER theme where it offers them. The strip is drawn once and redrawn only when the
+app can be pasted), analysing again, automatic analysis of newly selected items, and docking. Space starts and stops
+playback.
+
+The views of rhythm and form are drawn here as in the Playhead app:
+- **Bar raster** (`raster:<curve>`, `~4bars` for a row per 4 bars; music): a row per bar, top to bottom, the curve
+  through each bar, with the beat grid, sections between rows and onsets as dots. The cursors are drawn in the row of
+  the bar they are in, and a click moves the edit cursor to that point of that bar.
+- **Tempogram** (`spec:tempo`, `~cyclic` folds the octaves), **repetition** (`spec:lag`) (both music) and the
+  **modulation spectrogram** (`spec:mod`, any profile but fast), from the analysis.
+- **Curve rhythms** (`scalogram:<curve>`), computed in the window from the curve. On a long item this takes a moment
+  the first time the look is shown.
+
+A view the analysis does not have (a tempogram of a sound effect) leaves the waveform in its place, and the legend
+says why. Colours follow the REAPER theme where it offers them. The strip is drawn once and redrawn only when the
 item, the look, the window size or the theme changes. As a toolbar button it shows whether the window is open.
 
 **Playhead - Settings.** The executable (empty: look in `<resource>/Scripts/Playhead/`, then on the PATH), Node for
@@ -217,7 +228,8 @@ python3 integrations/reaper/test/run_tests.py --update-fixtures  # rewrite the f
 
 The core is checked against documents made by the command line and against what `src/playhead.js` computes from
 them: `curveAt`, `toMarkers`, look codes, legends and the rectangles, triangles and texts `drawStrip` draws for
-every look without a spectrogram (`test/make_fixtures.js` writes `test/fixtures/`). Every action script then runs in
+every look without a spectrogram; the views as numbers (`Playhead.view`) and as drawn, compared at 38,300 points of
+26 strips (`test/make_fixtures.js` writes `test/fixtures/`). Every action script then runs in
 a mock REAPER that checks each API call against its documented signature, with the real command line (when Node is
 installed) started through the job scripts. What cannot be checked outside REAPER: the drawing itself, the dialogs'
 look, the JSFX, and REAPER's own behaviour behind the calls (listed in the scripts' comments where it matters).

@@ -1,5 +1,5 @@
 -- @description Playhead: process selected items with a Playhead tool (each result as a new take)
--- @version 0.1.0
+-- @version 0.2.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about
@@ -64,10 +64,13 @@ local function ask_params(tool, doc)
   end
 end
 
---- Adds the rendered files as new takes of every item that plays this file; the first becomes the active take.
+--- Adds the rendered files as new takes of every item that plays this file; the first becomes the active take. A tool
+--- that changes the length (Stretch keeping the attacks) scales the take's start and the item's length with it, so the
+--- item plays the same part of the sound, stretched.
 local function add_takes(tool, files, infos, notes)
   local count = #files
   for _, info in ipairs(infos) do
+    local stretch = tool.id == "stretch" and files[1].len and info.file_len and info.file_len > 0 and files[1].len / info.file_len or nil
     local item, old = info.item, info.take
     local m = info.map
     local offs = m.offs
@@ -79,6 +82,7 @@ local function add_takes(tool, files, infos, notes)
       if m.reversed then notes[#notes + 1] = info.name .. ": the take plays its file reversed; the new takes play the same part forwards" end
     end
     if tool.id == "loop" then offs = 0 end
+    if stretch then offs = offs * stretch end
     local first
     for k, f in ipairs(files) do
       local take = reaper.AddTakeToMediaItem(item)
@@ -98,6 +102,12 @@ local function add_takes(tool, files, infos, notes)
     if first then
       if reaper.SetActiveTake then reaper.SetActiveTake(first)
       else reaper.SetMediaItemInfo_Value(item, "I_CURTAKE", reaper.CountTakes(item) - count) end
+      if stretch then
+        local len = reaper.GetMediaItemInfo_Value(item, "D_LENGTH")
+        reaper.SetMediaItemInfo_Value(item, "D_LENGTH", len * stretch)
+        notes[#notes + 1] = string.format("%s: the item is now %.2f s long (x%.2f), to play the stretched takes; the other takes keep their timing",
+          info.name, len * stretch, stretch)
+      end
     end
     reaper.UpdateItemInProject(item)
   end
@@ -157,19 +167,19 @@ local function main()
           R.remove_empty_dir(spec.out_dir)
           if #outs == 0 then problems[#problems + 1] = name .. ": the tool wrote no files"
           else
-            add_takes(tool, outs, by_file[spec.file], notes)
-            added = added + #outs
             local src_len = by_file[spec.file][1].file_len
             for _, o in ipairs(outs) do
               local s = reaper.PCM_Source_CreateFromFile(o.path)
               if s then
-                local len = reaper.GetMediaSourceLength(s)
+                o.len = reaper.GetMediaSourceLength(s)
                 reaper.PCM_Source_Destroy(s)
-                if len and src_len and len > src_len + 0.01 then
-                  notes[#notes + 1] = string.format("%s is %.2f s longer than the original; lengthen the item to hear all of it", core.basename(o.path), len - src_len)
+                if tool.id ~= "stretch" and o.len and src_len and o.len > src_len + 0.01 then
+                  notes[#notes + 1] = string.format("%s is %.2f s longer than the original; lengthen the item to hear all of it", core.basename(o.path), o.len - src_len)
                 end
               end
             end
+            add_takes(tool, outs, by_file[spec.file], notes)
+            added = added + #outs
             local report = core.trim(res.stdout)
             R.log("Playhead " .. tool.name .. " on " .. name .. " (" .. table.concat(args, " ") .. ")\n  " ..
               report:gsub("\n", "\n  ") .. "\n  new takes: " .. #outs .. " in " .. final_dir .. "\n")

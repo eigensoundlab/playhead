@@ -10,12 +10,13 @@
 --   time mapping (take)        M.take_map{...}, M.project_to_file(m, T), M.file_to_project(m, f), ...
 --   automation                 M.sample_curve(doc, name, m, opts), M.reduce_points(points, tol, max)
 --   markers                    M.marker_plan(doc, m, kinds)
+--   views                      M.view(doc, kind, opts), M.bar_rows(doc, per), M.raster_xy(...), M.raster_time(...)
 --   looks and strip            M.parse_look(code), M.describe_look(layers, doc), M.render_strip(doc, sink, opts)
 --   command lines              M.quote_posix(arg), M.quote_windows(arg), M.quote_batch(arg), M.job_script(spec)
 --   cache keys                 M.cache_key{ path, size, length, profile, version, os }
 --   processing tools           M.parse_tools(text), M.tool_dialog(tool, remembered), M.parse_tool_inputs(...)
 
-local M = { VERSION = "0.1.0", SCHEMA = "playhead-analysis", SCHEMA_VERSION = 1 }
+local M = { VERSION = "0.2.0", SCHEMA = "playhead-analysis", SCHEMA_VERSION = 1 }
 
 local floor, ceil, abs, max, min, huge = math.floor, math.ceil, math.abs, math.max, math.min, math.huge
 local byte, sub, find, fmt, rep = string.byte, string.sub, string.find, string.format, string.rep
@@ -552,7 +553,8 @@ function M.file_interval_to_project(m, fa, fb, limit)
 end
 
 --- For the strip of an item W pixels wide: column(x) returns the file interval heard in pixel column x (fa > fb where
---- the take plays backwards), or nil where nothing is heard; to_x(f) returns the pixel positions of file time f.
+--- the take plays backwards) and the file time at its middle, or nil where nothing is heard; to_x(f) returns the pixel
+--- positions of file time f.
 function M.item_columns(m, W)
   local px = m.len / W
   local function column(x)
@@ -560,8 +562,8 @@ function M.item_columns(m, W)
     local fc = M.project_to_file(m, Tc)
     if fc == nil then return nil end
     local half = 0.5 * px * m.rate
-    if m.reversed then return fc + half, fc - half end
-    return fc - half, fc + half
+    if m.reversed then return fc + half, fc - half, fc end
+    return fc - half, fc + half, fc
   end
   local function to_x(f)
     local xs = {}
@@ -710,13 +712,417 @@ function M.marker_plan(doc, m, kinds)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
+-- views of rhythm and form (as Playhead.view): the bar raster, the tempogram, the lag view, the modulation
+-- spectrogram and the curve scalogram, as numbers. A view: { kind, rows, cols, values, yTicks, and colAt(t)
+-- (time-based views) or timeRows (the raster) }; values[r * cols + c + 1] is row r (0 at the top), column c, 0..1,
+-- or -1 where there is no data. Built once per document and options; nil when the document cannot give the view.
+------------------------------------------------------------------------------------------------------------------------
+M.VIEW_KINDS = { raster = true, tempo = true, lag = true, scale = true, mod = true }
+
+--- A curve's value over [ta, tb) (document seconds): the mean of its samples there, or linear interpolation when a
+--- sample spans more (as the JavaScript curveValue).
+local function curve_value(arr, rate, ta, tb)
+  if not is_curve(arr) then return nil end
+  local ia, ib, n = ta * rate, tb * rate, #arr
+  if ib - ia >= 1 then
+    local s, k = 0, 0
+    for i = max(0, floor(ia)), min(n, ceil(ib)) - 1 do local v = arr[i + 1]; if v ~= NULL then s = s + v; k = k + 1 end end
+    if k > 0 then return s / k end
+    return nil
+  end
+  local x = max(0, min(n - 1, (ia + ib) / 2 - 0.5))
+  local i = floor(x)
+  local f = x - i
+  local a, b = arr[i + 1], arr[min(n - 1, i + 1) + 1]
+  if a == NULL then if f > 0.5 and b ~= NULL then return b end return nil end
+  if b == NULL then if f < 0.5 then return a end return nil end
+  return a + (b - a) * f
+end
+M.curve_value = curve_value
+
+-- the range a view maps a curve onto 0..1 (as the JavaScript autoRange)
+local function view_range(name, arr)
+  local v = sorted_values(arr)
+  if #v == 0 then return 0, 1 end
+  local lo, hi
+  if name:find("^n%d") then lo, hi = pct(v, 0.05), pct(v, 0.95)
+  elseif name == "structureNovelty" or name == "localPulse" then lo, hi = 0, max(0.05, pct(v, 0.99))
+  else return 0, 1 end
+  if hi - lo < 1e-9 then lo, hi = lo - 1, lo + 1 end
+  return lo, hi
+end
+
+-- the bytes of a base64 image (tempogram, repetition, modulation), decoded once
+local function image_bytes(t)
+  if type(t) ~= "table" or t == NULL or type(t.data) ~= "string" then return nil end
+  if not t._bytes then t._bytes = M.from_base64(t.data) end
+  return t._bytes
+end
+-- histogram of the non-zero bytes, and the p-quantile of them (as sorting them and taking floor(p * (n - 1)))
+local function byte_quantiles(u8)
+  local hist, n = {}, 0
+  for v = 0, 255 do hist[v] = 0 end
+  for i = 1, #u8 do local v = byte(u8, i); if v ~= 0 then hist[v] = hist[v] + 1; n = n + 1 end end
+  return function(index)                                   -- the byte at 0-based position index among them, sorted
+    local seen = 0
+    for v = 1, 255 do seen = seen + hist[v]; if seen > index then return v end end
+    return 255
+  end, n
+end
+
+--- Bar boundaries from the downbeats (or every 4th beat), gaps where the beat dropped out filled and both ends
+--- extended with the median bar, so every moment is in a row; per 4 bars, a row starts on the first real downbeat.
+--- Returns { rows = { {start, stop}, ... }, bar, beatsPerBar, bars } or nil without a beat.
+function M.bar_rows(doc, per)
+  local r, dur = doc and doc.rhythm, doc and doc.source and doc.source.duration
+  if type(r) ~= "table" or r == NULL or not dur then return nil end
+  local d
+  if type(r.downbeats) == "table" and #r.downbeats >= 2 then d = r.downbeats
+  elseif type(r.beats) == "table" and #r.beats >= 8 then d = {}; for i = 1, #r.beats, 4 do d[#d + 1] = r.beats[i] end end
+  if not d or #d < 2 then return nil end
+  local gaps = {}
+  for i = 2, #d do gaps[#gaps + 1] = d[i] - d[i - 1] end
+  sort(gaps)
+  local bar = gaps[(#gaps >> 1) + 1]
+  if not (bar > 0.2) then return nil end
+  local b, pre = {}, {}
+  local t = d[1] - bar
+  while t + bar > 0.05 do pre[#pre + 1] = t; t = t - bar end
+  for i = #pre, 1, -1 do b[#b + 1] = pre[i] end
+  local first = #b
+  for i = 1, #d do
+    b[#b + 1] = d[i]
+    local nx = d[i + 1]
+    if nx ~= nil and nx - d[i] > 1.5 * bar then
+      local n = round((nx - d[i]) / bar)
+      for k = 1, n - 1 do b[#b + 1] = d[i] + k * (nx - d[i]) / n end
+    end
+  end
+  t = b[#b] + bar
+  while t < dur - 0.05 do b[#b + 1] = t; t = t + bar end
+  b[#b + 1] = b[#b] + bar
+  local nb, rows = #b, {}
+  local function at(i)                                     -- boundary i (0-based), extended past both ends
+    if i < 0 then return b[1] + i * bar elseif i > nb - 1 then return b[nb] + (i - nb + 1) * bar end
+    return b[i + 1]
+  end
+  if per == 4 then
+    local i = (first % 4 ~= 0) and (first % 4 - 4) or 0
+    while i < nb - 1 do rows[#rows + 1] = { at(i), at(i + 4) }; i = i + 4 end
+  else
+    for i = 0, nb - 2 do rows[#rows + 1] = { b[i + 1], b[i + 2] } end
+  end
+  -- beats per bar: the most common count of beats between downbeats (4 when it cannot be told)
+  local counts, beats = {}, type(r.beats) == "table" and r.beats or {}
+  for i = 1, #d - 1 do
+    local n = 0
+    for _, bt in ipairs(beats) do if bt >= d[i] - 0.02 and bt < d[i + 1] - 0.02 then n = n + 1 end end
+    if n >= 2 and n <= 7 then counts[n] = (counts[n] or 0) + 1 end
+  end
+  local bpb, best = 4, 0
+  for n = 2, 7 do if (counts[n] or 0) > best then bpb, best = n, counts[n] end end
+  return { rows = rows, bar = bar, beatsPerBar = bpb, bars = per == 4 and 4 or 1 }
+end
+
+local function raster_view(doc, curve, per, ncols)
+  local br, arr = M.bar_rows(doc, per), doc.curves and doc.curves[curve]
+  if not br or not is_curve(arr) then return nil end
+  local R, rate, dur, values = #br.rows, doc.curves.rate, doc.source.duration, {}
+  local lo, hi = view_range(curve, arr)
+  for r = 0, R - 1 do
+    local a, e = br.rows[r + 1][1], br.rows[r + 1][2]
+    local w = (e - a) / ncols
+    for c = 0, ncols - 1 do
+      local ta = a + c * w
+      local tb = ta + w
+      local v = nil
+      if not (tb <= 0 or ta >= dur) then v = curve_value(arr, rate, max(0, ta), min(dur, tb)) end
+      values[r * ncols + c + 1] = v == nil and -1 or clamp((v - lo) / (hi - lo), 0, 1)
+    end
+  end
+  local ticks = {}
+  for r = 0, R - 1 do if r % (per == 4 and 2 or 8) == 0 then ticks[#ticks + 1] = { row = r + 0.5, text = tostring(r * br.bars + 1) } end end
+  return { kind = "raster", curve = curve, rows = R, cols = ncols, values = values, yTicks = ticks, timeRows = br.rows,
+    beatsPerBar = br.beatsPerBar, bars = br.bars }
+end
+
+local function log2(x) return math.log(x, 2) end
+
+local function tempo_view(doc, cyclic)
+  local tg = type(doc.rhythm) == "table" and doc.rhythm ~= NULL and doc.rhythm.tempogram or nil
+  local u8 = image_bytes(tg)
+  if not u8 then return nil end
+  local B, C, P, FOLD = tg.bins, tg.columns, tg.perOctave, 80
+  local kf = round(P * log2(FOLD / tg.bpmMin))
+  local rows, values = cyclic and P or B, {}
+  if not cyclic then
+    for c = 0, C - 1 do for k = 0, B - 1 do values[(B - 1 - k) * C + c + 1] = (byte(u8, c * B + k + 1) or 0) / 255 end end
+  else
+    -- every tempo folded onto 80 to 160 BPM: the mean over the octaves that land on a row, scaled to the image's peak
+    for i = 1, P * C do values[i] = 0 end
+    local n = {}
+    for j = 0, P - 1 do n[j] = 0 end
+    for k = 0, B - 1 do local j = (k - kf) % P; n[j] = n[j] + 1 end
+    for c = 0, C - 1 do
+      for k = 0, B - 1 do
+        local j = (k - kf) % P
+        local o = (P - 1 - j) * C + c + 1
+        values[o] = values[o] + (byte(u8, c * B + k + 1) or 0) / 255 / n[j]
+      end
+    end
+    local pk = 1e-9
+    for i = 1, P * C do if values[i] > pk then pk = values[i] end end
+    for i = 1, P * C do values[i] = values[i] / pk end
+  end
+  local function row_of(bpm) if cyclic then return P - 1 - P * log2(bpm / FOLD) end return B - 1 - P * log2(bpm / tg.bpmMin) end
+  local ticks = {}
+  for _, bpm in ipairs(cyclic and { 90, 120, 140 } or { 60, 90, 120, 180 }) do
+    local row = row_of(bpm) + 0.5
+    if row > 0.5 and row < rows - 0.5 then ticks[#ticks + 1] = { row = row, text = tostring(bpm) } end
+  end
+  local start, hop = tg.start or 0, tg.hop
+  return { kind = "tempo", cyclic = cyclic and true or false, rows = rows, cols = C, values = values, yTicks = ticks,
+    colAt = function(t) return clamp(round((t - start) / hop), 0, C - 1) end }
+end
+
+local function lag_view(doc)
+  local rp = doc.repetition
+  local u8 = image_bytes(rp)
+  if not u8 then return nil end
+  local R, C, values = rp.lags, rp.columns, {}
+  -- similarity is a Gaussian of the distance between moments, about 0.37 at the median distance: the median of the
+  -- image is set to black, so that ordinary likeness recedes and repeats (near 1) stand out
+  local q, n = byte_quantiles(u8)
+  local lo = n > 0 and (q(n >> 1) - 1) / 254 or 0
+  for c = 0, C - 1 do
+    for l = 0, R - 1 do
+      local v = byte(u8, c * R + l + 1) or 0
+      values[(R - 1 - l) * C + c + 1] = v ~= 0 and max(0, ((v - 1) / 254 - lo) / max(1e-6, 1 - lo)) or -1
+    end
+  end
+  local step = rp.lagStep * rp.unitSeconds
+  local ticks = {}
+  if rp.unit == "beat" then
+    for _, bars in ipairs({ 4, 8, 16, 32, 64 }) do
+      local l = bars * 4 / rp.lagStep - 1
+      if l >= 0 and l < R - 1 then ticks[#ticks + 1] = { row = R - 1 - l + 0.5, text = bars .. " bars" } end
+    end
+  else
+    for _, s in ipairs({ 5, 10, 30, 60, 120 }) do
+      local l = s / step - 1
+      if l >= 0 and l < R - 1 then ticks[#ticks + 1] = { row = R - 1 - l + 0.5, text = s >= 60 and (M.num(s / 60) .. " min") or (s .. " s") } end
+    end
+  end
+  local times = rp.times
+  local function col_at(t)
+    local a, b = 0, C - 1
+    while a < b do local m = (a + b + 1) >> 1; if times[m + 1] <= t then a = m else b = m - 1 end end
+    return a
+  end
+  return { kind = "lag", rows = R, cols = C, values = values, yTicks = ticks, colAt = col_at,
+    lagSeconds = function(l) return (l + 1) * step end }
+end
+
+local function mod_view(doc)
+  local md = doc.modulation
+  local u8 = image_bytes(md)
+  if not u8 then return nil end
+  local R, C, values = md.rows, md.columns, {}
+  -- depth on a square-root scale, from the image's median (black: the texture every moment has) to its 99th
+  -- percentile (white): a level that pulses at one rate is a bright row
+  local qb, n = byte_quantiles(u8)
+  local function q(p) return n > 0 and (qb(floor(p * (n - 1))) - 1) / 254 or 0 end
+  local lo = q(0.5)
+  local top = max(lo + 0.05, q(0.99))
+  for c = 0, C - 1 do
+    for r = 0, R - 1 do
+      local v = byte(u8, c * R + r + 1) or 0
+      values[(R - 1 - r) * C + c + 1] = v ~= 0 and clamp(((v - 1) / 254 - lo) / (top - lo), 0, 1) or -1
+    end
+  end
+  local ticks = {}
+  for _, f in ipairs({ 1, 4, 16, 64 }) do
+    local row = R - 1 - md.perOctave * log2(f / md.rateMin) + 0.5
+    if row > 0.5 and row < R - 0.5 then ticks[#ticks + 1] = { row = row, text = f .. " Hz" } end
+  end
+  local hop = md.hop
+  return { kind = "mod", rows = R, cols = C, values = values, yTicks = ticks,
+    colAt = function(t) return clamp(floor(t / hop), 0, C - 1) end,
+    rateOf = function(r) return md.rateMin * 2 ^ ((R - 1 - r) / md.perOctave) end }
+end
+
+local twiddles = {}                                       -- per size n: cos and sin of 2 pi k / n, k < n / 2
+--- Radix-2 FFT in place over re[1..n], im[1..n] (n a power of 2; the inverse scaled by 1/n).
+function M.fft(re, im, inv)
+  local n = #re
+  local tw = twiddles[n]
+  if not tw then
+    tw = { c = {}, s = {} }
+    for k = 0, (n >> 1) - 1 do tw.c[k + 1] = math.cos(2 * math.pi * k / n); tw.s[k + 1] = math.sin(2 * math.pi * k / n) end
+    twiddles[n] = tw
+  end
+  local C, S, sg = tw.c, tw.s, inv and 1 or -1
+  local j = 0
+  for i = 1, n - 1 do
+    local bit = n >> 1
+    while j & bit ~= 0 do j = j ~ bit; bit = bit >> 1 end
+    j = j ~ bit
+    if i < j then re[i + 1], re[j + 1] = re[j + 1], re[i + 1]; im[i + 1], im[j + 1] = im[j + 1], im[i + 1] end
+  end
+  local len = 2
+  while len <= n do
+    local h, step = len >> 1, n // len
+    for k = 0, h - 1 do
+      local cr, ci = C[k * step + 1], sg * S[k * step + 1]
+      for a = k + 1, n, len do
+        local b = a + h
+        local rb, ib = re[b], im[b]
+        local tr, ti = rb * cr - ib * ci, rb * ci + ib * cr
+        local ra, ia = re[a], im[a]
+        re[b] = ra - tr; im[b] = ia - ti; re[a] = ra + tr; im[a] = ia + ti
+      end
+    end
+    len = len << 1
+  end
+  if inv then for i = 1, n do re[i] = re[i] / n; im[i] = im[i] / n end end
+end
+
+local MORLET_W0 = 6
+local MORLET_FOURIER = 4 * math.pi / (MORLET_W0 + math.sqrt(2 + MORLET_W0 * MORLET_W0))      -- period / scale
+local function scale_view(doc, curve)
+  local arr = doc.curves and doc.curves[curve]
+  if not is_curve(arr) then return nil end
+  -- periods from 4 curve samples to a fifth of the sound (longer ones would be outside the cone of influence nearly everywhere)
+  local rate, n = doc.curves.rate, #arr
+  local dt, pMin, pMax = 1 / rate, 4 / rate, min(n / rate / 5, 600)
+  if not (pMax >= 2 * pMin) then return nil end
+  local perOct = 8
+  local rows = min(80, floor(perOct * log2(pMax / pMin)) + 1)
+  local periods = {}
+  for j = 0, rows - 1 do periods[j + 1] = pMin * 2 ^ (j / perOct) end
+  local mean, k = 0, 0
+  for i = 1, n do local v = arr[i]; if v ~= NULL then mean = mean + v; k = k + 1 end end
+  mean = k > 0 and mean / k or 0
+  local N = 1
+  while N < 2 * n do N = N << 1 end
+  local xr, xi = {}, {}
+  for i = 1, N do xr[i] = 0; xi[i] = 0 end
+  for i = 1, n do local v = arr[i]; xr[i] = (v == NULL and mean or v) - mean end
+  M.fft(xr, xi, false)
+  local power, wr, wi = {}, {}, {}
+  local norm0, half = math.pi ^ -0.25, N >> 1
+  for j = 0, rows - 1 do
+    local s = periods[j + 1] / MORLET_FOURIER
+    local gk = norm0 * math.sqrt(2 * math.pi * s / dt)
+    for i = 1, N do wr[i] = 0; wi[i] = 0 end
+    for q = 1, half do
+      local w = 2 * math.pi * q / (N * dt)
+      local e = s * w - MORLET_W0
+      if e > -9 and e < 9 then                             -- (beyond, the wavelet's spectrum is below 1e-17 of its peak)
+        local h = gk * math.exp(-0.5 * e * e)
+        wr[q + 1] = xr[q + 1] * h; wi[q + 1] = xi[q + 1] * h
+      end
+    end
+    M.fft(wr, wi, true)
+    -- power divided by scale; rows go from the shortest period (top) down
+    local base = j * n
+    for i = 1, n do power[base + i] = (wr[i] * wr[i] + wi[i] * wi[i]) / s end
+  end
+  -- inside the cone of influence: the period's e-folding time (sqrt 2 times the scale) fits between the moment and the end
+  local function inside(j, i) return math.sqrt(2) * periods[j + 1] / MORLET_FOURIER <= min(i, n - 1 - i) / rate end
+  local pk = 1e-20
+  for j = 0, rows - 1 do for i = 0, n - 1 do if inside(j, i) and power[j * n + i + 1] > pk then pk = power[j * n + i + 1] end end end
+  if pk <= 1e-20 then for i = 1, rows * n do if power[i] > pk then pk = power[i] end end end
+  local values, faint = {}, {}
+  for j = 0, rows - 1 do
+    for i = 0, n - 1 do
+      local o = j * n + i + 1
+      local p = power[o]
+      values[o] = p > 0 and clamp(1 + 10 * math.log(p / pk, 10) / 30, 0, 1) or 0     -- 30 dB below the peak is black
+      faint[o] = not inside(j, i)
+    end
+  end
+  local r = doc.rhythm
+  local beat = (type(r) == "table" and r ~= NULL and r.reliable and type(r.tempo) == "number" and r.tempo > 0) and 60 / r.tempo or 0
+  local marks = beat > 0 and { { beat, "beat" }, { 4 * beat, "bar" }, { 16 * beat, "4 bars" }, { 64 * beat, "16 bars" } }
+    or { { 0.05, "50 ms" }, { 0.2, "0.2 s" }, { 1, "1 s" }, { 5, "5 s" }, { 20, "20 s" }, { 60, "1 min" } }
+  local ticks = {}
+  for _, m in ipairs(marks) do
+    local row = perOct * log2(m[1] / pMin)
+    if row >= 0 and row <= rows - 1 then ticks[#ticks + 1] = { row = row + 0.5, text = m[2] } end
+  end
+  return { kind = "scale", curve = curve, rows = rows, cols = n, values = values, faint = faint, yTicks = ticks, periods = periods,
+    colAt = function(t) return clamp(floor(t * rate), 0, n - 1) end }
+end
+
+local view_cache = setmetatable({}, { __mode = "k" })
+local function view_key(kind, opts)
+  local curve = opts.curve or "onsetStrength"
+  local bars = opts.bars == 4 and 4 or 1
+  local ncols = max(8, min(512, opts.cols or (bars == 4 and 192 or 96)))
+  return kind .. "|" .. (kind == "raster" and (curve .. "|" .. bars .. "|" .. ncols) or kind == "scale" and curve
+    or kind == "tempo" and tostring(opts.cyclic and true or false) or ""), curve, bars, ncols
+end
+--- The image of a view as numbers (see above); nil when the document cannot give it. kind: "raster" (opts.curve,
+--- opts.bars 1 or 4, opts.cols), "tempo" (opts.cyclic), "lag", "mod", "scale" (opts.curve).
+function M.view(doc, kind, opts)
+  opts = opts or {}
+  if type(doc) ~= "table" or not M.VIEW_KINDS[kind] then return nil end
+  local key, curve, bars, ncols = view_key(kind, opts)
+  local m = view_cache[doc]
+  if not m then m = {}; view_cache[doc] = m end
+  if m[key] == nil then
+    local v
+    if kind == "raster" then v = raster_view(doc, curve, bars, ncols)
+    elseif kind == "tempo" then v = tempo_view(doc, opts.cyclic)
+    elseif kind == "lag" then v = lag_view(doc)
+    elseif kind == "mod" then v = mod_view(doc)
+    else v = scale_view(doc, curve) end
+    m[key] = v or false
+  end
+  return m[key] or nil
+end
+
+--- For hosts that cannot redraw while a view is worked out: a description of the slow views a look needs that are not
+--- worked out yet for this document (the scalogram of a long curve takes a second or more in Lua), or nil.
+function M.slow_views(doc, look)
+  local layers = M.parse_look(look) or {}
+  for _, l in ipairs(layers) do
+    if l.type == "spec" and l.of == "scale" and type(doc) == "table" and doc.curves and is_curve(doc.curves[l.curve]) and #doc.curves[l.curve] > 3000 then
+      local m = view_cache[doc]
+      if not (m and m[(view_key("scale", l))] ~= nil) then return "the rhythms in " .. M.curve_label(l.curve) end
+    end
+  end
+  return nil
+end
+
+--- Where file time f falls on a bar raster of the given rows ({ {start, stop}, ... }, as render_strip returns) drawn
+--- W x H: x, y (top of the row), row height; nil outside the rows.
+function M.raster_xy(rows, f, W, H)
+  if not rows or #rows == 0 or f == nil or f < rows[1][1] or f >= rows[#rows][2] then return nil end
+  local r = 1
+  while r < #rows and f >= rows[r][2] do r = r + 1 end
+  local a, e = rows[r][1], rows[r][2]
+  local rh = H / #rows
+  return (f - a) / (e - a) * W, (r - 1) * rh, rh
+end
+--- The file time at point x, y of a bar raster drawn W x H (the inverse of raster_xy).
+function M.raster_time(rows, x, y, W, H)
+  if not rows or #rows == 0 then return nil end
+  local r = clamp(floor(y / (H / #rows)) + 1, 1, #rows)
+  local a, e = rows[r][1], rows[r][2]
+  return a + clamp(x / W, 0, 1) * (e - a)
+end
+
+------------------------------------------------------------------------------------------------------------------------
 -- looks: look codes, ready-made looks and legends (as Playhead.parseLook, lookCode, describeLook, lookFits)
 ------------------------------------------------------------------------------------------------------------------------
 M.TICK_KINDS = { events = true, onsets = true, beats = true, downbeats = true, novelty = true }
 M.FORMS = { lanes = true, overlay = true }
 M.SHAPES = { base = true, mirror = true, horizon = true, line = true }
 M.LOOK_ORDER = { "auto", "plain", "spectrum", "structure", "rhythm", "tension", "events", "lanes", "shapes", "overlay",
-  "horizon", "specstructure", "overview", "character", "surprise", "hits", "sculpted" }
+  "horizon", "specstructure", "overview", "character", "surprise", "hits", "raster", "tempogram", "repetition", "modulation",
+  "rhythms", "sculpted" }
 M.LOOKS = {
   auto = { name = "Automatic", desc = "Sound effects: harshness as colour, activity as the line, events. Music: activity as colour, tension as the line, sections, downbeats.", code = nil },
   plain = { name = "Waveform only", desc = "The waveform without analysis, for comparison.", code = "wave" },
@@ -733,6 +1139,11 @@ M.LOOKS = {
   overview = { name = "Music overview", desc = "Curves only, overlaid and mirrored like a waveform: local pulse, activity and recurrence, with sections, bar lines and novelty marks.", code = "form:overlay,shape:mirror,sections,lane:localPulse,lane:activity,lane:n8Recurrence,ticks:downbeats+novelty" },
   character = { name = "Sound character", desc = "For sound effects. Curves only, overlaid and mirrored like a waveform: where the hits are (onset strength), harshness and impulsiveness (clicks, cracks, crackle), with onsets marked.", code = "form:overlay,shape:mirror,lane:onsetStrength,lane:harshness,lane:n1Kurtosis,ticks:onsets" },
   surprise = { name = "Hits and surprise", desc = "For sound effects. As Sound character, with spectral surprise (where the sound turns into something new) in place of impulsiveness.", code = "form:overlay,shape:mirror,lane:onsetStrength,lane:harshness,lane:n7Surprisal,ticks:onsets" },
+  raster = { name = "Bar raster", desc = "For music. A row per bar, top to bottom, like a drum pattern: onset strength through each bar, with sections. Bars that hit the same way line up in columns; fills, breaks and drops show as rows that differ.", code = "raster:onsetStrength,sections" },
+  tempogram = { name = "Tempogram", desc = "For music. How strongly each tempo (40 to 240 BPM, fast at the top) is present over time. A steady beat is a bright line, a tempo change bends it, double and half tempo show as fainter lines. With bar lines.", code = "spec:tempo,ticks:downbeats" },
+  repetition = { name = "Repetition (lag view)", desc = "For music. How alike each moment is to the moment a given time before (that time, the lag, going up). A bright horizontal line means the music repeats what played that long ago. With sections.", code = "spec:lag,sections" },
+  modulation = { name = "Modulation spectrogram", desc = "For any sound. How fast its level pulses, and how strongly, over time: rhythm below about 4 Hz, fluctuation, tremolo and flutter from 4 to 20 Hz, roughness above (fast at the top). Engines, rotors, tremolo, growls and buzzes show as bright rows at their rate; steady tones and plain noise stay dark.", code = "spec:mod" },
+  rhythms = { name = "Curve rhythms (scalogram)", desc = "Research view, for any sound. The periodic patterns in onset strength, from fast (top) to slow (bottom): beat, bar and phrase in music, flutter and tremolo in effects. Fainter near the ends, where the sound is too short to be sure of a period.", code = "scalogram:onsetStrength" },
   hits = { name = "Hits and pulse", desc = "The waveform with onset strength (where the hits are) and the local pulse as lanes, beats and bar lines.", code = "wave,lane:onsetStrength,lane:localPulse,ticks:beats+downbeats" },
   sculpted = { name = "Waveform as loud as it sounds", desc = "The waveform's envelope follows perceived loudness (a dB-like scale) while its detail stays; colour shows harshness, with the ordinary peak outline for comparison.", code = "sculpt:loudness,wave:harshness,outline,ticks:events+novelty" }
 }
@@ -766,13 +1177,13 @@ function M.parse_look(code)
       local ty = i and sub(main, 1, i - 1) or main
       local arg = i and sub(main, i + 1) or ""
       if ty == "wave" then out[#out + 1] = { type = "wave", colour = arg ~= "" and arg or nil }
-      elseif (ty == "spec" and (arg == "" or arg == "mel")) or ty == "outline" then out[#out + 1] = { type = ty }
-      elseif ty == "spec" or ty == "raster" or ty == "scalogram" then
-        -- the views of rhythm and form (tempogram, lag view, modulation, bar raster, scalogram) are drawn by the
-        -- JavaScript library only; here the plain waveform stands in for them, as it does there for a sound without them
-        local has = false
-        for _, l in ipairs(out) do if l.type == "wave" then has = true end end
-        if not has then out[#out + 1] = { type = "wave" } end
+      elseif ty == "outline" then out[#out + 1] = { type = ty }
+      elseif ty == "spec" then
+        if arg == "" or arg == "mel" then out[#out + 1] = { type = ty }
+        elseif arg == "tempo" then out[#out + 1] = { type = ty, of = "tempo", cyclic = flags.cyclic or false }
+        elseif arg == "lag" or arg == "mod" then out[#out + 1] = { type = ty, of = arg } end
+      elseif ty == "scalogram" then out[#out + 1] = { type = "spec", of = "scale", curve = arg ~= "" and arg or "onsetStrength" }
+      elseif ty == "raster" then out[#out + 1] = { type = ty, curve = arg ~= "" and arg or "onsetStrength", bars = flags["4bars"] and 4 or 1 }
       elseif ty == "sculpt" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg }
       elseif ty == "line" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg }
       elseif ty == "lane" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg, signed = flags.signed or false }
@@ -800,6 +1211,11 @@ function M.look_code(layers)
     elseif l.type == "ticks" then s = (l.of and #l.of > 0) and ("ticks:" .. concat(l.of, "+")) or ""
     elseif l.type == "form" or l.type == "shape" then s = l.type .. ":" .. l.value
     elseif l.type == "sculpt" then s = "sculpt:" .. l.curve
+    elseif l.type == "spec" and l.of then
+      if l.of == "tempo" then s = "spec:tempo" .. (l.cyclic and "~cyclic" or "")
+      elseif l.of == "scale" then s = "scalogram:" .. l.curve
+      else s = "spec:" .. l.of end
+    elseif l.type == "raster" then s = "raster:" .. l.curve .. (l.bars == 4 and "~4bars" or "")
     else s = l.type end
     if s ~= "" then out[#out + 1] = s end
   end
@@ -828,7 +1244,19 @@ function M.describe_look(layers, doc)
   for _, l in ipairs(layers or {}) do
     local t = l.type
     if t == "wave" then parts[#parts + 1] = (l.colour and has(l.colour)) and ("colour: " .. lab(l.colour)) or "waveform"
-    elseif t == "spec" then parts[#parts + 1] = (not doc or doc.spectrum) and "spectrogram (mel, low at the bottom)" or "spectrogram (not in this analysis)"
+    elseif t == "spec" and not l.of then parts[#parts + 1] = (not doc or doc.spectrum) and "spectrogram (mel, low at the bottom)" or "spectrogram (not in this analysis)"
+    elseif t == "spec" and l.of == "tempo" then
+      parts[#parts + 1] = (l.cyclic and "tempogram, octaves folded (80 to 160 BPM; a tempo, its half and its double share a row)" or "tempogram (40 to 240 BPM, fast at the top)")
+        .. ((not doc or (type(doc.rhythm) == "table" and doc.rhythm.tempogram)) and "" or " (music only; not in this analysis)")
+    elseif t == "spec" and l.of == "lag" then
+      parts[#parts + 1] = "repetition: bright where the music repeats what played a lag earlier (lag going up)" .. ((not doc or doc.repetition) and "" or " (music only; not in this analysis)")
+    elseif t == "spec" and l.of == "mod" then
+      parts[#parts + 1] = "modulation: how fast the level pulses (0.5 to 128 Hz, fast at the top): rhythm, then flutter and tremolo, then roughness" .. ((not doc or doc.modulation) and "" or " (not in this analysis)")
+    elseif t == "spec" and l.of == "scale" then
+      parts[#parts + 1] = "rhythms in " .. lab(l.curve) .. ": fast at the top, slow at the bottom" .. (has(l.curve) and "" or " (not in this analysis)")
+    elseif t == "raster" then
+      parts[#parts + 1] = (l.bars == 4 and ("phrase raster: " .. lab(l.curve) .. ", a row per 4 bars, top to bottom") or ("bar raster: " .. lab(l.curve) .. ", a row per bar, top to bottom"))
+        .. ((not doc or M.bar_rows(doc, 1)) and (has(l.curve) and "" or " (not in this analysis)") or " (needs a beat: music only)")
     elseif t == "outline" then parts[#parts + 1] = "outline: peak waveform"
     elseif t == "sculpt" then
       if not has_wave then parts[#parts + 1] = "height: " .. lab(l.curve) .. " (shapes the waveform; add it to see)"
@@ -872,20 +1300,26 @@ function M.look_fits(doc, look)
   for _, l in ipairs(layers) do
     if (l.type == "lane" or l.type == "line" or l.type == "sculpt") and not M.curve_live(doc, l.curve) then return false end
     if l.type == "wave" and l.colour and not M.curve_live(doc, l.colour) then return false end
-    if l.type == "spec" and not doc.spectrum then return false end
+    if l.type == "spec" and not l.of and not doc.spectrum then return false end
+    if l.type == "spec" and l.of == "tempo" and not (type(doc.rhythm) == "table" and doc.rhythm.tempogram) then return false end
+    if l.type == "spec" and l.of == "lag" and not doc.repetition then return false end
+    if l.type == "spec" and l.of == "mod" and not doc.modulation then return false end
+    if l.type == "spec" and l.of == "scale" and (not M.curve_live(doc, l.curve) or #doc.curves[l.curve] < 40) then return false end
+    if l.type == "raster" and (not M.curve_live(doc, l.curve) or not M.bar_rows(doc, 1)) then return false end
   end
   return true
 end
 
 ------------------------------------------------------------------------------------------------------------------------
--- the strip renderer: a Lua port of a subset of Playhead.drawStrip that draws through a small sink, so the REAPER
--- window (gfx) and the tests (a recorder) share it. All layer types are supported: wave (plain or tinted), spec, line,
--- lane (base, mirror, horizon, line shapes; signed; lanes or overlay form), sections, ticks (events, onsets, beats,
--- downbeats, novelty), outline and sculpt.
+-- the strip renderer: a Lua port of Playhead.drawStrip that draws through a small sink, so the REAPER window (gfx) and
+-- the tests (a recorder) share it. All layer types are supported: wave (plain or tinted), spec (the mel spectrogram or
+-- a view: tempogram, lag view, modulation, scalogram), raster, line, lane (base, mirror, horizon, line shapes; signed;
+-- lanes or overlay form), sections, ticks (events, onsets, beats, downbeats, novelty), outline and sculpt.
 --
 -- sink: rect(x, y, w, h, rgb, alpha); line(x1, y1, x2, y2, rgb, alpha); polyline(xs, ys, rgb, alpha, width);
 --       triangle(x1, y1, x2, y2, x3, y3, rgb, alpha); dashed(x, y1, y2, rgb, alpha);
---       text(x, y, str, rgb, alpha, size, align ("left"|"right"), valign ("baseline"|"middle"))
+--       text(x, y, str, rgb, alpha, size, align ("left"|"right"), valign ("baseline"|"middle"|"top"));
+--       circle(x, y, r, rgb, alpha) (filled; optional: a square is drawn without it)
 -- Colours are { r, g, b } with 0..255.
 ------------------------------------------------------------------------------------------------------------------------
 function M.rgb(hex)
@@ -947,11 +1381,17 @@ function M.from_base64(s)
   return concat(out)
 end
 
---- Geometry of a strip: how the main band (waveform or spectrogram) and the lanes share the height.
+-- whether a spectrogram-like layer shows something: the mel spectrogram, or a view this document can give
+local function spec_shows(doc, l)
+  if l.of then return M.view(doc, l.of, l) ~= nil end
+  return doc.spectrum ~= nil
+end
+
+--- Geometry of a strip: how the main band (waveform, spectrogram or a view) and the lanes share the height.
 function M.strip_layout(layers, doc, W, H)
   local curves = doc.curves
   local form, shape = option_of(layers, "form", "lanes"), option_of(layers, "shape", "base")
-  local has_main = has_type(layers, function(l) return l.type == "wave" or (l.type == "spec" and doc.spectrum ~= nil) end)
+  local has_main = has_type(layers, function(l) return l.type == "wave" or (l.type == "spec" and spec_shows(doc, l)) end)
   local lanes = {}
   for _, l in ipairs(layers) do if l.type == "lane" and is_curve(curves[l.curve]) then lanes[#lanes + 1] = l end end
   local stacked = form == "lanes" and #lanes > 0
@@ -966,7 +1406,9 @@ function M.strip_layout(layers, doc, W, H)
 end
 
 --- Draws a document's strip through sink. opts: width, height, look (name or code) or layers, theme, and either
---- from/to (document seconds) or column(x) and to_x(t) (see item_columns). Returns { code, layers, legend, layout, items }.
+--- from/to (document seconds) or column(x) and to_x(t) (see item_columns). Returns { code, layers, legend, layout, items,
+--- raster }: raster = { rows = { {start, stop}, ... } } (document seconds) when a bar raster was drawn, its rows top to
+--- bottom, for mapping the cursor and clicks (raster_xy, raster_time).
 function M.render_strip(doc, g, opts)
   opts = opts or {}
   local th = {}
@@ -975,10 +1417,25 @@ function M.render_strip(doc, g, opts)
   th.lane = th.lane or th.line; th.laneDown = th.laneDown or th.rule; th.laneFlat = th.laneFlat or th.wave
   th.outline = th.outline or th.wave
   local series = { th.lane, (th.series or {})[1] or M.rgb("#2f9378"), (th.series or {})[2] or M.rgb("#7e60c4") }
-  local layers
-  if opts.layers then layers = M.parse_look(opts.layers)
-  elseif opts.look then layers = M.parse_look(opts.look) or M.auto_layers(doc)
-  else layers = M.auto_layers(doc) end
+  local asked
+  if opts.layers then asked = M.parse_look(opts.layers)
+  elseif opts.look then asked = M.parse_look(opts.look) or M.auto_layers(doc)
+  else asked = M.auto_layers(doc) end
+  -- a view this document cannot give (a beat view of a sound effect) leaves the plain waveform in its place, once;
+  -- the legend says the view is not in this analysis
+  local function missing(l)
+    if l.type == "raster" then return M.view(doc, "raster", l) == nil end
+    return l.type == "spec" and l.of ~= nil and M.view(doc, l.of, l) == nil
+  end
+  local layers, first_missing, has_wave = {}, nil, false
+  for i, l in ipairs(asked) do
+    if l.type == "wave" then has_wave = true end
+    if not first_missing and missing(l) then first_missing = i end
+  end
+  for i, l in ipairs(asked) do
+    if not missing(l) then layers[#layers + 1] = l
+    elseif not has_wave and i == first_missing then layers[#layers + 1] = { type = "wave" } end
+  end
   local W, H = floor(opts.width or 600), opts.height or 64
   local dur = doc.source.duration
   local curves, rate = doc.curves, doc.curves.rate
@@ -987,21 +1444,30 @@ function M.render_strip(doc, g, opts)
     local t0 = max(0, opts.from or 0)
     local t1 = min(dur, opts.to or dur)
     local span = max(1e-6, t1 - t0)
-    column = function(x) return t0 + x / W * span, t0 + (x + 1) / W * span end
+    column = function(x) return t0 + x / W * span, t0 + (x + 1) / W * span, t0 + (x + 0.5) / W * span end
     to_x = function(t) if t < t0 or t > t1 then return {} end return { (t - t0) / span * W } end
   end
-  local cols = {}                                         -- per pixel column: lo, hi (document seconds), direction
+  local cols = {}                                         -- per pixel column: lo, hi (document seconds), direction, middle
   for x = 0, W - 1 do
-    local fa, fb = column(x)
+    local fa, fb, fm = column(x)
     if fa ~= nil and fb ~= nil then
       local lo, hi = min(fa, fb), max(fa, fb)
-      if hi > 0 and lo < dur then cols[x] = { max(0, lo), min(dur, hi), fb >= fa and 1 or -1 } end
+      if hi > 0 and lo < dur then cols[x] = { max(0, lo), min(dur, hi), fb >= fa and 1 or -1, fm or (fa + fb) / 2 } end
     end
   end
   local L = M.strip_layout(layers, doc, W, H)
   local mainH, laneH, lanes, stacked, form, shape, has_main = L.mainH, L.laneH, L.lanes, L.stacked, L.form, L.shape, L.has_main
   local items = {}
   if th.background and opts.fill ~= false then g.rect(0, 0, W, H, th.background, 1) end
+  local result = { code = M.look_code(asked), layers = asked, legend = M.describe_look(asked, doc), layout = L, items = items }
+  for _, l in ipairs(layers) do
+    if l.type == "raster" then
+      local t0, t1 = huge, -huge                          -- the document time shown: the strip's span of columns
+      for x = 0, W - 1 do local c = cols[x]; if c then t0 = min(t0, c[1]); t1 = max(t1, c[2]) end end
+      if t0 < t1 then result.raster = M.draw_raster(doc, g, asked, l, W, H, t0, t1, th, items) end
+      return result
+    end
+  end
 
   local function val_at(arr, ta, tb)
     if not is_curve(arr) then return nil end
@@ -1033,9 +1499,8 @@ function M.render_strip(doc, g, opts)
   end
   local function index_of(l) for i, x in ipairs(layers) do if x == l then return i end end return 0 end
   local function spec_before(l)
-    if not doc.spectrum then return false end
     local idx = index_of(l)
-    for j = 1, idx - 1 do if layers[j].type == "spec" then return true end end
+    for j = 1, idx - 1 do if layers[j].type == "spec" and spec_shows(doc, layers[j]) then return true end end
     return false
   end
   local wv = doc.wave
@@ -1137,7 +1602,8 @@ function M.render_strip(doc, g, opts)
     for _, ys in ipairs({ top, bot }) do for _, r in ipairs(runs(ys, 0.5)) do g.polyline(r[1], r[2], th.outline, 0.85, 1) end end
     items[#items + 1] = { label = "peak waveform", colour = th.outline }
   end
-  function draw.spec()
+  function draw.spec(l)
+    if l.of then return draw.view(l) end
     local sp = doc.spectrum
     if type(sp) ~= "table" or not sp.data or mainH <= 0 then return end
     if not sp._bytes then sp._bytes = M.from_base64(sp.data) end
@@ -1175,6 +1641,34 @@ function M.render_strip(doc, g, opts)
         end
       end
     end
+  end
+  -- a view in the spectrogram's place: one column of the view per pixel column (at the column's middle), one
+  -- rectangle per row over the pixels that show the same view column; the axis (tempo, lag, rate, period) on the right
+  function draw.view(l)
+    local v = M.view(doc, l.of, l)
+    if not v or mainH <= 0 then return end
+    local at = {}
+    for x = 0, W - 1 do local c = cols[x]; at[x] = (c and c[4] <= dur) and v.colAt(c[4]) or -1 end
+    local ramp, rows, vc, vals, faint = th.specRamp, v.rows, v.cols, v.values, v.faint
+    local rh = mainH / rows
+    local x = 0
+    while x < W do
+      local col = at[x]
+      local x2 = x + 1
+      while x2 < W and at[x2] == col do x2 = x2 + 1 end
+      if col >= 0 then
+        for r = 0, rows - 1 do
+          local k = r * vc + col + 1
+          local u = vals[k]
+          if u >= 0 then g.rect(x, r * rh, x2 - x, rh + 0.5, ramp_at(ramp, u), (faint and faint[k]) and 110 / 255 or 1) end
+        end
+      end
+      x = x2
+    end
+    M.axis_labels(g, v.yTicks, rows, mainH, W, th)
+    local label = l.of == "tempo" and "tempo strength" or l.of == "lag" and "likeness to earlier" or l.of == "mod" and "modulation depth"
+      or ("rhythms in " .. M.curve_label(l.curve))
+    items[#items + 1] = { label = label, ramp = ramp }
   end
   function draw.sections()
     if type(doc.sections) ~= "table" then return end
@@ -1310,7 +1804,100 @@ function M.render_strip(doc, g, opts)
     end
   end
   for _, l in ipairs(layers) do if draw[l.type] then draw[l.type](l) end end
-  return { code = M.look_code(layers), layers = layers, legend = M.describe_look(layers, doc), layout = L, items = items }
+  return result
+end
+
+--- A view's axis (tempo, lag, rate, period, bar number) along the right edge of a band h high, as yTicks
+--- ({ row, text }) over rows rows.
+function M.axis_labels(g, ticks, rows, h, W, th)
+  if h < 48 or W < 200 or not ticks then return end
+  local last = -1e9
+  for _, t in ipairs(ticks) do
+    local y = t.row / rows * h
+    if y > 6 and y < h - 6 and abs(y - last) >= 11 then g.text(W - 3, y, t.text, th.text, 0.65, 9, "right", "middle"); last = y end
+  end
+end
+
+--- The bar raster (as drawStrip draws it): it takes the whole strip. Rows of bars over the document time t0..t1, a faint
+--- beat grid, sections as rules between rows with their letters, and onsets, events and novelty as dots where they
+--- fall in the bar. layers are the look's layers (for ticks and sections), l the raster layer. Returns the rows drawn.
+function M.draw_raster(doc, g, layers, l, W, H, t0, t1, th, items)
+  local v = M.view(doc, "raster", l)
+  if not v then return nil end
+  local tr = v.timeRows
+  local r0, r1 = 0, v.rows - 1                            -- the rows that overlap the shown time (all of them unless zoomed)
+  while r0 < r1 and tr[r0 + 1][2] <= t0 do r0 = r0 + 1 end
+  while r1 > r0 and tr[r1 + 1][1] >= t1 do r1 = r1 - 1 end
+  local nr = r1 - r0 + 1
+  local rowH, cw = H / nr, W / v.cols
+  local ramp, grid = th.specRamp, th.grid or { 255, 255, 255 }
+  for r = 0, nr - 1 do                                    -- runs of equal cells in each row
+    local base = (r0 + r) * v.cols
+    local c = 0
+    while c < v.cols do
+      local u = v.values[base + c + 1]
+      local c2 = c + 1
+      while c2 < v.cols and v.values[base + c2 + 1] == u do c2 = c2 + 1 end
+      if u >= 0 then g.rect(c * cw, r * rowH, (c2 - c) * cw + 0.5, rowH + 0.5, ramp_at(ramp, u), 1) end
+      c = c2
+    end
+  end
+  items[#items + 1] = { label = M.curve_label(l.curve), ramp = ramp }
+  local per = v.bars * v.beatsPerBar
+  for k = 1, per - 1 do
+    local x = round(k / per * W) + 0.5
+    g.line(x, 0, x, H, grid, k % v.beatsPerBar == 0 and 0.5 or 0.18)
+  end
+  local tA, tB = tr[r0 + 1][1], tr[r1 + 1][2]
+  local function place(t)
+    local r = r0
+    while r < r1 and t >= tr[r + 1][2] do r = r + 1 end
+    local a, e = tr[r + 1][1], tr[r + 1][2]
+    return (t - a) / (e - a) * W, (r - r0) * rowH, r
+  end
+  local function want(k)
+    for _, x in ipairs(layers) do if x.type == "ticks" and contains(x.of, k) then return true end end
+    return false
+  end
+  local rad = max(1, min(3, rowH / 3))
+  local function dots(ts, radius, colour)
+    for _, t in ipairs(ts) do
+      if t >= tA and t < tB then
+        local x, y = place(t)
+        if g.circle then g.circle(x, y + rowH / 2, radius, colour, 1)
+        else g.rect(x - radius, y + rowH / 2 - radius, 2 * radius, 2 * radius, colour, 1) end
+      end
+    end
+  end
+  if want("onsets") and type(doc.onsets) == "table" then dots(doc.onsets, rad, th.line) end
+  if want("events") and type(doc.events) == "table" then
+    local starts = {}
+    for _, e in ipairs(doc.events) do starts[#starts + 1] = e.start end
+    dots(starts, rad * 1.3, th.line)
+  end
+  if want("novelty") and type(doc.noveltyTicks) == "table" then dots(doc.noveltyTicks, rad * 1.3, grid) end
+  if has_type(layers, function(x) return x.type == "sections" end) and type(doc.sections) == "table" then
+    local fs = max(9, min(12, round(H / 10)))
+    local lastY = -1e9
+    for _, s in ipairs(doc.sections) do
+      local stop = s["end"] or s.stop
+      if s.start < tB and stop > tA then
+        local x, _, r = place(max(s.start, tA))
+        local y = round((x > W / 2 and (r - r0 + 1) or (r - r0)) * rowH) + 0.5    -- the nearest row edge
+        if s.start > max(0.05, tA) and y > 1 then g.line(0, y, W, y, grid, 0.85) end
+        if not (y - lastY < fs + 1 or y > H - fs) then
+          g.text(3, y + 2, tostring(s.label or ""), grid, 1, fs, "left", "top")
+          lastY = y
+        end
+      end
+    end
+  end
+  local ticks = {}
+  for _, t in ipairs(v.yTicks) do if t.row >= r0 and t.row < r1 + 1 then ticks[#ticks + 1] = { row = t.row - r0, text = t.text } end end
+  M.axis_labels(g, ticks, nr, H, W, th)
+  local rows = {}
+  for r = r0, r1 do rows[#rows + 1] = tr[r + 1] end
+  return { rows = rows }
 end
 
 ------------------------------------------------------------------------------------------------------------------------

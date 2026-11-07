@@ -1,5 +1,5 @@
 -- @description Playhead: write curves as automation (Playhead Control envelopes over each selected item)
--- @version 0.1.0
+-- @version 0.2.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about

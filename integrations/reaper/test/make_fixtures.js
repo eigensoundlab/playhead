@@ -6,8 +6,9 @@
 //   fixtures/robot-hit-steel.playhead.json   `playhead analyze` of experiments/paper/robot-hit-steel.wav (sfx profile)
 //   fixtures/cue-arc.playhead.json           `playhead analyze` of the built-in cue arc (music profile, 400 wave columns)
 //   fixtures/tools.json                      `playhead tools`
-//   fixtures/reference.json                  what src/playhead.js computes from them (curveAt, toMarkers, looks, and
-//                                            the rectangles, triangles and texts drawStrip draws), for the Lua port
+//   fixtures/reference.json                  what src/playhead.js computes from them (curveAt, toMarkers, looks, the
+//                                            rectangles, triangles and texts drawStrip draws, and the views as
+//                                            numbers), for the Lua port
 // The documents come from the command line itself; only source.path is made relative and timing set to 0, so the
 // files do not depend on the machine that wrote them.
 "use strict";
@@ -46,17 +47,18 @@ const colour = s => {
   s = String(s);
   let m = /^#([0-9a-f]{6})$/i.exec(s);
   if (m) return [0, 2, 4].map(i => parseInt(m[1].slice(i, i + 2), 16)).join(",");
-  m = /^rgb\((\d+),(\d+),(\d+)\)$/.exec(s.replace(/\s/g, ""));
+  m = /^rgba?\((\d+),(\d+),(\d+)(?:,[\d.]+)?\)$/.exec(s.replace(/\s/g, ""));
   return m ? [m[1], m[2], m[3]].join(",") : s;
 };
+const fillAlpha = s => { const m = /^rgba\(\d+,\d+,\d+,([\d.]+)\)$/.exec(String(s).replace(/\s/g, "")); return m ? +m[1] : 1; };
 const r4 = v => Math.round(v * 1e4) / 1e4;
-function drawOps(doc, look, W, H) {
+function drawOps(doc, look, W, H, from, to) {
   const ops = { rects: [], triangles: [], texts: [] };
   let fill = null, alpha = 1, path = [];
   const ctx = new Proxy({ canvas: { width: W, height: H } }, {
     get: (t, k) => {
       if (k in t) return t[k];
-      if (k === "fillRect") return (x, y, w, h) => ops.rects.push([r4(x), r4(y), r4(w), r4(h), colour(fill), r4(alpha)]);
+      if (k === "fillRect") return (x, y, w, h) => ops.rects.push([r4(x), r4(y), r4(w), r4(h), colour(fill), r4(alpha * fillAlpha(fill))]);
       if (k === "beginPath") return () => { path = []; };
       if (k === "moveTo" || k === "lineTo") return (x, y) => path.push([r4(x), r4(y)]);
       if (k === "fill") return () => { if (path.length === 3) ops.triangles.push(path.flat()); };
@@ -65,8 +67,40 @@ function drawOps(doc, look, W, H) {
     },
     set: (t, k, v) => { if (k === "fillStyle") fill = v; else if (k === "globalAlpha") alpha = v; return true; }
   });
-  const r = Playhead.drawStrip(ctx, doc, { look, width: W, height: H });
-  return { code: r.code, legend: r.legend, ops };
+  const r = Playhead.drawStrip(ctx, doc, { look, width: W, height: H, from, to });
+  return { code: r.code, legend: r.legend, ops, raster: r.raster ? r.raster.rows : null };
+}
+// the views are images (or a rectangle per cell and pixel column without a canvas), which the Lua port draws as runs
+// of rectangles: they are compared at points, every 4th pixel across and every 3rd down: the colour and alpha of the
+// last rectangle drawn over the point ("" where none is)
+const PROBE = { dx: 4, dy: 3 };
+// (as indices into a palette, to keep the file small)
+function probes(rects, W, H) {
+  const palette = [""], idx = [];
+  for (let y = 0.5; y < H; y += PROBE.dy) for (let x = 0.5; x < W; x += PROBE.dx) {
+    let hit = "";
+    for (const q of rects) if (x >= q[0] && x < q[0] + q[2] && y >= q[1] && y < q[1] + q[3]) hit = q[4] + "," + q[5];
+    let k = palette.indexOf(hit); if (k < 0) { k = palette.length; palette.push(hit); }
+    idx.push(k);
+  }
+  return { palette, idx };
+}
+function viewOps(doc, look, W, H, from, to) {
+  const d = drawOps(doc, look, W, H, from, to);
+  return { code: d.code, legend: d.legend, probes: probes(d.ops.rects, W, H), texts: d.ops.texts, triangles: d.ops.triangles, raster: d.raster };
+}
+// a view as numbers: its size, axis, columns at given times, raster rows, and its values at 64 places and summed
+function viewNumbers(doc, kind, opts) {
+  const v = Playhead.view(doc, kind, opts);
+  if (!v) return null;
+  const n = v.rows * v.cols, at = [], d = doc.source.duration;
+  for (let i = 0; i < 64; i++) { const k = Math.floor(i * (n - 1) / 63); at.push([k, r4(v.values[k])]); }
+  let sum = 0, none = 0; for (const x of v.values) { if (x < 0) none++; else sum += x; }
+  const out = { kind, opts, rows: v.rows, cols: v.cols, sum: Math.round(sum * 1e3) / 1e3, none, at, yTicks: v.yTicks.map(t => [r4(t.row), t.text]) };
+  if (v.colAt) out.colAt = [0, 0.37, d / 3, d / 2, d - 0.01, d + 1].map(t => [t, v.colAt(t)]);
+  if (v.timeRows) { out.timeRows = v.timeRows.map(r => r.map(r4)); out.beatsPerBar = v.beatsPerBar; }
+  if (v.faint) { let f = 0; for (const x of v.faint) f += x; out.faint = f; }
+  return out;
 }
 
 function reference(doc) {
@@ -78,8 +112,13 @@ function reference(doc) {
   }
   for (const key of Object.keys(Playhead.looks)) {
     const L = Playhead.looks[key];
-    // the views of rhythm and form (bar raster, tempogram, lag view, scalogram) are not in the Lua port yet
-    if (L.code && /(^|,)(raster|scalogram)|spec:/.test(L.code)) continue;
+    // the views of rhythm and form (bar raster, tempogram, lag view, modulation, scalogram): compared at points
+    if (L.code && /(^|,)(raster|scalogram)|spec:/.test(L.code)) {
+      const small = viewOps(doc, key, 160, 60), tall = viewOps(doc, key, 240, 100);
+      ref.looks[key] = { fits: Playhead.lookFits(doc, key), code: small.code, legend: small.legend, roundTrip: Playhead.lookCode(Playhead.parseLook(L.code)),
+        views: { "160x60": small, "240x100": tall } };
+      continue;
+    }
     const small = drawOps(doc, key, 160, 60), tall = drawOps(doc, key, 120, 100);
     // the spectrogram is drawn as an image (or one rectangle per cell without a canvas), which the Lua port draws
     // differently, so its rectangles are not kept
@@ -92,10 +131,17 @@ function reference(doc) {
     const ctx = new Proxy({ canvas: { width: 200, height: 70 } }, { get: (t, k) => k in t ? t[k] : k === "fillRect" ? (x, y, w, h) => ops.rects.push([r4(x), r4(y), r4(w), r4(h), colour(fill), r4(alpha)]) : k === "beginPath" ? () => { p = []; } : (k === "moveTo" || k === "lineTo") ? (x, y) => p.push([r4(x), r4(y)]) : k === "fill" ? () => { if (p.length === 3) ops.triangles.push(p.flat()); } : k === "fillText" ? (s, x, y) => ops.texts.push([String(s), r4(x), r4(y)]) : () => { },
       set: (t, k, v) => { if (k === "fillStyle") fill = v; else if (k === "globalAlpha") alpha = v; return true; } });
     Playhead.drawStrip(ctx, doc, { look: "wave:harshness,lane:activity~signed,lane:loudness,ticks:events+onsets+novelty", width: 200, height: 70, from: d / 3, to: 2 * d / 3 }); return ops; })() };
+  // the views as numbers, and zoomed and folded
+  ref.views = [["raster", {}], ["raster", { curve: "loudness", bars: 4 }], ["tempo", {}], ["tempo", { cyclic: true }], ["lag", {}], ["mod", {}],
+    ["scale", { curve: "loudness" }], ["scale", { curve: "onsetStrength" }]].map(([k, o]) => viewNumbers(doc, k, o) || { kind: k, opts: o, none: "view" });
+  ref.viewZoom = ["raster:onsetStrength~4bars,sections,ticks:onsets+events+novelty", "spec:tempo~cyclic,lane:localPulse,ticks:downbeats", "scalogram:loudness,sections"]
+    .map(look => ({ look, ...viewOps(doc, look, 220, 90, d / 3, 2 * d / 3) }));
   return ref;
 }
-const ref = { generator: "src/playhead.js " + Playhead.version, robot: reference(robot), arc: reference(arc),
+const ref = { generator: "src/playhead.js " + Playhead.version, probe: PROBE, robot: reference(robot), arc: reference(arc),
   parse: ["wave:loudness,bogus,lane:activity~signed,ticks:events+nope", "shape:mirror,form:overlay,spec,wave,lane:loudness", "shape:wobbly,form:sideways", " wave , line:tension ,ticks:", "structure"]
-    .map(code => ({ code, out: Playhead.lookCode(Playhead.parseLook(code) || []) })) };
+    .map(code => ({ code, out: Playhead.lookCode(Playhead.parseLook(code) || []) }))
+    .concat(["spec:tempo~cyclic,ticks:downbeats", "raster~4bars,sections", "raster:loudness,spec:mel", "wave:harshness,spec:mod,spec:bogus",
+      "spec:lag,scalogram,scalogram:loudness~x,lane:activity", "tempogram", "rhythms"].map(code => ({ code, out: Playhead.lookCode(Playhead.parseLook(code) || []) }))) };
 fs.writeFileSync(path.join(outDir, "reference.json"), JSON.stringify(ref) + "\n");
 console.log("fixtures written to " + outDir);

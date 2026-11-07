@@ -236,20 +236,15 @@ return function(T)
       local out = M.look_code(M.parse_look(p.code) or {})
       if out ~= p.out then ok_parse = false; T.note("parse " .. p.code .. ": " .. out .. " vs " .. p.out) end
     end
-    check("looks: look codes parse and print as Playhead.parseLook and lookCode", ok_parse)
-    -- the views of rhythm and form are not drawn here: the plain waveform stands in for them (once)
-    local views = { ["spec:tempo~cyclic,ticks:downbeats"] = "wave,ticks:downbeats", ["raster:onsetStrength~4bars,sections"] = "wave,sections",
-      ["wave:harshness,spec:mod"] = "wave:harshness", ["spec:lag,scalogram:loudness,lane:activity"] = "wave,lane:activity", ["spec"] = "spec" }
-    local ok_views = true
-    for code, want in pairs(views) do local got = M.look_code(M.parse_look(code) or {}); if got ~= want then ok_views = false; T.note("view " .. code .. ": " .. got) end end
-    check("looks: the views of rhythm and form fall back to the waveform", ok_views)
+    check("looks: look codes parse and print as Playhead.parseLook and lookCode (views included)", ok_parse)
     local function recorder()
-      local ops = { rects = {}, triangles = {}, texts = {}, lines = 0, polylines = 0, dashed = 0 }
+      local ops = { rects = {}, triangles = {}, texts = {}, lines = 0, polylines = 0, dashed = 0, circles = 0 }
       local function r4(v) return floor(v * 1e4 + 0.5) / 1e4 end
       local g = {}
       function g.rect(x, y, w, h, c, a) ops.rects[#ops.rects + 1] = { r4(x), r4(y), r4(w), r4(h), c[1] .. "," .. c[2] .. "," .. c[3], r4(a) } end
       function g.triangle(x1, y1, x2, y2, x3, y3) ops.triangles[#ops.triangles + 1] = { r4(x1), r4(y1), r4(x2), r4(y2), r4(x3), r4(y3) } end
       function g.text(x, y, s) ops.texts[#ops.texts + 1] = { s, r4(x), r4(y) } end
+      function g.circle() ops.circles = ops.circles + 1 end     -- the raster's dots (arcs in drawStrip, not recorded there)
       function g.line() ops.lines = ops.lines + 1 end
       function g.polyline() ops.polylines = ops.polylines + 1 end
       function g.dashed() ops.dashed = ops.dashed + 1 end
@@ -266,12 +261,70 @@ return function(T)
       end
       return true
     end
+    -- the views are compared at points (see make_fixtures.js): the last rectangle over each point, colour within 1 and
+    -- alpha within 0.01 of drawStrip's
+    local PROBE = ref.probe
+    local function probe_ops(rects, W, H)
+      local nx, ny = 0, 0
+      while 0.5 + nx * PROBE.dx < W do nx = nx + 1 end
+      while 0.5 + ny * PROBE.dy < H do ny = ny + 1 end
+      local hit = {}
+      for _, q in ipairs(rects) do
+        local i0, i1 = math.ceil((q[1] - 0.5) / PROBE.dx), math.ceil((q[1] + q[3] - 0.5) / PROBE.dx) - 1
+        local j0, j1 = math.ceil((q[2] - 0.5) / PROBE.dy), math.ceil((q[2] + q[4] - 0.5) / PROBE.dy) - 1
+        for j = max(0, j0), min(ny - 1, j1) do for i = max(0, i0), min(nx - 1, i1) do hit[j * nx + i + 1] = q end end
+      end
+      return hit, nx * ny
+    end
+    local function same_probes(rects, jp, W, H, what)
+      local hit, n = probe_ops(rects, W, H)
+      if n ~= #jp.idx then return false, what .. ": " .. n .. " points vs " .. #jp.idx end
+      local bad, first = 0, nil
+      for k = 1, n do
+        local want, q = jp.palette[jp.idx[k] + 1], hit[k]
+        local ok
+        if want == "" then ok = q == nil
+        elseif q == nil then ok = false
+        else
+          local r, g2, b, a = want:match("^(%d+),(%d+),(%d+),([%d.]+)$")
+          local c = M.split(q[5], ",")
+          ok = abs(tonumber(c[1]) - tonumber(r)) <= 1 and abs(tonumber(c[2]) - tonumber(g2)) <= 1 and abs(tonumber(c[3]) - tonumber(b)) <= 1 and abs(q[6] - tonumber(a)) <= 0.011
+        end
+        if not ok then bad = bad + 1; first = first or string.format("%s point %d: %s vs %s", what, k, q and (q[5] .. "," .. q[6]) or "none", want) end
+      end
+      return bad == 0, first, n
+    end
+    local function same_rows(a, b)
+      if not a or not b then return a == b end
+      if #a ~= #b then return false end
+      for i = 1, #a do if not (near(a[i][1], b[i][1], 2e-4) and near(a[i][2], b[i][2], 2e-4)) then return false end end
+      return true
+    end
+    local view_strips, view_points, view_bad = 0, 0, {}
+    local function compare_view(which, look, jv, W, H, from, to)
+      local g, ops = recorder()
+      local r = M.render_strip(which[2], g, { look = look, width = W, height = H, from = from, to = to, fill = false })
+      local ok1, e1, n = same_probes(ops.rects, jv.probes, W, H, which[1] .. " " .. look .. " " .. W .. "x" .. H)
+      local ok2, e2 = same_list(ops.texts, jv.texts, "texts")
+      local ok3, e3 = same_list(ops.triangles, jv.triangles, "triangles")
+      local ok4 = same_rows(r.raster and r.raster.rows, jv.raster)
+      local ok5 = r.legend == jv.legend and r.code == jv.code
+      view_strips, view_points = view_strips + 1, view_points + (n or 0)
+      if not (ok1 and ok2 and ok3 and ok4 and ok5) then
+        view_bad[#view_bad + 1] = e1 or (e2 and (look .. " " .. e2)) or (e3 and (look .. " " .. e3)) or (not ok4 and (look .. ": raster rows")) or (look .. " legend: " .. r.legend .. " | " .. jv.legend)
+      end
+    end
     local compared, mismatches, legends, fits, trips = 0, {}, true, true, true
     for _, which in ipairs({ { "robot", robot, ref.robot }, { "arc", arc, ref.arc } }) do
       for key, L in pairs(which[3].looks) do
         if M.look_fits(which[2], key) ~= L.fits then fits = false; T.note("fits " .. which[1] .. " " .. key) end
         if L.roundTrip and M.look_code(M.parse_look(M.LOOKS[key].code)) ~= L.roundTrip then trips = false end
-        if L.ops then
+        if L.views then
+          for size, jv in pairs(L.views) do
+            local W, H = size:match("(%d+)x(%d+)")
+            compare_view(which, key, jv, tonumber(W), tonumber(H))
+          end
+        elseif L.ops then
           for size, jsops in pairs(L.ops) do
             local W, H = size:match("(%d+)x(%d+)")
             local g, ops = recorder()
@@ -289,6 +342,84 @@ return function(T)
           if r.legend ~= L.legend or r.code ~= L.code then legends = false; T.note(which[1] .. " " .. key .. " legend: " .. r.legend .. " | " .. L.legend) end
         end
       end
+    end
+    for _, which in ipairs({ { "robot", robot, ref.robot }, { "arc", arc, ref.arc } }) do
+      local d = which[2].source.duration
+      for _, z in ipairs(which[3].viewZoom) do compare_view(which, z.look, z, 220, 90, d / 3, 2 * d / 3) end
+    end
+    check("views: drawn as drawStrip draws them (every view look, two sizes, both documents, and zoomed): colours at points, texts, raster rows, legends",
+      #view_bad == 0 and view_strips >= 26, view_strips .. " strips, " .. view_points .. " points; " .. (view_bad[1] or "all equal"))
+    -- the views as numbers, as Playhead.view gives them
+    local vn_bad, vn_n = {}, 0
+    for _, which in ipairs({ { "robot", robot, ref.robot }, { "arc", arc, ref.arc } }) do
+      for _, jv in ipairs(which[3].views) do
+        local o = jv.opts or {}
+        local v = M.view(which[2], jv.kind, { curve = o.curve, bars = o.bars, cyclic = o.cyclic })
+        local name = which[1] .. " " .. jv.kind .. (o.curve and (" " .. o.curve) or "") .. (o.bars and " 4 bars" or "") .. (o.cyclic and " cyclic" or "")
+        local err
+        if jv.none == "view" then if v then err = "a view where drawStrip has none" end
+        elseif not v then err = "no view"
+        else
+          local sum, none = 0, 0
+          for i = 1, v.rows * v.cols do local x = v.values[i]; if x < 0 then none = none + 1 else sum = sum + x end end
+          if v.rows ~= jv.rows or v.cols ~= jv.cols then err = "size " .. v.rows .. "x" .. v.cols
+          elseif none ~= jv.none or abs(sum - jv.sum) > 1e-3 * max(1, jv.sum) then err = string.format("sum %.3f vs %.3f, %d vs %d without data", sum, jv.sum, none, jv.none) end
+          for _, p in ipairs(jv.at) do if not err and not near(v.values[p[1] + 1], p[2], 2e-4) then err = string.format("value %d: %.5f vs %.5f", p[1], v.values[p[1] + 1], p[2]) end end
+          if not err and #v.yTicks ~= #jv.yTicks then err = "axis " .. #v.yTicks .. " vs " .. #jv.yTicks end
+          for i, t in ipairs(jv.yTicks) do if not err and not (near(v.yTicks[i].row, t[1], 2e-4) and v.yTicks[i].text == t[2]) then err = "axis " .. v.yTicks[i].text .. " vs " .. t[2] end end
+          for _, c in ipairs(jv.colAt or {}) do if not err and v.colAt(c[1]) ~= c[2] then err = string.format("column at %.3f s: %d vs %d", c[1], v.colAt(c[1]), c[2]) end end
+          if not err and jv.timeRows and not (same_rows(v.timeRows, jv.timeRows) and v.beatsPerBar == jv.beatsPerBar) then err = "raster rows" end
+          if not err and jv.faint then local f = 0; for i = 1, v.rows * v.cols do if v.faint[i] then f = f + 1 end end; if f ~= jv.faint then err = "faint " .. f .. " vs " .. jv.faint end end
+        end
+        vn_n = vn_n + 1
+        if err then vn_bad[#vn_bad + 1] = name .. ": " .. err end
+      end
+    end
+    check("views: bar raster, tempogram (and folded), lag view, modulation and scalogram as numbers equal Playhead.view's",
+      #vn_bad == 0 and vn_n == 16, vn_n .. " views; " .. (vn_bad[1] or "all equal"))
+    -- the window says when a slow view is being worked out (a scalogram of a long curve), once
+    do
+      local c = {}
+      for i = 1, 4000 do c[i] = math.sin(i / 7) end
+      local long = { curves = { rate = 20, loudness = c }, source = { duration = 200 } }
+      local before = M.slow_views(long, "scalogram:loudness,lane:loudness")
+      local v = M.view(long, "scale", { curve = "loudness" })
+      check("views: a scalogram of a long curve is announced before it is worked out, and not again",
+        before == "the rhythms in loudness" and v ~= nil and M.slow_views(long, "scalogram:loudness") == nil and M.slow_views(arc, "rhythms") == nil, tostring(before))
+    end
+    -- a view the document cannot give leaves the plain waveform in its place (once); the legend says so
+    do
+      local g, ops = recorder()
+      local r = M.render_strip(robot, g, { look = "spec:tempo~cyclic,raster:loudness,ticks:onsets", width = 120, height = 40, fill = false })
+      local g2, ops2 = recorder()
+      M.render_strip(robot, g2, { look = "wave,ticks:onsets", width = 120, height = 40, fill = false })
+      check("views: one a sound effect cannot give falls back to its waveform, and the legend says why",
+        r.code == "spec:tempo~cyclic,raster:loudness,ticks:onsets" and #ops.rects == #ops2.rects and #ops.rects > 100 and r.legend:find("music only; not in this analysis", 1, true) ~= nil
+          and r.legend:find("needs a beat", 1, true) ~= nil and r.raster == nil, r.legend)
+    end
+    -- the raster in an item: the strip window maps the cursor and clicks through the rows
+    do
+      local d = arc.source.duration
+      local m = M.take_map({ pos = 10, len = d / 2, offs = d / 4, rate = 1, src_len = d })
+      local column, to_x = M.item_columns(m, 300)
+      local g, ops = recorder()
+      local r = M.render_strip(arc, g, { look = "raster:onsetStrength,sections,ticks:onsets", width = 300, height = 120, column = column, to_x = to_x, fill = false })
+      local rows = r.raster and r.raster.rows or {}
+      local trips2, inside = 0, 0
+      for k = 0, 40 do
+        local T = 10 + k / 40 * d / 2 * 0.999
+        local f = M.project_to_file(m, T)
+        local x, y, rh = M.raster_xy(rows, f, 300, 120)
+        if x then
+          inside = inside + 1
+          local f2 = M.raster_time(rows, x, y + rh / 2, 300, 120)
+          local Ts = M.file_to_project(m, f2)
+          if Ts[1] and abs(Ts[1] - T) < 1e-6 then trips2 = trips2 + 1 end
+        end
+      end
+      check("views: a bar raster in an item shows the bars the item plays; cursor and clicks map through its rows",
+        #rows >= 16 and #rows <= 18 and rows[1][1] <= d / 4 and rows[#rows][2] >= 3 * d / 4 and inside == 41 and trips2 == 41 and ops.circles > 20 and #ops.texts >= 3,
+        #rows .. " rows, " .. trips2 .. " of " .. inside .. " times back, " .. ops.circles .. " onsets")
     end
     check("looks: legends and codes equal drawStrip's for every ready-made look", legends and trips)
     check("looks: lookFits as Playhead.lookFits", fits)

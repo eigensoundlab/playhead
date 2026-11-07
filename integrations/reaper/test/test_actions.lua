@@ -39,7 +39,7 @@ return function(T)
       local chunk, e = loadfile(f)
       if not chunk then bad[#bad + 1] = e end
       local text = T.read(f) or ""
-      for _, tag in ipairs({ "@description", "@version 0.1.0", "@author Daniel Sandner", "SPDX%-License%-Identifier: Apache%-2%.0", "Copyright 2026 Daniel Sandner" }) do
+      for _, tag in ipairs({ "@description", "@version 0.2.0", "@author Daniel Sandner", "SPDX%-License%-Identifier: Apache%-2%.0", "Copyright 2026 Daniel Sandner" }) do
         if not text:find(tag) then bad[#bad + 1] = n .. ": no " .. tag end
       end
     end
@@ -265,6 +265,19 @@ return function(T)
     local f = A.takes[#A.takes - 1].src.file
     return f:find("_deharsh_2_deharsh%.wav$") ~= nil, f:match("[^/]*$")
   end)
+  -- a tool that changes the length: the new takes start at the same moment of the sound, and the item is lengthened
+  local S = env.add_item(tr2, { source = rsrc, pos = 120, len = 1.0, offs = 0.1, name = "robot to stretch" })
+  env.select({ S })
+  env.menu_choice = pick("Stretch keeping the attacks")
+  env.input_answers = { function(v) v[1] = "2"; return v end }
+  scenario("process: Stretch keeping the attacks: the takes start at the same moment of the sound, the item is lengthened to play them",
+    script("Process selected items"), nil, function()
+      local t1, t2 = S.takes[2], S.takes[3]
+      local ok = #S.takes == 3 and t1.name == "Stretch keeping the attacks" and t2.name == "Stretch keeping the attacks (plain)"
+        and math.abs(t1.offs - 0.2) < 0.002 and math.abs(t2.offs - 0.2) < 0.002 and math.abs(S.len - 2.0) < 0.002 and S.cur == 1 and last_message():find("x2.00", 1, true)
+      return ok, string.format("%s; start %.4f s, item %.4f s", t1 and t1.name or "?", t1 and t1.offs or -1, S.len)
+    end)
+  env.input_answers = {}
   env.menu_choice = nil
 
   ------------------------------------------------------------------------------------------------------------------
@@ -300,6 +313,29 @@ return function(T)
       local expected = 30 + 450 / 900 * 20
       return drew and cursor and math.abs(cursor - expected) < 0.05 and seen_look == "structure" and env.toggles[55555] == 0,
         string.format("cursor %.2f s (expected %.2f), look %s", cursor or -1, expected, tostring(seen_look))
+    end)
+  -- the bar raster: the strip is a row per bar; a click in a row moves the edit cursor to that point of that bar
+  env.select({ B })
+  closing = false
+  local rcursor, rlook = nil, nil
+  scenario("strip window: on the bar raster a click moves the edit cursor to that point of the bar in its row",
+    script("Strip window"), { seconds = 60, on_tick = function(i)
+      if i == 3 then env.menu_choice = pick("Bar raster"); G.mouse_cap = 2 end
+      if i == 4 then G.mouse_cap = 0; env.menu_choice = nil end
+      if i == 6 then G.mouse_x, G.mouse_y, G.mouse_cap = 300, 22 + 100, 1 end
+      if i == 7 then G.mouse_cap = 0; rcursor, rlook = env.cursor, env.ext["Playhead/look"] end
+      if i >= 9 then closing = true end
+    end }, function()
+      -- expected: as the window maps it, from the same rows (the strip is 900 x 160 under a 22-pixel header)
+      local m = core.take_map({ pos = 30, len = 20, offs = 5, rate = 1.25, src_len = 64, file_len = 64 })
+      local column, to_x = core.item_columns(m, 900)
+      local nop = setmetatable({}, { __index = function() return function() end end })
+      local r = core.render_strip(core.load_document(T.fixtures.arc), nop, { look = "raster", width = 900, height = 160, column = column, to_x = to_x })
+      local rows = r.raster and r.raster.rows or {}
+      local f = core.raster_time(rows, 300, 100, 900, 160)
+      local want = f and core.file_to_project(m, f)[1]
+      return rlook == "raster" and rcursor and want and math.abs(rcursor - want) < 1e-6 and #rows >= 12 and #rows <= 15,
+        string.format("cursor %.3f s (expected %.3f) in a raster of %d bars", rcursor or -1, want or -1, #rows)
     end)
   -- an item that has not been analysed: the window analyses it in the background and then draws it
   local copy = T.media .. "/robot copy.wav"

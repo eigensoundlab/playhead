@@ -642,8 +642,12 @@ function R.gfx_sink(ox, oy, text_scale)
     gfx.setfont(2, "Arial", math.max(6, floor(size * text_scale + 0.5)))
     local w, h = gfx.measurestr(str)
     gfx.x = ox + (align == "right" and (x - w) or x)
-    gfx.y = oy + (valign == "middle" and (y - h / 2) or (y - h * 0.8))
+    gfx.y = oy + (valign == "middle" and (y - h / 2) or valign == "top" and y or (y - h * 0.8))
     gfx.drawstr(str)
+  end
+  function s.circle(x, y, r, c, a)
+    set_colour(c, a)
+    gfx.circle(ox + x, oy + y, r, 1, 1)
   end
   return s
 end
