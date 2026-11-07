@@ -22,7 +22,7 @@
 const WL = root.WL || (typeof require !== "undefined" ? require("./analysis.js") : null);
 const PHD = root.PHD || (typeof require !== "undefined" ? require("./descriptors.js") : null);
 
-const VERSION = "0.2.0";            // kept equal to package.json by the test suite
+const VERSION = "0.3.0";            // kept equal to package.json by the test suite
 const SCHEMA = "playhead-analysis", SCHEMA_VERSION = 1;
 const PROFILES = ["fast", "sfx", "music", "auto"];
 

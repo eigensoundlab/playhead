@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.3.0 (2026-11-07)
 
 ### Added
 - **Languages**: the lab in Czech, German, Polish, Russian and Spanish, from a menu in the top bar or `?lang=` in the
@@ -53,7 +53,9 @@
 - The loudness curve hears a file with silence before and after it: its window counts silence beyond the ends, and its
   attack runs from silence through the half window before the start. A clip that starts at once used to begin at full
   loudness; inside a mix it rises from silence, so combined documents put the peak up to 2 dB too high and 20 to 60 ms
-  too early. Only the first and last moments of a file change.
+  too early. Only the first and last moments of a file change: on the 73-file corpus, the loudness range of short
+  one-shots (by 1 LU or more in 16 files) and the tension range of a few; the self-checks pass and fail as before
+  ([experiments/corpus](experiments/corpus/README.md)).
 - `measureParts`: *together* takes every part in the main hit, so a part that comes in up to 100 ms late counts against
   it instead of being left out.
 - Parts of very different lengths combine on the longest part's grid: a clip of a few tens of milliseconds has a rounded

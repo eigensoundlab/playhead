@@ -23,6 +23,7 @@ Playhead is a research prototype. It runs entirely in the browser: audio you dro
 | Rhythm | Tempo, beats, downbeats, pulse clarity | Autocorrelation tempogram, Ellis dynamic-programming beats, predominant local pulse |
 | Structure | Sections and repeats (A B A …) | Foote checkerboard novelty on a self-similarity matrix |
 | Sound effects | Events, Schaeffer-style tags (impulse / iterative / sustained), layers, pitch, attack, QA problems | YIN, Timbre Toolbox descriptors, KL-NMF, Peeters–Deruty profiles |
+| Views of rhythm and form | Bar raster, tempogram, lag view, modulation spectrogram, curve scalogram | Beat-synchronous folding; autocorrelation tempogram (Grosche & Müller); time-lag self-similarity (Goto); modulation spectrum (Atlas & Shamma); Morlet wavelet with cone of influence (Torrence & Compo) |
 
 Five combined preview designs (D1–D5) put the most useful of these onto one strip. The library view uses D5 for sound effects and D4 for music.
 
