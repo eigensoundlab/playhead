@@ -42,6 +42,8 @@ const whole = Playhead.combine([{ doc: kick }, { doc: bass, offset: 0.5, gain: -
 | `tools()` | the tools and their parameters (id, label, range, default) |
 | `combine(parts, opts)` | a document for the sum of several sounds, from their documents alone (no audio, no new analysis), for folder tracks, layered effects and stems. `parts`: `[{ doc, offset, gain }]` (seconds, dB). `opts`: `rate`, `duration`, `wave` (a real overview of the sum, instead of the estimate), `aligned`. `doc.combined` lists the parts and the rule used for each curve ([Combining](#combining-documents)) |
 | `align(parts, opts)` | the parts on one time axis: per part its power per column and, when all have spectrograms, per column and band. For views that show which part carries what |
+| `measureParts(parts, opts)` | measures of the whole around its main peak, from the documents: `rise` (s), `contrast` and `focus` (dB before and after the peak), `together`, `overlap`, `coverage`, `low`, `shared` (0..1), `tail` (s), `harshness`, and `scores` for the goals (`punch`, `size`, `clean`) |
+| `arrange(parts, opts)` | searches offsets and gains for a goal (`"punch"`, `"big"`, `"clean"` or weights) and returns `{ baseline, candidates: [{ parts: [{ offset, gain }], score, measures, changes }], evaluated, ms }`, about 500 arrangements in 0.1 to 0.3 s. Parts with `lock: true` stay; without any, the loudest stays. `opts`: `range` (s, default 0.25), `gainRange` (dB, default [-6, 3]), `minOffset`, `maxOffset`, `count`, `seed`, `maxHarshness` |
 | `localize(table)` | shows the curve names, looks, legends and tools in another language; `table` is `dist/i18n/<lang>.json` (Czech, German, Polish, Russian, Spanish), `null` returns to English. Documents are unaffected: only labels change |
 
 **Profiles** (one core of the development machine, stereo 44.1 kHz; document size in brackets):
@@ -67,6 +69,14 @@ whole. On 14 sessions built from separate parts ([experiments/compose](../experi
 the spectrogram matched the analysed mix closely, activity, arousal and harshness roughly (r 0.8 to 0.99), tension and
 novelty less (0.72, 0.51), events poorly (F about 0.5): three layers struck together are one event in the mix. Where
 the combined and the analysed whole differ is itself worth showing: it is where the parts interact.
+
+**Searching arrangements.** Combining takes about a millisecond, so `arrange()` can try some 500 offsets and gains in a
+fraction of a second (stochastic hill climbing from the current arrangement and from random ones, on the curve columns:
+10 ms for sound effects) and return the best few that differ from each other. The goals are first heuristics, meant to
+be tested by listening: *punch* favours a short rise, the layers starting together and sounding in the hit, a peak
+that stands out and little masking; *big* favours a full spectrum, low end and a long tail; *clean* favours few shared bands with every layer still
+in the hit. Each dB of gain change costs a little, so turning the other layers down is not a free win. Power sums cannot
+see phase, so a host lines the chosen arrangement up to the sample (SFX Workbench's "Align hits").
 
 ## The document (schema `playhead-analysis`, version 1)
 

@@ -124,6 +124,12 @@ band, and the bands two tracks share, where one may mask the other. `Playhead.al
 power and spectrogram behind such views. How well each curve combines is measured in
 [experiments/compose](experiments/compose/README.md).
 
+Because a whole combines in about a millisecond, a computer can search it: `Playhead.arrange(parts, { goal: "punch" })`
+tries some 500 offsets and gains in a fraction of a second and returns the best few arrangements that differ from each
+other, for punchy, big (cinematic) or clean layering, with `Playhead.measureParts` reporting the measures behind them
+(rise time, the layers starting together, focus, spectral coverage, tail, shared bands). SFX Workbench offers it as
+"Find arrangements" in its layer stack.
+
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
 
 **REAPER.** [integrations/reaper](integrations/reaper/README.md) is a ReaPack package of six actions around the command
@@ -341,7 +347,7 @@ src/analysis.js       feature extraction, curves, rhythm, structure, sound-effec
 src/descriptors.js    cross-field descriptors N1–N9
 src/probes.js         synthetic test signals with ground truth, descriptor tour
 src/effects.js        analysis-driven tools, WAV encoder
-src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process(), combine(), align(), localize()
+src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process(), combine(), align(), arrange(), localize()
 src/i18n.js           translations at run time; src/i18n-data.js is built from i18n/<lang>.json
 src/app.js            user interface
 i18n/                 the English texts (en.json), the translations and the translators' guide

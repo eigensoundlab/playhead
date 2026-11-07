@@ -429,6 +429,207 @@ function combine(parts, opts) {
   };
 }
 
+/* ---------------- arranging parts: measures of the whole and a search over offsets and gains ---------------- */
+// Because a whole can be combined from its parts' documents in about a millisecond, a computer can try hundreds of
+// arrangements a second and keep the ones that serve a goal. Everything here works from documents (no audio), on the
+// curve columns (10 ms for sound effects, 50 ms for music); a host lines the chosen arrangement up to the sample.
+//
+//   Playhead.measureParts(parts, opts)  measures of the whole for parts [{ doc, offset, gain }], around its main peak:
+//     rise      seconds the loudness takes to climb the last 20 dB into the main peak (short: a hard attack)
+//     contrast  dB the main peak stands above the 60-250 ms before it (silence before an impact makes it bigger)
+//     focus     dB the main peak stands above the 150-400 ms after it (high: short and punchy; low: long and full)
+//     together  0..1, how many of the parts that sound at the main peak start within ±8 ms of each other
+//     overlap   0..1, how many parts sound in the main hit (from 50 ms before to 100 ms after its peak, with at least
+//               3 % of the whole's energy there): spreading layers apart in time is not layering
+//     coverage  0..1, the share of frequency bands within 30 dB of the strongest one, in the 300 ms from the peak
+//     low       0..1, the share of energy below 120 Hz in those 300 ms
+//     tail      seconds until the whole falls 30 dB below the main peak
+//     shared    0..1, the share of energy in time-frequency cells where the two strongest parts are within 6 dB
+//               (where one may mask the other)
+//     harshness the whole's mean harshness (0..1, combined as in combine())
+//     and score: the goal's 0..1 score, from GOALS
+//   Playhead.arrange(parts, opts)  searches offsets and gains for opts.goal ("punch", "big" or "clean", or weights over
+//     the scores below) and returns { goal, baseline, candidates: [{ parts: [{ offset, gain }], score, measures,
+//     changes }], evaluated, ms }. Parts with lock: true stay as they are; without any, the loudest part stays.
+//     opts: range (seconds each part may move, default 0.25), gainRange ([lowest, highest] change in dB, default
+//     [-6, 3]; each dB of change costs 0.004 of score, so turning layers down is not a free win), minOffset (default
+//     0), maxOffset, count (candidates, default 6), restarts, steps, seed, maxHarshness (above it the score drops,
+//     default 0.9).
+// The goals are first heuristics to be tested by listening (see experiments/compose); the candidates are suggestions
+// to audition, not answers.
+const GOALS = {
+  punch: { punch: 1 },
+  big: { size: 1, punch: 0.25 },
+  clean: { clean: 1, punch: 0.25 }
+};
+const clip01 = v => Math.max(0, Math.min(1, v));
+// the 0..1 scores a goal combines
+function partScores(m) {
+  const sep = m.shared == null ? 0.5 : 1 - m.shared, hard = clip01(1 - (m.rise - 0.01) / 0.1);
+  return {
+    punch: 0.2 * hard + 0.1 * clip01(m.contrast / 40) + 0.2 * clip01(m.focus / 30) + 0.2 * m.together + 0.1 * sep + 0.2 * m.overlap,
+    size: 0.3 * (m.coverage == null ? 0.5 : m.coverage) + 0.25 * clip01(m.tail / 2) + 0.2 * (m.low == null ? 0 : clip01(m.low / 0.4)) + 0.15 * hard + 0.1 * m.together,
+    clean: 0.5 * sep + 0.2 * m.overlap + 0.15 * m.together + 0.15 * hard
+  };
+}
+// the parts as arrays on one column grid, ready for many evaluations
+function prepareParts(parts) {
+  const ps = (parts || []).filter(p => p && p.doc && p.doc.curves && Array.isArray(p.doc.curves.lufs));
+  if (!ps.length) throw new Error("Playhead: no parts (expected [{ doc, offset, gain }])");
+  const rate = ps[0].doc.curves.rate;
+  if (ps.some(p => Math.abs(p.doc.curves.rate / rate - 1) > 0.05)) throw new Error("Playhead: analyse every part with the same curveRate");
+  const B = ps.every(p => p.doc.spectrum && p.doc.spectrum.bands === ps[0].doc.spectrum.bands) ? ps[0].doc.spectrum.bands : 0;
+  const sp0 = B ? ps[0].doc.spectrum : null, mel = f => 2595 * Math.log10(1 + f / 700);
+  const bandOf = f => (sp0 ? Math.max(0, Math.min(B - 1, Math.floor((mel(f) - mel(sp0.fmin)) / (mel(sp0.fmax) - mel(sp0.fmin)) * (B + 1) - 0.5))) : 0);
+  const prepared = ps.map(p => {
+    // each part on the common grid, by time (a document's rate is rounded to its own length)
+    const d = p.doc, c = d.curves, own = c.lufs.length, n = Math.max(1, Math.round(d.source.duration * rate));
+    const ix = i => Math.min(own - 1, Math.floor((i + 0.5) / rate * c.rate));
+    const pow = Float64Array.from({ length: n }, (_, i) => { const v = c.lufs[ix(i)]; return v == null ? 0 : Math.pow(10, v / 10); });
+    const loud = Float64Array.from({ length: n }, (_, i) => { const v = c.loudness ? c.loudness[ix(i)] : c.lufs[ix(i)] == null ? 0 : (c.lufs[ix(i)] + 60) / 60; return v || 0; });
+    const harsh = c.harshness ? Float64Array.from({ length: n }, (_, i) => c.harshness[ix(i)] || 0) : null;
+    let spec = null;
+    if (B) {
+      const P = specPower(d.spectrum), cols = d.spectrum.columns, dur = d.source.duration;
+      spec = new Float64Array(n * B);
+      for (let i = 0; i < n; i++) { const j = Math.min(cols - 1, Math.floor((i + 0.5) / rate / dur * cols)); for (let b = 0; b < B; b++) spec[i * B + b] = P[j * B + b]; }
+    }
+    const s = d.summary && d.summary.soundStart, on = (d.onsets || []).slice();
+    if (s != null && !(on.length && on[0] - s < 0.05)) on.unshift(s);       // a part that starts with sound starts with an onset
+    return { doc: d, n, pow, loud, harsh, spec, onsets: on, offset: p.offset || 0, gain: p.gain || 0, lock: !!p.lock };
+  });
+  return { ps: prepared, rate, B, low: bandOf(120) };
+}
+// measures for offsets (seconds) and gains (dB), one per part
+function measureAt(P, offs, gains) {
+  const { ps, rate, B } = P, K = ps.length;
+  const o = offs.map(v => Math.round(v * rate)), g = gains.map(v => Math.pow(10, v / 10));
+  const C = Math.max(...ps.map((p, k) => o[k] + p.n));
+  const tot = new Float64Array(C);
+  for (let k = 0; k < K; k++) { const p = ps[k]; for (let i = 0; i < p.n; i++) { const c = o[k] + i; if (c >= 0) tot[c] += p.pow[i] * g[k]; } }
+  const L = Float64Array.from(tot, v => (v > 0 ? 10 * Math.log10(v) : -100));
+  let cp = 0; for (let c = 1; c < C; c++) if (L[c] > L[cp]) cp = c;
+  const at = w => Math.max(1, Math.round(w * rate));
+  let cr = cp; while (cr > 0 && L[cr - 1] > L[cp] - 20) cr--;
+  const rise = (cp - cr + 1) / rate;
+  let bs = 0, bk = 0; for (let c = cp - at(0.25); c <= cp - at(0.06); c++) { bs += c >= 0 ? Math.max(-60, L[c]) : -60; bk++; }
+  const contrast = Math.min(60, L[cp] - bs / Math.max(1, bk));
+  let fs = 0, fk = 0; for (let c = cp + at(0.15); c <= cp + at(0.4); c++) { fs += c < C ? Math.max(-70, L[c]) : -70; fk++; }
+  const focus = Math.min(60, L[cp] - fs / fk);
+  let ce = C; for (let c = cp + 1; c < C; c++) if (L[c] < L[cp] - 30) { ce = c; break; }
+  const tail = (ce - cp) / rate;
+  // together: the parts that sound at the peak (within 20 dB of the whole), by their onset nearest before it
+  const t0 = cp / rate, starts = [];
+  for (let k = 0; k < K; k++) {
+    const i = cp - o[k]; if (i < 0 || i >= ps[k].n || ps[k].pow[i] * g[k] < tot[cp] * 0.01) continue;
+    let best = null; for (const t of ps[k].onsets) { const a = t + o[k] / rate; if (a <= t0 + 0.02 && a >= t0 - 0.08) best = best == null || Math.abs(a - t0) < Math.abs(best - t0) ? a : best; }
+    if (best != null) starts.push(best);
+  }
+  // overlap: the parts with at least 3 % of the whole's energy in the main hit
+  const wa = Math.max(0, cp - at(0.05)), wb = Math.min(C, cp + at(0.1) + 1);
+  let wt = 0; for (let c = wa; c < wb; c++) wt += tot[c];
+  let inside = 0;
+  for (let k = 0; k < K; k++) { let e = 0; for (let c = wa; c < wb; c++) { const i = c - o[k]; if (i >= 0 && i < ps[k].n) e += ps[k].pow[i] * g[k]; } if (wt > 0 && e >= 0.03 * wt) inside++; }
+  const overlap = inside / K;
+  let together = 1;
+  if (starts.length > 1) { const s = starts.slice().sort((a, b) => a - b), med = s[Math.floor(s.length / 2)]; together = s.filter(v => Math.abs(v - med) <= 0.008).length / s.length; }
+  // the spectrum around the peak and the shared cells over the whole
+  let coverage = null, low = null, shared = null;
+  if (B) {
+    const E = new Float64Array(B), w1 = Math.min(C, cp + at(0.3));
+    let top = 0;
+    const cell = new Float64Array(K);
+    let all = 0, sh = 0;
+    for (let c = 0; c < C; c++) for (let b = 0; b < B; b++) {
+      let s = 0, p1 = 0, p2 = 0;
+      for (let k = 0; k < K; k++) { const i = c - o[k]; const v = i >= 0 && i < ps[k].n ? ps[k].spec[i * B + b] * g[k] : 0; cell[k] = v; s += v; if (v > p1) { p2 = p1; p1 = v; } else if (v > p2) p2 = v; }
+      if (c >= cp && c < w1) E[b] += s;
+      if (s > top) top = s;
+      if (s > 0) { all += s; if (p2 > 0 && p1 / p2 <= 3.981) sh += s; }
+    }
+    void top;
+    let mx = 0, sum = 0; for (let b = 0; b < B; b++) { mx = Math.max(mx, E[b]); sum += E[b]; }
+    coverage = mx > 0 ? E.filter(v => v >= mx * 1e-3).length / B : 0;
+    let lw = 0; for (let b = 0; b <= P.low; b++) lw += E[b];
+    low = sum > 0 ? lw / sum : 0;
+    shared = all > 0 ? sh / all : 0;
+  }
+  // harshness of the whole: its loudness plus the parts' weighted excess (as in combine), over the sounding columns
+  let hs = 0, hn = 0;
+  if (ps.every(p => p.harsh)) for (let c = 0; c < C; c++) {
+    if (L[c] < L[cp] - 40) continue;
+    let ex = 0, w = 0;
+    for (let k = 0; k < K; k++) { const i = c - o[k]; if (i < 0 || i >= ps[k].n || !ps[k].pow[i]) continue; const q = ps[k].pow[i] * g[k]; ex += q * (ps[k].harsh[i] - ps[k].loud[i]); w += q; }
+    hs += clip01(clip01((L[c] + 60) / 60) + (w ? ex / w : 0)); hn++;
+  }
+  return { peakLufs: rnd(L[cp], 2), peakTime: rnd(t0, 3), rise: rnd(rise, 3), contrast: rnd(contrast, 2), focus: rnd(focus, 2), together: rnd(together, 3), overlap: rnd(overlap, 3), coverage: coverage == null ? null : rnd(coverage, 3),
+    low: low == null ? null : rnd(low, 3), tail: rnd(tail, 3), shared: shared == null ? null : rnd(shared, 3), harshness: hn ? rnd(hs / hn, 3) : null };
+}
+function goalOf(goal) {
+  const w = typeof goal === "object" && goal ? goal : GOALS[goal || "punch"];
+  if (!w) throw new Error("Playhead: unknown goal " + goal + " (" + Object.keys(GOALS).join(", ") + ", or weights)");
+  return w;
+}
+function scoreOf(m, w, maxHarsh, gainChange) {
+  const s = partScores(m); let v = 0, n = 0;
+  for (const k in w) { v += w[k] * (s[k] || 0); n += Math.abs(w[k]); }
+  v = n ? v / n : 0;
+  if (m.harshness != null && m.harshness > maxHarsh) v -= 2 * (m.harshness - maxHarsh);
+  return v - 0.004 * (gainChange || 0);
+}
+function measureParts(parts, opts) {
+  opts = opts || {};
+  const P = prepareParts(parts), m = measureAt(P, P.ps.map(p => p.offset), P.ps.map(p => p.gain));
+  m.scores = Object.fromEntries(Object.entries(partScores(m)).map(([k, v]) => [k, rnd(v, 3)]));
+  m.score = rnd(scoreOf(m, goalOf(opts.goal), opts.maxHarshness == null ? 0.9 : opts.maxHarshness), 3);
+  return m;
+}
+function arrange(parts, opts) {
+  opts = opts || {};
+  const t0 = Date.now(), P = prepareParts(parts), K = P.ps.length, w = goalOf(opts.goal), maxH = opts.maxHarshness == null ? 0.9 : opts.maxHarshness;
+  const range = opts.range == null ? 0.25 : opts.range, gr = opts.gainRange || [-6, 3], step = 1 / P.rate;
+  const minO = opts.minOffset == null ? 0 : opts.minOffset, maxO = opts.maxOffset == null ? Infinity : opts.maxOffset;
+  let locked = P.ps.map(p => p.lock);
+  if (!locked.some(Boolean)) { let best = 0; P.ps.forEach((p, k) => { if (Math.max(...p.pow) * Math.pow(10, p.gain / 10) > Math.max(...P.ps[best].pow) * Math.pow(10, P.ps[best].gain / 10)) best = k; }); locked = locked.map((_, k) => k === best); }
+  const free = P.ps.map((_, k) => k).filter(k => !locked[k]);
+  const base = { offs: P.ps.map(p => p.offset), gains: P.ps.map(p => p.gain) };
+  const lim = k => [Math.max(minO, base.offs[k] - range), Math.min(maxO, base.offs[k] + range)];
+  const glim = k => [base.gains[k] + gr[0], base.gains[k] + gr[1]];
+  const snapO = v => Math.round(v / step) * step;
+  let seed = (opts.seed == null ? 12345 : opts.seed) >>> 0;
+  const rand = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+  let evaluated = 0;
+  const evalState = st => { evaluated++; const m = measureAt(P, st.offs, st.gains); return { st, m, score: scoreOf(m, w, maxH, st.gains.reduce((a, v, k) => a + Math.abs(v - base.gains[k]), 0)) }; };
+  const baseline = evalState(base), pool = [];
+  const consider = r => { if (r.score > baseline.score + 1e-4) pool.push(r); };
+  const restarts = opts.restarts || 8, steps = opts.steps || 60;
+  for (let r = 0; r < restarts && free.length; r++) {
+    let curS = { offs: base.offs.slice(), gains: base.gains.slice() };
+    if (r > 0) for (const k of free) { const [a, b] = lim(k), [ga, gb] = glim(k); curS.offs[k] = snapO(a + rand() * (b - a)); curS.gains[k] = Math.round((ga + rand() * (gb - ga)) * 2) / 2; }
+    let cur = evalState(curS); consider(cur);
+    for (let s = 0; s < steps; s++) {
+      const k = free[Math.floor(rand() * free.length)], nx = { offs: cur.st.offs.slice(), gains: cur.st.gains.slice() }, big = s < steps / 2;
+      if (rand() < 0.6) { const [a, b] = lim(k); nx.offs[k] = Math.max(a, Math.min(b, snapO(nx.offs[k] + (rand() * 2 - 1) * (big ? 0.08 : 0.025)))); }
+      else { const [ga, gb] = glim(k); nx.gains[k] = Math.max(ga, Math.min(gb, Math.round((nx.gains[k] + (rand() * 2 - 1) * (big ? 3 : 1)) * 2) / 2)); }
+      const r2 = evalState(nx);
+      if (r2.score > cur.score) { cur = r2; consider(cur); }
+    }
+  }
+  // the best, kept apart: each candidate differs from the ones before by 15 ms or 1.5 dB in some part
+  pool.sort((a, b) => b.score - a.score);
+  const picked = [];
+  for (const r of pool) {
+    if (picked.length >= (opts.count || 6)) break;
+    if (picked.some(q => r.st.offs.every((v, k) => Math.abs(v - q.st.offs[k]) < 0.015) && r.st.gains.every((v, k) => Math.abs(v - q.st.gains[k]) < 1.5))) continue;
+    picked.push(r);
+  }
+  const out = r => ({
+    parts: r.st.offs.map((v, k) => ({ offset: rnd(v, 4), gain: rnd(r.st.gains[k], 2) })), score: rnd(r.score, 3), measures: r.m,
+    changes: r.st.offs.map((v, k) => ({ part: k, offset: rnd(v - base.offs[k], 4), gain: rnd(r.st.gains[k] - base.gains[k], 2) })).filter(c => Math.abs(c.offset) > 1e-4 || Math.abs(c.gain) > 0.01)
+  });
+  return { goal: opts.goal || "punch", weights: w, locked: locked.map((v, k) => (v ? k : -1)).filter(k => k >= 0), baseline: { score: rnd(baseline.score, 3), measures: baseline.m }, candidates: picked.map(out), evaluated, ms: Date.now() - t0 };
+}
+
 /* ---------------- markers for editors and engines ---------------- */
 // { kind: "region" | "marker", start, end?, name } sorted by time: sections as regions, downbeats and events as markers
 function toMarkers(doc, opts) {
@@ -847,7 +1048,7 @@ function drawStrip(ctx, doc, opts) {
   return { code: lookCode(layers), layers, legend: describeLook(layers, doc), items };
 }
 
-const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, align, combine, combineRules: COMBINE_RULES, drawStrip, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
+const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, align, combine, combineRules: COMBINE_RULES, measureParts, arrange, goals: GOALS, drawStrip, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.Playhead = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

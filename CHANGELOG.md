@@ -28,6 +28,11 @@
   mute, solo and play the whole. The folder shows the tracks' look combined at once or from the analysed mix, with
   their agreement, and three new views: each track's share, the loudest track in each band, and bands two tracks
   share. In all six languages.
+- **Searching arrangements**: `Playhead.arrange(parts, { goal })` tries some 500 offsets and gains of the parts from their
+  documents in a fraction of a second and returns the best few arrangements, kept apart from each other, for punchy,
+  big or clean layering (or weights of your own); `Playhead.measureParts(parts)` gives the measures behind them: rise
+  time, contrast and focus around the main peak, the layers starting together and overlapping, spectral coverage, low
+  end, tail, shared bands and harshness. First heuristics, to be tested by listening.
 - `experiments/compose`: can a mix's Playhead be predicted from its parts'? 14 sessions from CC0 Sonic Pi samples;
   level, spectrum and onsets combine almost exactly, perceptual curves roughly, novelty and events poorly.
 - Asset checks carry a key and values, so the lab shows them in other languages (`text` stays English).
