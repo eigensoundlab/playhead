@@ -43,8 +43,19 @@
   `repetition` (the tempogram about 11 KB a minute, the lag view at most about 45 KB); `Playhead.view(doc, kind)` returns any view as numbers. A view a document
   cannot give leaves the waveform in its place.
 - `Playhead.localize(table, lang)`: counts in the library's labels ("4 bars") follow the language's plural rules.
+- `experiments/arrange`: arrangements found by `arrange()` mixed and analysed. Predicted and rendered measures agree
+  (peak level r 0.99, rise 0.90, contrast 0.92, focus 0.95, coverage 0.97), the search ranks arrangements as their mixes
+  rank (median Spearman 0.92 to 0.95), and its best candidate beats a rough placement in 23 of 24 sessions and goals.
 
 ### Changed
+- The loudness curve hears a file with silence before and after it: its window counts silence beyond the ends, and its
+  attack runs from silence through the half window before the start. A clip that starts at once used to begin at full
+  loudness; inside a mix it rises from silence, so combined documents put the peak up to 2 dB too high and 20 to 60 ms
+  too early. Only the first and last moments of a file change.
+- `measureParts`: *together* takes every part in the main hit, so a part that comes in up to 100 ms late counts against
+  it instead of being left out.
+- Parts of very different lengths combine on the longest part's grid: a clip of a few tens of milliseconds has a rounded
+  curve rate (3 columns for 34 ms) and was refused as "analysed with another curveRate".
 - The command line writes `--out` and `--out-dir` files whole (a temporary file, then renamed), so a host waiting for
   them never reads half a file.
 - Clearer English: structural change goes down for "a fall or break" (in dance music a "drop" is a loud entry); the

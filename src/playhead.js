@@ -247,6 +247,13 @@ function curveAt(doc, name, t, fallback) {
 }
 
 /* ---------------- combining documents: tracks in a folder ---------------- */
+// The common rate is the longest part's: a document's rate is its column count over its length, so a very short part's
+// is rounded (a 0.03 s click at 100 per second has 3 columns, 100 +- 17 per second) and is allowed to differ by that much.
+function curveRateOf(ps) {
+  const len = p => (p.doc.curves.lufs || []).length, ref = ps.reduce((a, p) => (len(p) > len(a) ? p : a), ps[0]), rate = ref.doc.curves.rate;
+  if (ps.some(p => Math.abs(p.doc.curves.rate / rate - 1) > 0.05 + 0.5 / Math.max(1, len(p)))) throw new Error("Playhead: analyse every part with the same curveRate");
+  return rate;
+}
 // What the sum of several sounds looks like, from their documents alone: no audio, no new analysis. For folder tracks,
 // layered sound effects and stems. parts: [{ doc, offset, gain }], offset in seconds (where the part starts in the
 // whole, default 0), gain in dB (default 0). Analyse the parts with the same profile, asset class and curveRate.
@@ -288,7 +295,7 @@ function align(parts, opts) {
   opts = opts || {};
   const ps = (parts || []).filter(p => p && p.doc && p.doc.curves && p.doc.source);
   if (!ps.length) throw new Error("Playhead.align: no parts (expected [{ doc, offset, gain }])");
-  const rate = opts.rate || ps[0].doc.curves.rate;
+  const rate = opts.rate || curveRateOf(ps);
   const duration = opts.duration || Math.max(...ps.map(p => (p.offset || 0) + p.doc.source.duration));
   const cols = Math.max(1, Math.round(duration * rate));
   const B = ps.every(p => p.doc.spectrum && p.doc.spectrum.bands === ps[0].doc.spectrum.bands) ? ps[0].doc.spectrum.bands : 0;
@@ -447,7 +454,8 @@ function combine(parts, opts) {
 //     rise      seconds the loudness takes to climb the last 20 dB into the main peak (short: a hard attack)
 //     contrast  dB the main peak stands above the 60-250 ms before it (silence before an impact makes it bigger)
 //     focus     dB the main peak stands above the 150-400 ms after it (high: short and punchy; low: long and full)
-//     together  0..1, how many of the parts that sound at the main peak start within ±8 ms of each other
+//     together  0..1, how many of the parts in the main hit (as for overlap) start within ±8 ms of each other, each by
+//               its onset nearest the peak (80 ms before it to 100 ms after: a part that comes in late counts against it)
 //     overlap   0..1, how many parts sound in the main hit (from 50 ms before to 100 ms after its peak, with at least
 //               3 % of the whole's energy there): spreading layers apart in time is not layering
 //     coverage  0..1, the share of frequency bands within 30 dB of the strongest one, in the 300 ms from the peak
@@ -485,8 +493,7 @@ function partScores(m) {
 function prepareParts(parts) {
   const ps = (parts || []).filter(p => p && p.doc && p.doc.curves && Array.isArray(p.doc.curves.lufs));
   if (!ps.length) throw new Error("Playhead: no parts (expected [{ doc, offset, gain }])");
-  const rate = ps[0].doc.curves.rate;
-  if (ps.some(p => Math.abs(p.doc.curves.rate / rate - 1) > 0.05)) throw new Error("Playhead: analyse every part with the same curveRate");
+  const rate = curveRateOf(ps);
   const B = ps.every(p => p.doc.spectrum && p.doc.spectrum.bands === ps[0].doc.spectrum.bands) ? ps[0].doc.spectrum.bands : 0;
   const sp0 = B ? ps[0].doc.spectrum : null, mel = f => 2595 * Math.log10(1 + f / 700);
   const bandOf = f => (sp0 ? Math.max(0, Math.min(B - 1, Math.floor((mel(f) - mel(sp0.fmin)) / (mel(sp0.fmax) - mel(sp0.fmin)) * (B + 1) - 0.5))) : 0);
@@ -527,18 +534,20 @@ function measureAt(P, offs, gains) {
   const focus = Math.min(60, L[cp] - fs / fk);
   let ce = C; for (let c = cp + 1; c < C; c++) if (L[c] < L[cp] - 30) { ce = c; break; }
   const tail = (ce - cp) / rate;
-  // together: the parts that sound at the peak (within 20 dB of the whole), by their onset nearest before it
+  // overlap: the parts with at least 3 % of the whole's energy in the main hit (50 ms before the peak to 100 ms after)
   const t0 = cp / rate, starts = [];
-  for (let k = 0; k < K; k++) {
-    const i = cp - o[k]; if (i < 0 || i >= ps[k].n || ps[k].pow[i] * g[k] < tot[cp] * 0.01) continue;
-    let best = null; for (const t of ps[k].onsets) { const a = t + o[k] / rate; if (a <= t0 + 0.02 && a >= t0 - 0.08) best = best == null || Math.abs(a - t0) < Math.abs(best - t0) ? a : best; }
-    if (best != null) starts.push(best);
-  }
-  // overlap: the parts with at least 3 % of the whole's energy in the main hit
   const wa = Math.max(0, cp - at(0.05)), wb = Math.min(C, cp + at(0.1) + 1);
   let wt = 0; for (let c = wa; c < wb; c++) wt += tot[c];
   let inside = 0;
-  for (let k = 0; k < K; k++) { let e = 0; for (let c = wa; c < wb; c++) { const i = c - o[k]; if (i >= 0 && i < ps[k].n) e += ps[k].pow[i] * g[k]; } if (wt > 0 && e >= 0.03 * wt) inside++; }
+  for (let k = 0; k < K; k++) {
+    let e = 0; for (let c = wa; c < wb; c++) { const i = c - o[k]; if (i >= 0 && i < ps[k].n) e += ps[k].pow[i] * g[k]; }
+    if (!(wt > 0 && e >= 0.03 * wt)) continue;
+    inside++;
+    // together: the same parts, by their onset nearest the peak (from 80 ms before it to 100 ms after, so a part that
+    // comes in late counts against it rather than being left out)
+    let best = null; for (const t of ps[k].onsets) { const a = t + o[k] / rate; if (a <= t0 + 0.1 && a >= t0 - 0.08) best = best == null || Math.abs(a - t0) < Math.abs(best - t0) ? a : best; }
+    if (best != null) starts.push(best);
+  }
   const overlap = inside / K;
   let together = 1;
   if (starts.length > 1) { const s = starts.slice().sort((a, b) => a - b), med = s[Math.floor(s.length / 2)]; together = s.filter(v => Math.abs(v - med) <= 0.008).length / s.length; }

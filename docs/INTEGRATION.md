@@ -78,7 +78,12 @@ fraction of a second (stochastic hill climbing from the current arrangement and 
 be tested by listening: *punch* favours a short rise, the layers starting together and sounding in the hit, a peak
 that stands out and little masking; *big* favours a full spectrum, low end and a long tail; *clean* favours few shared bands with every layer still
 in the hit. Each dB of gain change costs a little, so turning the other layers down is not a free win. Power sums cannot
-see phase, so a host lines the chosen arrangement up to the sample (SFX Workbench's "Align hits").
+see phase, so a host lines the chosen arrangement up to the sample (SFX Workbench's "Align hits"). Mixed and analysed,
+the arrangements measure as predicted ([experiments/arrange](../experiments/arrange/README.md), 175 arrangements of 8
+layered impacts): peak level r 0.99 (0.2 LU), rise 0.90, contrast 0.92, focus 0.95, spectral coverage 0.97; the search
+ranks them as their mixes rank (median Spearman 0.92 to 0.95 per goal), and its best candidate beats a rough placement
+in 23 of 24 cases. A file is analysed as heard with silence before and after it, so a clip's document is its share of
+any mix it is placed in.
 
 ## The document (schema `playhead-analysis`, version 1)
 

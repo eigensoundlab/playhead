@@ -337,9 +337,10 @@ async function extractFeatures(buf, onProgress, opts) {
    Helpers for stage 2
    =================================================================== */
 function prefix(a) { const p = new Float64Array(a.length + 1); for (let i = 0; i < a.length; i++) p[i + 1] = p[i] + a[i]; return p; }
-function movMean(a, half) {
+// pad: silence beyond the ends counts (the mean over the whole window), rather than the window shrinking at the ends
+function movMean(a, half, pad) {
   const p = prefix(a), n = a.length, o = new Float32Array(n);
-  for (let i = 0; i < n; i++) { const s = Math.max(0, i - half), e = Math.min(n, i + half + 1); o[i] = (p[e] - p[s]) / (e - s); }
+  for (let i = 0; i < n; i++) { const s = Math.max(0, i - half), e = Math.min(n, i + half + 1); o[i] = (p[e] - p[s]) / (pad ? 2 * half + 1 : e - s); }
   return o;
 }
 function movMax(a, half) {
@@ -379,10 +380,10 @@ function runMAD(a, half, step) {
     return d[d.length >> 1];
   });
 }
-function asym(a, dt, ta, tr) {
+function asym(a, dt, ta, tr, y0) {
   const n = a.length, o = new Float32Array(n);
   const aa = 1 - Math.exp(-dt / ta), ar = 1 - Math.exp(-dt / tr);
-  let y = a[0] || 0;
+  let y = y0 != null ? y0 : a[0] || 0;
   for (let i = 0; i < n; i++) { const x = a[i]; y += (x > y ? aa : ar) * (x - y); o[i] = y; }
   return o;
 }
@@ -730,12 +731,20 @@ function computeCurves(F, cls, opt) {
   const X = baseOf(F);
   const gate = X.gate;
 
-  /* C1 perceptual loudness: K-weighted, class window, one-pole in the dB domain */
+  /* C1 perceptual loudness: K-weighted, class window, one-pole in the dB domain. The file is heard with silence before
+     and after it: the window counts silence beyond the ends, and the attack has already run from silence through the
+     half window before the start, where the file's first moments come into the window. A sound that starts at once
+     then rises as it would inside a longer recording, and documents of clips add up to the document of their mix. */
   const lwHalf = Math.max(0, Math.round(C.lw / dt / 2));
-  const kzW = lwHalf > 0 ? movMean(F.kz, lwHalf) : Float32Array.from(F.kz);
+  const kzW = lwHalf > 0 ? movMean(F.kz, lwHalf, true) : Float32Array.from(F.kz);
   const lraw = new Float32Array(n);
   for (let m = 0; m < n; m++) lraw[m] = Math.max(-70, -0.691 + 10 * Math.log10(kzW[m] + 1e-15));
-  const lufs = asym(lraw, dt, C.ta * 0.5, C.tr * 0.5);
+  const pre = new Float32Array(lwHalf);
+  for (let i = 0, s = 0; i < lwHalf; i++) {      // frame i - lwHalf: its window holds frames 0 .. i
+    s += i < n ? F.kz[i] : 0;
+    pre[i] = Math.max(-70, -0.691 + 10 * Math.log10(s / (2 * lwHalf + 1) + 1e-15));
+  }
+  const lufs = asym(lraw, dt, C.ta * 0.5, C.tr * 0.5, lwHalf ? asym(pre, dt, C.ta * 0.5, C.tr * 0.5, -70)[lwHalf - 1] : -70);
   const c1 = new Float32Array(n);
   for (let m = 0; m < n; m++) c1[m] = clamp01((lufs[m] + 60) / 60);
 

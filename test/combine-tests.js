@@ -47,9 +47,10 @@ module.exports = async function (check) {
       back.schema === "playhead-analysis" && calls.length > 100 && /harshness/.test(r.legend) && silentBefore && A.bands === 40);
   }
   {
-    // arranging: a click and a body 60 ms late. The search for punch keeps the louder part (the body) where it is and
-    // moves the click onto its attack; the same seed gives the same candidates; candidates differ from each other.
-    const click = Float32Array.from({ length: SR }, (_, i) => (i < 0.004 * SR ? 0.6 * Math.sin(i * 1.7) * (1 - i / (0.004 * SR)) : 0));
+    // arranging: a click (a 12 ms noise burst) and a body 60 ms late. The search for punch keeps the louder part (the
+    // body) where it is and moves the click onto its attack; the same seed gives the same candidates; candidates differ.
+    let sc = 11;
+    const click = Float32Array.from({ length: SR }, (_, i) => { sc = (sc * 16807) % 2147483647; return i < 0.012 * SR ? 0.9 * (sc / 2147483647 * 2 - 1) * Math.exp(-i / (0.004 * SR)) : 0; });
     const body = Float32Array.from({ length: SR }, (_, i) => 0.7 * Math.sin(2 * Math.PI * 70 * i / SR) * Math.exp(-6 * i / SR) * Math.min(1, i / (0.003 * SR)));
     const dc = await P.analyze({ sampleRate: SR, channels: [click] }, o), dbo = await P.analyze({ sampleRate: SR, channels: [body] }, o);
     const ps = [{ doc: dc, offset: 0.1 }, { doc: dbo, offset: 0.16 }];
@@ -58,5 +59,10 @@ module.exports = async function (check) {
     const distinct = a.candidates.every((c, i) => a.candidates.slice(0, i).every(q => c.parts.some((p, k) => Math.abs(p.offset - q.parts[k].offset) >= 0.015 || Math.abs(p.gain - q.parts[k].gain) >= 1.5)));
     check("arrange: punch moves the click onto the body's attack", best ? "click at " + moved + " s, score " + a.baseline.score + " → " + best.score + "; " + a.evaluated + " tried in " + a.ms + " ms" : "no candidate",
       !!best && a.locked[0] === 1 && Math.abs(moved - 0.16) <= 0.011 && best.measures.overlap === 1 && best.score > a.baseline.score && JSON.stringify(a.candidates) === JSON.stringify(b.candidates) && distinct);
+    // a clip of 34 ms has 3 columns at 100 per second, so its rate is rounded (88 per second): it still combines, on the
+    // longer part's grid
+    const tiny = await P.analyze({ sampleRate: SR, channels: [click.subarray(0, Math.round(0.034 * SR))] }, o);
+    let ok = true, c2 = null; try { c2 = P.combine([{ doc: tiny, offset: 0.16 }, { doc: dbo, offset: 0.16 }]); P.arrange([{ doc: tiny, offset: 0.1 }, { doc: dbo, offset: 0.16 }], { goal: "punch" }); } catch (e) { ok = false; }
+    check("combine: a very short part (rounded curve rate) joins the longer part's grid", "rate " + tiny.curves.rate + " with " + dbo.curves.rate + (c2 ? " → " + c2.curves.rate : ""), ok && c2.curves.rate === dbo.curves.rate);
   }
 };
