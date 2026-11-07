@@ -434,6 +434,10 @@ For 0.2.0:
 
 > Sandner, D. (2026). *Playhead: overview curves and analysis-driven tools for music and game audio* (Version 0.2.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.23985438
 
+For 0.3.0, which produced the combining and arrangement experiments (`experiments/compose`, `experiments/arrange`):
+
+> Sandner, D. (2026). *Playhead: overview curves and analysis-driven tools for music and game audio* (Version 0.3.0) [Computer software]. Zenodo. https://doi.org/10.5281/zenodo.24043447
+
 To refer to the software in general, use the concept DOI [10.5281/zenodo.23932625](https://doi.org/10.5281/zenodo.23932625), which always resolves to the latest version. [CITATION.cff](CITATION.cff) lists them all, with the paper as the preferred citation (GitHub's "Cite this repository" button shows it).
 
 ### Releasing

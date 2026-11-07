@@ -25,6 +25,9 @@ identifiers:
   - type: doi
     value: 10.5281/zenodo.23985438
     description: "Version 0.2.0"
+  - type: doi
+    value: 10.5281/zenodo.24043447
+    description: "Version 0.3.0"
 license: Apache-2.0
 preferred-citation:
   type: article
