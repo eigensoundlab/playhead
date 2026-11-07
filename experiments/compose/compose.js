@@ -7,7 +7,9 @@
 // from the parts' documents alone, by simple rules, and compared with the mix's own analysis:
 //   lufs           power sum of the parts' short-term loudness (LUFS)
 //   loudness ...   0-1 curves: the maximum of the parts, their loudness-weighted mean, the loudest part's value;
-//                  loudness also mapped from the predicted LUFS (the map is learnt from the parts' own documents)
+//                  loudness also mapped from the predicted LUFS (the map is learnt from the parts' own documents, and
+//                  "fixed": the library's own scale); harshness and arousal also as the whole's loudness plus the parts'
+//                  weighted excess over their own loudness ("excess", the rule Playhead.combine uses for harshness)
 //   onsetStrength  the sum of the parts' onset strength
 //   spectrum       power sum of the parts' mel spectrograms, then activity re-derived from its spectral flux
 //   onsets, events the union of the parts' onsets (events), merged within 30 ms
@@ -143,6 +145,13 @@ function compare(parts, mix) {
       loudest: i => { let best = null, bw = -1; for (const d of parts) { const q = pw(d.curves.lufs[i]); if (q > bw) { bw = q; best = d; } } return v01(best.curves[c] && best.curves[c][i]); }
     };
     if (c === "loudness") rules.fromLufs = i => mapL(lufsPred(i));
+    // the library's rules (Playhead.combine): loudness on its fixed scale from the summed LUFS; harshness and arousal as
+    // the whole's loudness plus the parts' power-weighted excess over their own loudness
+    const L0 = i => Math.max(0, Math.min(1, (lufsPred(i) + 60) / 60));
+    const excess = (i, k) => { let s = 0, w = 0; for (const d of parts) { const q = pw(d.curves.lufs[i]); if (!q) continue; s += q * (v01(d.curves[c][i]) - k * v01(d.curves.loudness[i])); w += q; } return w ? s / w : 0; };
+    if (c === "loudness") rules.fixed = i => L0(i);
+    if (c === "harshness") rules.excess = i => Math.min(1, L0(i) + excess(i, 1));
+    if (c === "arousal") rules.excess = i => Math.min(1, 0.5 * L0(i) + excess(i, 0.5));
     res[c] = {};
     for (const [k, f] of Object.entries(rules)) { const p = pick(f); res[c][k] = { r: pearson(p, truth), mae: mae(p, truth) }; }
   }
@@ -195,7 +204,7 @@ async function run() {
   const add = (kind, label, get) => { const v = out.filter(o => o.kind === kind).map(get).filter(x => x != null && isFinite(x)); if (v.length) rows.push({ kind, label, median: +med(v).toFixed(3), min: +Math.min(...v).toFixed(3), max: +Math.max(...v).toFixed(3), n: v.length }); };
   for (const kind of ["music", "sfx"]) {
     add(kind, "lufs: power sum, r", o => o.res.lufs.r); add(kind, "lufs: power sum, MAE (LU)", o => o.res.lufs.mae);
-    for (const c of CURVES) for (const rule of ["fromLufs", "max", "wmean", "loudest"]) add(kind, c + ": " + rule + ", r", o => o.res[c] && o.res[c][rule] && o.res[c][rule].r);
+    for (const c of CURVES) for (const rule of ["fromLufs", "fixed", "max", "wmean", "loudest", "excess"]) add(kind, c + ": " + rule + ", r", o => o.res[c] && o.res[c][rule] && o.res[c][rule].r);
     add(kind, "onsetStrength: sum, r", o => o.res.onsetStrength && o.res.onsetStrength.sum.r);
     add(kind, "spectrum: power sum, MAE (dB)", o => o.res.spectrum && o.res.spectrum.maeDb);
     add(kind, "flux of predicted vs mix spectrum, r", o => o.res.spectrum && o.res.spectrum.fluxVsMixFlux);

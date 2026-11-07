@@ -158,3 +158,23 @@ body.drag .wrap{outline:2px dashed var(--accent);outline-offset:-6px}
 .cmp-code label.ctl{flex:1 1 320px;min-width:0}
 .cmp-code input{flex:1 1 auto;min-width:0;font:12px var(--mono);padding:5px 7px;border:1px solid var(--rule2);border-radius:4px;background:var(--surface);color:var(--ink)}
 .cmp-code a{font-size:12.5px;color:var(--accent)}
+/* tracks in a folder */
+.tracks{display:grid;gap:8px}
+.trrows .lab{padding-block:7px}
+.trhead{align-items:center}
+.trsw{display:inline-block;width:10px;height:10px;border-radius:2px;background:var(--tc);flex:none}
+button.trms{min-height:22px;padding:0 7px;font:500 11px var(--mono);line-height:20px}
+button.trmute[aria-pressed="true"]{background:var(--warn);border-color:var(--warn);color:var(--paper)}
+button.trsolo[aria-pressed="true"]{background:var(--good);border-color:var(--good);color:var(--paper)}
+button.trfold{min-height:22px;padding:0 6px;line-height:20px;font-size:12px}
+select.trfile{width:100%;margin-top:5px}
+label.trgain{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:12px;color:var(--ink2)}
+label.trgain input{flex:1 1 auto;min-width:60px;margin:0;accent-color:var(--accent)}
+label.trgain .val{font:11.5px var(--mono);color:var(--ink);min-width:7.5ch;text-align:right;font-variant-numeric:tabular-nums}
+.trat{font:11.5px var(--mono);color:var(--ink3);font-variant-numeric:tabular-nums}
+.trlegend{color:var(--ink3)}
+.trlegend:empty{display:none}
+.trrows canvas.strip:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.trrows canvas.strip.dragging{cursor:grabbing}
+.tracks .cmp-row a{font-size:12.5px;color:var(--accent)}
+p.trnote{margin:2px 0 0;max-width:100ch}

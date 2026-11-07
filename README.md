@@ -114,6 +114,16 @@ ordinary waveform and spectrogram of the same file; the same code works in every
 the feedback link sends it with your notes. Structural change is drawn signed: up for an entry, down for a fall in
 level or a break into silence.
 
+**Tracks in a folder.** Documents combine: `Playhead.combine([{ doc, offset, gain }, ...])` returns a document for the
+sum of several sounds without the audio or a new analysis, so a folder track, a group of layered effects or a set of
+stems can show the whole as the parts move. The app's **Tracks in a folder** section tries it hands-on: up to three
+files as tracks under a folder, as in a DAW, with clips to drag (snapping to each other's onsets), gain, mute, solo
+and playback. The folder draws the tracks' look combined at once, or the mix analysed a moment later for reference,
+with how closely they agree; three more folder views show each track's share of the energy, the loudest track in each
+band, and the bands two tracks share, where one may mask the other. `Playhead.align` gives other hosts the per-track
+power and spectrogram behind such views. How well each curve combines is measured in
+[experiments/compose](experiments/compose/README.md).
+
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
 
 **REAPER.** [integrations/reaper](integrations/reaper/README.md) is a ReaPack package of six actions around the command
@@ -331,13 +341,14 @@ src/analysis.js       feature extraction, curves, rhythm, structure, sound-effec
 src/descriptors.js    cross-field descriptors N1–N9
 src/probes.js         synthetic test signals with ground truth, descriptor tour
 src/effects.js        analysis-driven tools, WAV encoder
-src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process(), localize()
+src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process(), combine(), align(), localize()
 src/i18n.js           translations at run time; src/i18n-data.js is built from i18n/<lang>.json
 src/app.js            user interface
 i18n/                 the English texts (en.json), the translations and the translators' guide
 test/run-tests.js     regression checks
 test/descriptor-tests.js  analytic reference tests for the descriptors
 test/i18n-tests.js    translations: complete English list, placeholders and markup kept, plurals, library labels
+test/combine-tests.js combining documents: a moved, turned-down part against the analysed mix; gain, order, drawing
 tools/batch.js        batch analysis, self-checks and tool comparison for folders of files
 tools/selfchecks.js   the self-checks and whole-pipeline analysis shared by batch and tune
 tools/tune.js         threshold calibration with a held-out half

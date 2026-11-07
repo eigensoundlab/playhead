@@ -21,6 +21,15 @@
   with its citation beside the software's, and is the preferred citation in `CITATION.cff`. The footer also links the
   sound vocabulary, and "Comment on the translation" under the language menu opens a GitHub form with the language
   filled in.
+- **Tracks in a folder**: `Playhead.combine(parts)` returns a document for the sum of several sounds from their
+  documents alone (parts with an offset and a gain; no audio, no new analysis), and `Playhead.align(parts)` puts the
+  parts on one time axis for views of who carries what. The lab's new section layers up to three files as tracks under
+  a folder track, as in a DAW: drag the clips (they snap to each other's onsets, or move with the arrow keys), set gain,
+  mute, solo and play the whole. The folder shows the tracks' look combined at once or from the analysed mix, with
+  their agreement, and three new views: each track's share, the loudest track in each band, and bands two tracks
+  share. In all six languages.
+- `experiments/compose`: can a mix's Playhead be predicted from its parts'? 14 sessions from CC0 Sonic Pi samples;
+  level, spectrum and onsets combine almost exactly, perceptual curves roughly, novelty and events poorly.
 - Asset checks carry a key and values, so the lab shows them in other languages (`text` stays English).
 
 ### Changed

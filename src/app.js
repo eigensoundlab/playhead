@@ -869,6 +869,490 @@ function buildComposer() {
   showCompareRows();
 }
 
+/* ---------------- tracks in a folder: layering files as in a DAW ----------------
+   Up to three tracks under a folder track, each holding one clip (a library file) that can be dragged in time. The
+   folder shows the whole: combined from the tracks' Playhead documents at once (Playhead.combine, no new analysis), or
+   from the analysed mix for reference; the other folder views show which track carries what. A folder track in a DAW
+   could draw any of these. All tracks and the mix share one profile, asset class and curve rate, so they compare. */
+const TR_N = 3, TR_VIEWS = ["combined", "mix", "stack", "owner", "shared"], TR_HEIGHTS = [40, 64, 96, 128];
+const TR = {
+  tracks: Array.from({ length: TR_N }, () => ({ fid: null, off: 0, gain: 0, mute: false, solo: false })),
+  view: store.get("trView", "combined"), look: store.get("trLook", "auto"), cls: "auto", h: store.get("trHeight", 64),
+  snap: store.get("trSnap", true), compare: store.get("trCompare", false), collapsed: false,
+  span: 0, ver: 0, started: false, memo: null, mix: null, mixTimer: 0, visible: false, pos: 0, play: null, audio: null, drag: null, rows: null, raf: 0, legend: "", files: ""
+};
+if (!TR_VIEWS.includes(TR.view)) TR.view = "combined";
+const trViewName = v => ({
+  combined: T("tracks.view.combined", "Combined from the tracks (instant)"), mix: T("tracks.view.mix", "Analysed mix (reference)"),
+  stack: T("tracks.view.stack", "Each track's share"), owner: T("tracks.view.owner", "Loudest track in each band"), shared: T("tracks.view.shared", "Bands two tracks share")
+})[v];
+const trViewDesc = v => ({
+  combined: T("tracks.view.combined.desc", "The tracks' look, combined from their Playhead documents without analysing the mix. Instant, so it follows every move."),
+  mix: T("tracks.view.mix.desc", "The tracks' look on the mix itself, analysed like any file a moment after the tracks stop moving. The reference for the combined view."),
+  stack: T("tracks.view.stack.desc", "Height is the loudness of the whole. Inside, each track's share of the sound energy in the track's colour, the first track in the middle."),
+  owner: T("tracks.view.owner.desc", "A spectrogram of the whole, each cell in the colour of the track that is loudest there. Brighter is louder."),
+  shared: T("tracks.view.shared.desc", "A spectrogram of the whole, highlighted where two tracks are within 6 dB of each other in the same band: where one may mask the other.")
+})[v];
+const trColour = (P, k) => [P.cat[0], P.cat[1], P.cat[3]][k % 3];
+const trFile = t => (t && t.fid != null ? S.files.find(f => f.id === t.fid && f.F) || null : null);
+const trHex = c => { const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(c || ""); return m ? [parseInt(m[1], 16), parseInt(m[2], 16), parseInt(m[3], 16)] : [128, 128, 128]; };
+const trAudible = (t, anySolo) => !!trFile(t) && !t.mute && (!anySolo || t.solo);
+function trChanged(files) {        // anything that changes the whole: a new arrangement version
+  TR.ver++; TR.memo = null;
+  if (files) { TR.span = trSpan(); for (const t of TR.tracks) { const f = trFile(t); if (f) t.off = Math.max(0, Math.min(t.off, TR.span - f.dur)); } }
+  trDraw();
+}
+// the timeline: half as long again as the longest clip, so clips can move; it changes only when the files do
+function trSpan() {
+  const fs = TR.tracks.map(trFile).filter(Boolean);
+  if (!fs.length) return 0;
+  const L = Math.max(...fs.map(f => f.dur));
+  return Math.max(L * 1.5, L + 0.5);
+}
+// one profile, class and curve rate for every track and the mix: short sessions as sound effects at 100 columns/s
+function trSettings() {
+  const fs = TR.tracks.map(trFile).filter(Boolean), short = TR.span <= 10;
+  const longest = fs.reduce((a, f) => (!a || f.dur > a.dur ? f : a), null);
+  const cls = TR.cls !== "auto" ? TR.cls : short ? "sfx" : longest ? longest.F.guess : "rhythmic";
+  return { profile: short ? "sfx" : "music", rate: short ? 100 : 20, cls };
+}
+function trDoc(f, st) {
+  const key = st.cls + "|" + st.profile + "|" + st.rate;
+  f.trDocs = f.trDocs || {};
+  if (f.trDocs[key]) return f.trDocs[key];
+  const ent = f.trDocs[key] = { doc: null, err: null };
+  PHAPI.fromAnalysis(f.F, f.buf, { profile: st.profile, assetClass: st.cls, curveRate: st.rate, name: f.name })
+    .then(d => { ent.doc = d; TR.memo = null; trDraw(); })
+    .catch(e => { ent.err = (e && e.message) || String(e); console.error(e); TR.memo = null; trDraw(); });
+  return ent;
+}
+// the audible tracks as parts, their alignment and the combined document (kept until something changes)
+function trArrangement() {
+  if (TR.memo && TR.memo.ver === TR.ver) return TR.memo;
+  const st = trSettings(), anySolo = TR.tracks.some(t => t.solo && trFile(t)), parts = [];
+  let pending = false, err = null;
+  TR.tracks.forEach((t, k) => {
+    const f = trFile(t); if (!f) return;
+    const ent = trDoc(f, st);
+    if (ent.err) err = ent.err; else if (!ent.doc) pending = true;
+    if (ent.doc && trAudible(t, anySolo)) parts.push({ doc: ent.doc, offset: t.off, gain: t.gain, k, f });
+  });
+  const m = { ver: TR.ver, st, parts, pending, err, anySolo, A: null, doc: null, end: 0 };
+  if (!pending && parts.length) {
+    m.end = Math.max(...parts.map(p => p.offset + p.doc.source.duration));
+    m.A = PHAPI.align(parts, { rate: st.rate, duration: m.end });
+    m.doc = PHAPI.combine(parts, { rate: st.rate, duration: m.end, aligned: m.A, name: T("tracks.mixName", "folder mix") });
+  }
+  return (TR.memo = m);
+}
+// the audible tracks summed at their positions and gains (resampled to the first track's rate where rates differ)
+function trRender(m) {
+  const sr = m.parts[0].f.buf.sampleRate, n = Math.max(1, Math.round(m.end * sr));
+  const nch = Math.max(...m.parts.map(p => Math.min(2, p.f.buf.numberOfChannels))), chans = Array.from({ length: nch }, () => new Float32Array(n));
+  for (const p of m.parts) {
+    const b = p.f.buf, a = Math.pow(10, p.gain / 20), ratio = b.sampleRate / sr, i0 = Math.round(p.offset * sr), len = b.length;
+    for (let c = 0; c < nch; c++) {
+      const src = b.getChannelData(Math.min(c, b.numberOfChannels - 1)), out = chans[c];
+      for (let i = Math.max(0, i0); i < n; i++) {
+        const x = (i - i0) * ratio, j = Math.floor(x); if (j >= len) break;
+        out[i] += a * (ratio === 1 ? src[j] : src[j] + (src[Math.min(len - 1, j + 1)] - src[j]) * (x - j));
+      }
+    }
+  }
+  return { sampleRate: sr, numberOfChannels: nch, length: n, duration: n / sr, getChannelData: c => chans[c] };
+}
+// the analysed mix: a moment after the last change, and only while the section is on screen
+function trScheduleMix() { clearTimeout(TR.mixTimer); TR.mixTimer = setTimeout(trRunMix, 900); }
+async function trRunMix() {
+  if (!TR.visible || TR.drag) return;
+  const m = trArrangement();
+  if (m.pending || !m.parts.length || (TR.mix && TR.mix.ver === m.ver)) return;
+  const me = TR.mix = { ver: m.ver, doc: null, err: null, agree: null };
+  trDraw();
+  try {
+    const rec = { buf: trRender(m), name: T("tracks.mixName", "folder mix") };
+    let F = null;
+    if (await poolReady()) { try { F = await analyseInWorker(rec, () => {}); } catch (e) { if (!e.fallback) throw e; } }
+    if (!F) { F = await analyseOnMainThread(rec); if (!S.active) setStatus(""); }
+    const doc = await PHAPI.fromAnalysis(F, rec.buf, { profile: m.st.profile, assetClass: m.st.cls, curveRate: m.st.rate, name: rec.name });
+    if (TR.mix !== me) return;
+    me.doc = doc; me.agree = trAgreement(m.doc, doc);
+  } catch (e) { if (TR.mix === me) { me.err = (e && e.message) || String(e); console.error(e); } }
+  if (TR.mix === me) trDraw();
+}
+function trPearson(a, b) {
+  const n = a.length; if (n < 3) return NaN;
+  let ma = 0, mb = 0; for (let i = 0; i < n; i++) { ma += a[i]; mb += b[i]; } ma /= n; mb /= n;
+  let ab = 0, aa = 0, bb = 0; for (let i = 0; i < n; i++) { const x = a[i] - ma, y = b[i] - mb; ab += x * y; aa += x * x; bb += y * y; }
+  return aa && bb ? ab / Math.sqrt(aa * bb) : NaN;
+}
+function trFmeasure(est, ref, tol) {
+  const used = new Uint8Array(ref.length); let hit = 0;
+  for (const e of est) { let best = -1, bd = tol; ref.forEach((r, j) => { const d = Math.abs(r - e); if (!used[j] && d <= bd) { bd = d; best = j; } }); if (best >= 0) { used[best] = 1; hit++; } }
+  const p = est.length ? hit / est.length : 0, r = ref.length ? hit / ref.length : 0;
+  return p + r ? 2 * p * r / (p + r) : est.length || ref.length ? 0 : NaN;
+}
+// how closely the combined folder follows the analysed mix, over the columns where the mix sounds (as in experiments/compose)
+function trAgreement(c, m) {
+  const n = Math.min(c.curves.lufs.length, m.curves.lufs.length), idx = [];
+  for (let i = 0; i < n; i++) if (m.curves.lufs[i] != null && (m.curves.loudness[i] || 0) > 0.02) idx.push(i);
+  const r = k => (c.curves[k] && m.curves[k] && m.curves[k].some(v => v)) ? trPearson(idx.map(i => c.curves[k][i] || 0), idx.map(i => m.curves[k][i] || 0)) : NaN;
+  const out = ["loudness", "activity", "harshness"].map(k => ({ k, label: PHAPI.curveLabels[k] || k, r: r(k) }));
+  out.push({ k: "onsets", label: T("tracks.onsets", "onsets"), f: trFmeasure(c.onsets || [], m.onsets || [], 0.05) });
+  return out.filter(o => isFinite(o.r != null ? o.r : o.f));
+}
+function trLookCode() {
+  if (TR.look === "compose") return cmpEffective(CMP.code);
+  const L = PHAPI.looks[TR.look];
+  // the automatic look as the composer resolves it: sound effects or music, by the section's profile
+  return cmpEffective(L && L.code ? L.code : trSettings().profile === "sfx" ? "wave:harshness,line:activity,ticks:events" : "wave:activity,sections,line:tension,ticks:downbeats+events");
+}
+
+/* drawing */
+function trDraw() { if (TR.raf || !TR.rows) return; TR.raf = requestAnimationFrame(() => { TR.raf = 0; trPaint(); }); }
+function trStep() { const w = TR.rows ? TR.rows.ruler.cv.clientWidth || 600 : 600; for (const s of [0.05, 0.1, 0.2, 0.5, 1, 2, 5, 10, 15, 30, 60, 120]) if (s / TR.span * w >= 70) return s; return 300; }
+function trGrid(x, P, w, h) {
+  if (!TR.span) return;
+  const step = trStep(); x.fillStyle = P.seg;
+  for (let t = step; t < TR.span; t += step) x.fillRect(Math.round(t / TR.span * w), 0, 1, h);
+}
+function trOff(x, P, w, h, text) { drawOff(x, P, w, h, text); }
+function trPaint() {
+  const P = PANELS[S.panel], h = TR.h, m = trArrangement(), rows = TR.rows;
+  // the ruler
+  { const g = prep(rows.ruler.cv, 22), x = g.x, w = g.w; x.fillStyle = P.bg; x.fillRect(0, 0, w, 22);
+    if (TR.span) { const step = trStep(); x.font = "11px 'IBM Plex Sans', system-ui, sans-serif"; x.textBaseline = "middle"; x.textAlign = "left"; x.fillStyle = P.rulerInk;
+      for (let t = 0; t <= TR.span + 1e-9; t += step) { const px = Math.round(t / TR.span * w); x.globalAlpha = 0.6; x.fillRect(px, 15, 1, 7); x.globalAlpha = 1; if (px < w - 34) x.fillText(fmtT(t, step < 1), px + 4, 9); } } }
+  TR.legend = "";
+  const r = trFolder(rows.folder.cv, TR.view, P, h, m);
+  if (r && r.legend) TR.legend = r.legend;
+  for (const v of TR_VIEWS) { const row = rows.views[v]; if (!row.lab.hidden) trFolder(row.cv, v, P, h, m); }
+  TR.tracks.forEach((t, k) => { if (!rows.tracks[k].lab.hidden) trTrack(k, P, h, m); });
+  trLabels(m);
+  trHead();
+  if (!m.pending && m.parts.length && !(TR.mix && TR.mix.ver === m.ver)) trScheduleMix();
+}
+function trFolder(cv, view, P, h, m) {
+  const g = prep(cv, h), x = g.x, w = g.w;
+  x.fillStyle = P.bg; x.fillRect(0, 0, w, h);
+  if (!TR.span) return trOff(x, P, w, h, T("tracks.noFiles", "Choose files for the tracks below"));
+  if (m.err) return trOff(x, P, w, h, T("off.prepFailed", "Could not prepare this file: {err}", { err: m.err }));
+  if (m.pending) return trOff(x, P, w, h, T("off.preparing", "Preparing…"));
+  if (!m.parts.length) return trOff(x, P, w, h, T("tracks.allMuted", "Every track is muted"));
+  trGrid(x, P, w, h);
+  const ew = m.end / TR.span * w;
+  if (view === "combined") return PHAPI.drawStrip(x, m.doc, { width: ew, height: h, look: trLookCode(), theme: themeOf(P) });
+  if (view === "mix") {
+    const mx = TR.mix;
+    if (!mx || mx.ver !== m.ver || !mx.doc) return trOff(x, P, w, h, mx && mx.ver === m.ver && mx.err ? T("tracks.mixFailed", "Could not analyse the mix: {err}", { err: mx.err }) : T("tracks.mixWait", "Analysing the mix…"));
+    return PHAPI.drawStrip(x, mx.doc, { width: mx.doc.source.duration / TR.span * w, height: h, look: trLookCode(), theme: themeOf(P) });
+  }
+  const cols = m.parts.map(p => trColour(P, p.k));
+  if (view === "stack") {         // mirrored like a waveform: height the whole's loudness, bands each track's share of the energy
+    const A = m.A, C = A.columns, mid = h / 2, n = A.parts.length, W = Math.max(1, Math.floor(ew)), pw = new Float64Array(n);
+    for (let px = 0; px < W; px++) {
+      const c0 = Math.floor(px / W * C), c1 = Math.max(c0 + 1, Math.floor((px + 1) / W * C));
+      let tot = 0; pw.fill(0);
+      for (let c = c0; c < c1 && c < C; c++) for (let i = 0; i < n; i++) pw[i] += A.parts[i].power[c];
+      for (let i = 0; i < n; i++) tot += pw[i];
+      if (tot <= 0) continue;
+      const half = Math.max(0, Math.min(1, (10 * Math.log10(tot / (c1 - c0)) + 60) / 60)) * (mid - 0.5);
+      let r = 0;
+      for (let i = 0; i < n; i++) { const th = pw[i] / tot * half; if (th <= 0) continue; x.fillStyle = cols[i]; x.fillRect(px, mid - r - th, 1, th); x.fillRect(px, mid + r, 1, th); r += th; }
+    }
+    return null;
+  }
+  // owner and shared: spectrogram cells coloured by the tracks' power in them
+  const A = m.A, B = A.bands, C = A.columns, n = A.parts.length;
+  if (!B) return trOff(x, P, w, h, T("tracks.noSpec", "No spectrogram in this analysis"));
+  const tot = new Float64Array(C * B); let top = 0;
+  for (const p of A.parts) for (let i = 0; i < tot.length; i++) tot[i] += p.spectrum[i];
+  for (let i = 0; i < tot.length; i++) if (tot[i] > top) top = tot[i];
+  if (!(top > 0)) return null;
+  const topDb = 10 * Math.log10(top), range = 60, bg = trHex(P.bg), ink = trHex(P.ink), hi = trHex(P.mark), tc = cols.map(trHex), share = Math.pow(10, 6 / 10);
+  const img = document.createElement("canvas"); img.width = C; img.height = B;
+  const ig = img.getContext("2d"), id = ig.createImageData(C, B);
+  const put = (o, a, b, u) => { id.data[o] = a[0] + (b[0] - a[0]) * u; id.data[o + 1] = a[1] + (b[1] - a[1]) * u; id.data[o + 2] = a[2] + (b[2] - a[2]) * u; id.data[o + 3] = 255; };
+  for (let c = 0; c < C; c++) for (let b = 0; b < B; b++) {
+    const i = c * B + b, o = ((B - 1 - b) * C + c) * 4, t = tot[i];
+    if (!(t > 0)) { put(o, bg, bg, 0); continue; }
+    const u = Math.max(0, Math.min(1, (10 * Math.log10(t) - topDb + range) / range));
+    let p1 = 0, p2 = 0, k1 = 0;
+    for (let k = 0; k < n; k++) { const v = A.parts[k].spectrum[i]; if (v > p1) { p2 = p1; p1 = v; k1 = k; } else if (v > p2) p2 = v; }
+    if (view === "owner") put(o, bg, tc[k1], Math.pow(u, 0.8));
+    else if (p2 > 0 && p1 / p2 <= share && 10 * Math.log10(p2) >= topDb - 45) put(o, bg, hi, Math.max(0.35, u));
+    else put(o, bg, ink, 0.4 * u);
+  }
+  ig.putImageData(id, 0, 0);
+  const sm = x.imageSmoothingEnabled; x.imageSmoothingEnabled = false;
+  x.drawImage(img, 0, 0, C, B, 0, 0, ew, h);
+  x.imageSmoothingEnabled = sm;
+  return null;
+}
+function trTrack(k, P, h, m) {
+  const row = TR.rows.tracks[k], t = TR.tracks[k], f = trFile(t), g = prep(row.cv, h), x = g.x, w = g.w;
+  x.fillStyle = P.bg; x.fillRect(0, 0, w, h);
+  if (!f || !TR.span) return trOff(x, P, w, h, T("tracks.empty", "Empty track: choose a file on the left"));
+  trGrid(x, P, w, h);
+  const ent = trDoc(f, m.st), x0 = t.off / TR.span * w, cw = Math.max(3, f.dur / TR.span * w);
+  x.save();
+  x.beginPath(); x.rect(x0, 0, cw, h); x.clip();
+  x.fillStyle = P.seg; x.fillRect(x0, 0, cw, h);
+  if (ent.doc) {
+    // the clip's own drawing does not change while it moves: drawn once, then copied to its place
+    const dpr = window.devicePixelRatio || 1, look = trLookCode(), key = [look, cw.toFixed(2), h, dpr, S.panel].join("|");
+    if (!row.cache || row.cache.doc !== ent.doc || row.cache.key !== key) {
+      const img = document.createElement("canvas"); img.width = Math.max(1, Math.round(cw * dpr)); img.height = Math.round(h * dpr);
+      const ix = img.getContext("2d"); ix.scale(dpr, dpr);
+      const r = PHAPI.drawStrip(ix, ent.doc, { width: cw, height: h, look, theme: themeOf(P) });
+      row.cache = { doc: ent.doc, key, img, legend: r && r.legend };
+    }
+    x.drawImage(row.cache.img, x0, 0, cw, h);
+    if (!TR.legend && row.cache.legend) TR.legend = row.cache.legend;
+  }
+  x.fillStyle = trColour(P, k); x.fillRect(x0, 0, cw, 2);
+  if (h >= 24 && cw > 40) {
+    x.font = "10.5px 'IBM Plex Sans', system-ui, sans-serif"; x.textAlign = "left"; x.textBaseline = "top";
+    x.lineWidth = 3; x.strokeStyle = P.halo; x.strokeText(f.name, x0 + 4, 4); x.fillStyle = P.rulerInk; x.fillText(f.name, x0 + 4, 4);
+  }
+  if (!trAudible(t, m.anySolo)) { x.fillStyle = P.shade; x.fillRect(x0, 0, cw, h); }
+  x.restore();
+  x.strokeStyle = trColour(P, k); x.lineWidth = 1; x.globalAlpha = TR.drag && TR.drag.k === k ? 0.9 : 0.45;
+  x.strokeRect(x0 + 0.5, 0.5, cw - 1, h - 1); x.globalAlpha = 1;
+  if (!ent.doc) { x.fillStyle = P.off; x.font = "11px 'IBM Plex Sans', system-ui, sans-serif"; x.textBaseline = "middle"; x.fillText(ent.err ? T("off.prepFailed", "Could not prepare this file: {err}", { err: ent.err }) : T("off.preparing", "Preparing…"), x0 + 6, h / 2); }
+}
+// labels that follow the arrangement: the folder's legend and agreement, each track's position
+function trLabels(m) {
+  const rows = TR.rows;
+  rows.cls.options[0].textContent = TR.span ? T("ui.cls.autoOf", "Auto ({cls})", { cls: clsLabel(trSettings().cls) }) : T("ui.cls.auto", "Auto");
+  rows.folder.desc.textContent = trViewDesc(TR.view);
+  rows.folder.legend.textContent = TR.legend;
+  const ml = rows.folder.meta; ml.innerHTML = "";
+  const mx = TR.mix;
+  if (mx && mx.ver === m.ver && mx.agree && mx.agree.length) {
+    const lab = el("span", "mut", T("tracks.agree", "Combined vs analysed mix:")); lab.title = T("tracks.agree.title", "How closely the combined folder follows the analysed mix: the correlation of each curve (1 is the same shape) and the F-measure of the onsets (±50 ms)");
+    ml.appendChild(lab);
+    for (const a of mx.agree) {
+      const v = a.r != null ? a.r : a.f, b = el("span", "badge " + (v >= 0.9 ? "new" : v >= 0.7 ? "mid" : "dep"), a.label + (a.r != null ? " r" : " F"));
+      b.appendChild(el("b", "", dec(v.toFixed(2)))); b.title = lab.title; ml.appendChild(b);
+    }
+  } else if (m.parts.length && !m.pending) ml.appendChild(el("span", "mut", T("tracks.agreeBusy", "Analysing the mix to check the combination…")));
+  TR.tracks.forEach((t, k) => {
+    const r = rows.tracks[k], f = trFile(t);
+    r.at.textContent = f ? T("tracks.at", "starts at {t} s", { t: dec(t.off.toFixed(3)) }) : "";
+    r.cv.setAttribute("aria-label", f ? T("tracks.aria.track", "Track {n}: {file}. Drag the clip or use the arrow keys to move it; double-click opens the file above.", { n: k + 1, file: f.name }) : T("tracks.empty", "Empty track: choose a file on the left"));
+    if (f) { r.cv.setAttribute("aria-valuemin", "0"); r.cv.setAttribute("aria-valuemax", (TR.span - f.dur).toFixed(3)); r.cv.setAttribute("aria-valuenow", t.off.toFixed(3)); r.cv.setAttribute("aria-valuetext", r.at.textContent); }
+    r.mute.setAttribute("aria-pressed", String(t.mute)); r.solo.setAttribute("aria-pressed", String(t.solo));
+  });
+}
+
+/* transport: the section's own player, sharing the lab's audio (starting either stops the other) */
+const trNow = () => (TR.play ? TR.play.from + (ctx().currentTime - TR.play.startAt) : TR.pos);
+function trHead() {
+  if (!TR.rows) return;
+  const t = Math.min(trNow(), TR.span || 0), on = !!TR.play || t > 0;
+  for (const s of TR.rows.scopes) { if (!s.ph) continue; s.ph.classList.toggle("on", on && !!TR.span); s.ph.style.transform = "translateX(" + (TR.span ? t / TR.span * s.w.clientWidth : 0) + "px)"; }
+  TR.rows.time.textContent = fmtT(t, true);
+  TR.rows.play.textContent = TR.play ? T("ui.pause", "Pause") : T("ui.play", "Play");
+}
+function trStop() {
+  if (!TR.play) return;
+  const p = TR.play; TR.pos = Math.min(trNow(), TR.span);
+  TR.play = null; cancelAnimationFrame(p.raf);
+  try { p.src.onended = null; p.src.stop(); } catch (e) { /* stopped */ }
+  p.src.disconnect(); trHead();
+}
+function trPlay(from) {
+  const m = trArrangement();
+  if (m.pending || !m.parts.length) return;
+  stopAudio();          // the lab's player and the bench; this also stops this player
+  const c = ctx(); if (c.state === "suspended") c.resume();
+  if (!TR.audio || TR.audio.ver !== m.ver) {
+    const b = trRender(m), ab = c.createBuffer(b.numberOfChannels, b.length, b.sampleRate);
+    for (let ch = 0; ch < b.numberOfChannels; ch++) ab.getChannelData(ch).set(b.getChannelData(ch));
+    TR.audio = { ver: m.ver, ab };
+  }
+  let at = from != null ? from : TR.pos; if (at >= m.end - 0.02) at = 0;
+  const src = c.createBufferSource(); src.buffer = TR.audio.ab; src.connect(c.destination); src.start(0, at);
+  const p = TR.play = { src, from: at, startAt: c.currentTime, raf: 0 };
+  src.onended = () => { if (TR.play !== p) return; TR.play = null; TR.pos = 0; cancelAnimationFrame(p.raf); trHead(); };
+  const step = () => { if (TR.play !== p) return; trHead(); p.raf = requestAnimationFrame(step); };
+  step();
+}
+function trSeek(t) { const playingNow = !!TR.play; trStop(); TR.pos = Math.max(0, Math.min(TR.span, t)); if (playingNow) trPlay(); else trHead(); }
+// after a change while playing: go on from the same place with the new mix
+function trReplay() { if (TR.play) { const t = trNow(); trStop(); trPlay(t); } }
+
+/* the first arrangement: a whoosh leading into an explosion with breaking glass, from the built-in kit */
+function trDefaults() {
+  const by = n => S.files.find(f => f.F && f.name === n), wh = by("Whoosh_Flyby_LR.wav"), ex = by("Explosion_Large_Debris.wav"), gl = by("Glass_Window_Break.wav");
+  if (!wh || !ex || !gl) return false;
+  const te = Math.round(Math.min(wh.dur * 0.6, Math.max(ex.dur, wh.dur, gl.dur) * 0.4) * 100) / 100;
+  TR.tracks[0] = { fid: wh.id, off: 0, gain: -3, mute: false, solo: false };
+  TR.tracks[1] = { fid: ex.id, off: te, gain: 0, mute: false, solo: false };
+  TR.tracks[2] = { fid: gl.id, off: te + 0.03, gain: -4, mute: false, solo: false };
+  return true;
+}
+// called from render(): new files in the menus, the first arrangement once the kit is in
+function trSync() {
+  if (!TR.rows) return;
+  const ready = S.files.filter(f => f.F), sig = ready.map(f => f.id).join(",");
+  if (sig !== TR.files) {
+    TR.files = sig;
+    TR.rows.tracks.forEach((r, k) => {
+      const s = r.file, keep = TR.tracks[k].fid;
+      s.innerHTML = ""; const none = el("option", "", T("tracks.none", "No file")); none.value = ""; s.appendChild(none);
+      for (const f of ready) { const o = el("option", "", f.name); o.value = String(f.id); s.appendChild(o); }
+      s.value = keep != null ? String(keep) : "";
+    });
+    if (!TR.started && trDefaults()) { TR.started = true; trChanged(true); TR.rows.tracks.forEach((r, k) => { r.file.value = String(TR.tracks[k].fid); r.gain.value = String(TR.tracks[k].gain); r.gainVal.textContent = trDb(TR.tracks[k].gain); }); }
+  }
+  trDraw();
+}
+const trDb = g => (g > 0 ? "+" : g < 0 ? "−" : "±") + dec(Math.abs(g).toFixed(1)) + " dB";
+
+function buildTracks() {
+  const box = $("tracks");
+  if (!box) return;
+  box.innerHTML = ""; TR.rows = null; TR.files = "";
+  if (!PHAPI || !PHAPI.combine) { box.textContent = T("cmp.noApi", "The composer needs src/playhead.js."); return; }
+  const sel = (id, label, opts, value, title) => {
+    const l = el("label", "ctl"); l.htmlFor = id; l.appendChild(document.createTextNode(label + " ")); if (title) l.title = title;
+    const s = el("select"); s.id = id;
+    for (const [v, t] of opts) { const o = el("option", "", t); o.value = v; s.appendChild(o); }
+    s.value = String(value); l.appendChild(s); return [l, s];
+  };
+  const chk = (id, label, on, title) => { const l = el("label", "chk"), c = el("input"); c.type = "checkbox"; c.id = id; c.checked = on; l.htmlFor = id; l.append(c, document.createTextNode(" " + label)); if (title) l.title = title; return [l, c]; };
+  const lookOpts = [["compose", T("tracks.look.compose", "Your combination (from the composer)")]].concat(Object.entries(PHAPI.looks).map(([k, L]) => [k, L.name]));
+  if (!lookOpts.some(o => o[0] === TR.look)) TR.look = "auto";
+  const [lLook, sLook] = sel("tr-look", T("tracks.look", "Track look"), lookOpts, TR.look, T("tracks.look.title", "How the clips are drawn: your combination from the composer above, or a ready-made look. The folder uses the same look."));
+  const [lView, sView] = sel("tr-view", T("tracks.view", "Folder shows"), TR_VIEWS.map(v => [v, trViewName(v)]), TR.view, T("tracks.view.title", "What the folder track draws for the whole"));
+  const clsOpts = [["auto", T("ui.cls.auto", "Auto")]].concat(Object.keys(WL.CLASSES).map(k => [k, clsLabel(k)]));
+  const [lCls, sCls] = sel("tr-cls", T("ui.cls", "Asset class"), clsOpts, TR.cls, T("tracks.cls.title", "The tracks and the mix are analysed with one class, so their curves compare"));
+  const [lH, sH] = sel("tr-height", T("cmp.height", "Height"), TR_HEIGHTS.map(v => [String(v), v + " px"]), TR.h, T("cmp.height.title", "Height of the strips in this section"));
+  const [lSnap, cSnap] = chk("tr-snap", T("tracks.snap", "Snap to onsets"), TR.snap, T("tracks.snap.title", "While you drag, the clip's start or one of its onsets snaps to the other tracks' clips and onsets. Hold Alt to move freely."));
+  const [lCmp, cCmp] = chk("tr-compare", T("tracks.compare", "Show every folder view"), TR.compare, T("tracks.compare.title", "Draw all folder views under the folder, to compare them on the same tracks"));
+  const play = el("button", "primary", T("ui.play", "Play")); play.type = "button";
+  const fb = el("a", "", T("tracks.feedback", "Tell us which folder view helps")); fb.target = "_blank"; fb.rel = "noopener";
+  const fbHref = () => { fb.href = "https://github.com/eigensoundlab/playhead/issues/new?template=look-feedback.yml&title=" + encodeURIComponent("Folder view feedback: " + TR.view) + "&look=" + encodeURIComponent(trLookCode() || "") + "&app=" + encodeURIComponent("Playhead app, tracks in a folder (" + TR.view + ")"); };
+  const row1 = el("div", "cmp-row"), row2 = el("div", "cmp-row");
+  row1.append(lLook, lView, lCls, lH);
+  row2.append(play, lSnap, lCmp, fb);
+  const grid = el("div", "rows trrows");
+  const scopes = [];
+  const strip = (aria, tab) => {
+    const sc = el("div", "scope"), w = el("div", "cvw"), cv = el("canvas", "strip"), ph = el("div", "ph");
+    cv.setAttribute("role", "img"); if (aria) cv.setAttribute("aria-label", aria); if (tab) cv.tabIndex = 0;
+    w.append(cv, ph); sc.appendChild(w); const s = { sc, w, cv, ph }; scopes.push(s); return s;
+  };
+  // the ruler
+  const rl = el("div", "lab"), time = el("div", "rulerlab", "0:00.0"); rl.appendChild(time);
+  const ruler = strip(T("aria.ruler", "Time ruler; click to seek"));
+  grid.append(rl, ruler.sc);
+  // the folder track
+  const fl = el("div", "lab trfolder"), ft = el("div", "titleline trhead");
+  const fold = el("button", "trfold", "▾"); fold.type = "button"; fold.title = T("tracks.collapse.title", "Show or hide the tracks, like a folder in a DAW"); fold.setAttribute("aria-label", fold.title); fold.setAttribute("aria-expanded", String(!TR.collapsed));
+  ft.append(fold, el("span", "name", T("tracks.folder", "Folder")));
+  const fdesc = el("div", "desc"), flegend = el("div", "desc trlegend"), fmeta = el("div", "metaline");
+  fl.append(ft, fdesc, flegend, fmeta);
+  const folder = strip(T("tracks.aria.folder", "Folder track: the whole of the tracks; click to set the play position"));
+  grid.append(fl, folder.sc);
+  // every folder view, for comparing them
+  const views = {};
+  for (const v of TR_VIEWS) {
+    const l = el("div", "lab"), tl = el("div", "titleline"); tl.appendChild(el("span", "name", trViewName(v))); l.append(tl, el("div", "desc", trViewDesc(v)));
+    const s = strip(trViewName(v)); grid.append(l, s.sc); views[v] = Object.assign(s, { lab: l });
+  }
+  // the tracks
+  const tracks = TR.tracks.map((t, k) => {
+    const l = el("div", "lab trlab"), hd = el("div", "titleline trhead");
+    const sw = el("span", "trsw"); sw.style.setProperty("--tc", trColour(PANELS[S.panel], k));
+    const mute = el("button", "trms trmute", "M"), solo = el("button", "trms trsolo", "S");
+    mute.type = solo.type = "button"; mute.title = T("tracks.mute", "Mute"); solo.title = T("tracks.solo", "Solo");
+    mute.setAttribute("aria-label", T("tracks.mute", "Mute") + " " + (k + 1)); solo.setAttribute("aria-label", T("tracks.solo", "Solo") + " " + (k + 1));
+    hd.append(sw, el("span", "name", T("tracks.track", "Track {n}", { n: k + 1 })), mute, solo);
+    const file = el("select", "trfile"); file.setAttribute("aria-label", T("tracks.file", "File on track {n}", { n: k + 1 }));
+    const gl = el("label", "trgain"), gain = el("input"), gainVal = el("span", "val", trDb(t.gain));
+    gain.type = "range"; gain.min = "-24"; gain.max = "12"; gain.step = "0.5"; gain.value = String(t.gain);
+    gl.append(document.createTextNode(T("tracks.gain", "Gain") + " "), gain, gainVal);
+    const at = el("div", "metaline trat");
+    l.append(hd, file, gl, at);
+    const s = strip("", true);
+    s.cv.setAttribute("role", "slider");
+    grid.append(l, s.sc);
+    return Object.assign(s, { lab: l, file, gain, gainVal, mute, solo, at, sw });
+  });
+  const note = el("p", "fxnote trnote", T("tracks.rules", "How the folder is combined: loudness and the spectrogram add as power, and a track's gain moves its loudness; onsets and events are merged and onset strength adds up; harshness is the whole's loudness plus the tracks' harshness above their own loudness; the other curves take the strongest track. Sections are not combined, and the beat grid is the clearest track's. On 14 test sessions, loudness and the spectrogram matched the analysed mix closely, activity and harshness roughly, novelty and events poorly (experiments/compose in the source)."));
+  box.append(row1, row2, grid, note);
+  TR.rows = { ruler, folder: Object.assign(folder, { desc: fdesc, legend: flegend, meta: fmeta }), views, tracks, scopes, time, play, cls: sCls };
+
+  const showRows = () => {
+    for (const v of TR_VIEWS) { const r = views[v], on = TR.compare && v !== TR.view; r.lab.hidden = !on; r.sc.hidden = !on; }
+    tracks.forEach(r => { r.lab.hidden = TR.collapsed; r.sc.hidden = TR.collapsed; });
+    fold.textContent = TR.collapsed ? "▸" : "▾"; fold.setAttribute("aria-expanded", String(!TR.collapsed));
+    fbHref();
+  };
+  showRows();
+  sLook.addEventListener("change", () => { TR.look = sLook.value; store.set("trLook", TR.look); fbHref(); trDraw(); });
+  sView.addEventListener("change", () => { TR.view = sView.value; store.set("trView", TR.view); showRows(); trDraw(); });
+  sCls.addEventListener("change", () => { TR.cls = sCls.value; TR.mix = null; trChanged(false); });
+  sH.addEventListener("change", () => { TR.h = parseInt(sH.value, 10) || 64; store.set("trHeight", TR.h); trDraw(); });
+  cSnap.addEventListener("change", () => { TR.snap = cSnap.checked; store.set("trSnap", TR.snap); });
+  cCmp.addEventListener("change", () => { TR.compare = cCmp.checked; store.set("trCompare", TR.compare); showRows(); trDraw(); });
+  fold.addEventListener("click", () => { TR.collapsed = !TR.collapsed; showRows(); trDraw(); });
+  play.addEventListener("click", () => { if (TR.play) trStop(); else trPlay(); });
+  // seeking: the ruler, the folder and the view rows
+  for (const s of [ruler, folder].concat(Object.values(views))) s.w.addEventListener("pointerdown", e => { if (TR.span) trSeek(fracFrom(e, s.w) * TR.span); });
+  tracks.forEach((r, k) => {
+    const t = () => TR.tracks[k];
+    r.file.addEventListener("change", () => { TR.started = true; t().fid = r.file.value ? parseInt(r.file.value, 10) : null; trChanged(true); trReplay(); });
+    r.gain.addEventListener("input", () => { TR.started = true; t().gain = parseFloat(r.gain.value) || 0; r.gainVal.textContent = trDb(t().gain); trChanged(false); });
+    r.gain.addEventListener("change", trReplay);
+    r.mute.addEventListener("click", () => { t().mute = !t().mute; trChanged(false); trReplay(); });
+    r.solo.addEventListener("click", () => { t().solo = !t().solo; trChanged(false); trReplay(); });
+    const onClip = e => { const f = trFile(t()); if (!f || !TR.span) return false; const at = fracFrom(e, r.w) * TR.span; return at >= t().off && at <= t().off + f.dur; };
+    r.cv.addEventListener("pointerdown", e => {
+      if (!TR.span) return;
+      if (!onClip(e)) { trSeek(fracFrom(e, r.w) * TR.span); return; }
+      const f = trFile(t()), st = trSettings(), own = trDoc(f, st).doc, targets = [0];
+      TR.tracks.forEach((o, j) => { const g = trFile(o); if (j === k || !g) return; targets.push(o.off, o.off + g.dur); const d = trDoc(g, st).doc; if (d) for (const x of (d.onsets || []).slice(0, 400)) targets.push(o.off + x); });
+      const anchors = [0].concat(own ? (own.onsets || []).slice(0, 32) : []);
+      TR.drag = { k, grab: fracFrom(e, r.w) * TR.span - t().off, targets, anchors, moved: false };
+      r.cv.setPointerCapture(e.pointerId); r.cv.classList.add("dragging"); TR.started = true;
+    });
+    r.cv.addEventListener("pointermove", e => {
+      const d = TR.drag;
+      if (!d || d.k !== k) { if (e.pointerType !== "touch") r.cv.style.cursor = onClip(e) ? "grab" : ""; return; }
+      const f = trFile(t()), raw = fracFrom(e, r.w) * TR.span - d.grab;
+      let off = raw;
+      if (TR.snap && !e.altKey) {
+        const tol = 8 / Math.max(1, r.w.clientWidth) * TR.span; let best = tol;
+        for (const a of d.anchors) for (const c of d.targets) { const cand = c - a, dd = Math.abs(cand - raw); if (dd < best) { best = dd; off = cand; } }
+      }
+      off = Math.max(0, Math.min(TR.span - f.dur, off));
+      if (Math.abs(off - t().off) < 1e-6) return;
+      t().off = off; d.moved = true; trChanged(false);
+    });
+    const end = () => { if (!TR.drag || TR.drag.k !== k) return; const moved = TR.drag.moved; TR.drag = null; r.cv.classList.remove("dragging"); trDraw(); if (moved) { trReplay(); trScheduleMix(); } };
+    r.cv.addEventListener("pointerup", end); r.cv.addEventListener("pointercancel", end);
+    r.cv.addEventListener("dblclick", e => { const f = trFile(t()); if (!f || !onClip(e)) return; S.sel = f; stopAudio(); offset = 0; render(); $("bar").scrollIntoView({ behavior: "smooth", block: "start" }); });
+    r.cv.addEventListener("keydown", e => {
+      const f = trFile(t()); if (!f || !TR.span) return;
+      const step = e.shiftKey ? 0.1 : 0.01;
+      let off = e.key === "ArrowLeft" ? t().off - step : e.key === "ArrowRight" ? t().off + step : e.key === "Home" ? 0 : null;
+      if (off == null) return;
+      e.preventDefault(); TR.started = true;
+      t().off = Math.max(0, Math.min(TR.span - f.dur, Math.round(off * 1000) / 1000)); trChanged(false); trReplay();
+    });
+  });
+  if (typeof IntersectionObserver !== "undefined") {
+    if (TR.io) TR.io.disconnect();
+    TR.io = new IntersectionObserver(es => { TR.visible = es.some(x => x.isIntersecting); if (TR.visible) trDraw(); });
+    TR.io.observe(box);
+  } else TR.visible = true;
+  trSync();
+}
+
 function fmtT(t, fine) {
   if (!isFinite(t)) return "0:00";
   const m = Math.floor(t / 60), s = t - m * 60;
@@ -1046,6 +1530,7 @@ function renderFxResult() {
 const AB = { src: null, f: null, from: 0, startAt: 0, raf: 0, pos: new Map() };
 function abTime() { return AB.src ? AB.from + (ctx().currentTime - AB.startAt) : 0; }
 function stopAudition() {
+  trStop();
   const f = AB.f;
   if (AB.src) { AB.pos.set(f.id, Math.min(abTime(), f.dur)); try { AB.src.onended = null; AB.src.stop(); } catch (e) { /* stopped */ } AB.src.disconnect(); AB.src = null; }
   cancelAnimationFrame(AB.raf); AB.f = null;
@@ -1160,6 +1645,7 @@ function render() {
   renderMatrix();
   renderLibrary();
   renderBench();
+  trSync();
   if (ready) placeHead(playing ? offset + (ctx().currentTime - startAt) : offset);
 }
 function updateLabels() {
@@ -1838,6 +2324,7 @@ if (I18N) {
 }
 buildRows();
 buildComposer();
+buildTracks();
 $("ghost").addEventListener("change", () => { if (cmpShow) cmpShow(); });
 hookScopes();
 render();
@@ -1846,6 +2333,7 @@ if (I18N) I18N.onChange(lang => {
   if ($("lang-en")) $("lang-en").closest("label").hidden = lang === "en";
   relabelRows();
   buildComposer();
+  buildTracks();
   $("toolpick").innerHTML = "";
   setStatus("");
   render();

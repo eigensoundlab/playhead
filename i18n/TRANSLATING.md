@@ -1,6 +1,6 @@
 # Translating Playhead
 
-`en.json` lists every English text of the app and the library: about 670 texts, about 4,500 words. A translation is
+`en.json` lists every English text of the app and the library: about 730 texts, about 5,100 words. A translation is
 `<lang>.json` next to it: the same keys, with your text as each value. Whatever is missing shows in English, so a
 translation can grow a section at a time.
 
@@ -70,6 +70,7 @@ brackets do not nest.
 | `lab.*`, `now.*`, `check.*`, `obj.*`, `profile.*`, `layer.*`, `mat.*` | the measurements and badges under the strips |
 | `off.*` | text drawn in a strip when it has nothing to show |
 | `cmp.*` | the "Your own look" composer |
+| `tracks.*` | the "Tracks in a folder" section: tracks, the folder and its views. "Track", "folder", "clip", "mix", "mute" and "solo" are the words of the language's DAWs |
 | `bench.*`, `metric.*` | the tool bench and its result table |
 | `status.*` | the status line while files load and analyse |
 | `aria.*` | names for screen readers |

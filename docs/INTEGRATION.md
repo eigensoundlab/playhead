@@ -26,6 +26,7 @@ Playhead.drawStrip(canvas.getContext("2d"), doc, { from: 0, to: doc.source.durat
 const marks = Playhead.toMarkers(doc, { kinds: ["sections", "downbeats"] });
 const v = Playhead.curveAt(doc, "tension", 12.5);
 const r = await Playhead.process(sound, "deharsh", { amount: 0.6 });   // r.outputs[0].channels, r.report
+const whole = Playhead.combine([{ doc: kick }, { doc: bass, offset: 0.5, gain: -3 }]);   // the sum, from documents alone
 ```
 
 | Function | Returns |
@@ -39,6 +40,8 @@ const r = await Playhead.process(sound, "deharsh", { amount: 0.6 });   // r.outp
 | `curveAt(doc, name, t, fallback)` | a curve's value at time `t`, interpolated: for driving generator and effect parameters |
 | `process(input, toolId, params)` | runs one of the effects bench tools: `{ outputs: [{ suffix, sampleRate, channels }], report }` |
 | `tools()` | the tools and their parameters (id, label, range, default) |
+| `combine(parts, opts)` | a document for the sum of several sounds, from their documents alone (no audio, no new analysis), for folder tracks, layered effects and stems. `parts`: `[{ doc, offset, gain }]` (seconds, dB). `opts`: `rate`, `duration`, `wave` (a real overview of the sum, instead of the estimate), `aligned`. `doc.combined` lists the parts and the rule used for each curve ([Combining](#combining-documents)) |
+| `align(parts, opts)` | the parts on one time axis: per part its power per column and, when all have spectrograms, per column and band. For views that show which part carries what |
 | `localize(table)` | shows the curve names, looks, legends and tools in another language; `table` is `dist/i18n/<lang>.json` (Czech, German, Polish, Russian, Spanish), `null` returns to English. Documents are unaffected: only labels change |
 
 **Profiles** (one core of the development machine, stereo 44.1 kHz; document size in brackets):
@@ -54,6 +57,16 @@ The first analysis at a new sample rate adds about 0.25 s of one-time calibratio
 also carry a small mel spectrogram for the spectrogram layer: about 5.3 KB per second of sound up to 10 s (100 columns
 per second) and 1.1 KB per second above (20 columns per second). `analyze(..., { spectrum: false })` leaves it out;
 `fast` leaves it out unless `spectrum: true`.
+
+**Combining documents.** Analyse the parts with the same `profile`, `assetClass` and `curveRate`. LUFS and the
+spectrogram add as power and a part's gain moves them exactly; loudness follows from the summed LUFS; harshness is the
+whole's loudness plus the parts' power-weighted harshness above their own loudness; activity, arousal, tension and
+novelty take the strongest part; onset strength adds up; onsets, events and novelty ticks are merged (a part that starts
+with sound gets an onset at its entry). The beat grid is the clearest part's, and sections are left out: they need the
+whole. On 14 sessions built from separate parts ([experiments/compose](../experiments/compose/README.md)) loudness and
+the spectrogram matched the analysed mix closely, activity, arousal and harshness roughly (r 0.8 to 0.99), tension and
+novelty less (0.72, 0.51), events poorly (F about 0.5): three layers struck together are one event in the mix. Where
+the combined and the analysed whole differ is itself worth showing: it is where the parts interact.
 
 ## The document (schema `playhead-analysis`, version 1)
 

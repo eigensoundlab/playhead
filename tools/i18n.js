@@ -116,7 +116,7 @@ function extract() {
 }
 
 // keys in a fixed, readable order: page first, then app texts, then the library
-const ORDER = ["ui.", "sec.", "note.", "guide.", "foot.", "row.", "d3.", "word.", "aria.", "off.", "cmp.", "bench.", "metric.", "lab.", "now.", "matrix.", "status.", "check.", "obj.", "profile.", "layer.", "mat.", "lib."];
+const ORDER = ["ui.", "sec.", "note.", "guide.", "foot.", "row.", "d3.", "word.", "aria.", "off.", "cmp.", "tracks.", "bench.", "metric.", "lab.", "now.", "matrix.", "status.", "check.", "obj.", "profile.", "layer.", "mat.", "lib."];
 function sorted(o) {
   const rank = k => { const i = ORDER.findIndex(p => k.startsWith(p)); return i < 0 ? ORDER.length : i; };
   const keys = Object.keys(o).map((k, i) => [k, i]).sort((a, b) => rank(a[0]) - rank(b[0]) || a[1] - b[1]).map(x => x[0]);
@@ -128,7 +128,7 @@ const isMeta = k => k.startsWith("_");
 const pluralBase = k => k.replace(/\.(zero|one|two|few|many|other)$/, "");
 // [[term|English]]: the English term after a technical term, in explanations only (see i18n/TRANSLATING.md)
 const GLOSS = /\[\[([^\]|]+)\|([^\]]+)\]\]/g;
-const EXPLAINS = /^(ui\.intro$|sec\.|note\.|guide\.|row\.[\w-]+\.desc$|d3\.|lib\.(look|tool)\.\w+\.desc$|[\w.-]+\.title$|bench\.(need\.|eqNote|saveGh|saveZipNote)|lab\.fTitle$|aria\.)/;
+const EXPLAINS = /^(ui\.intro$|sec\.|note\.|guide\.|tracks\.(view\.\w+\.desc|rules)$|row\.[\w-]+\.desc$|d3\.|lib\.(look|tool)\.\w+\.desc$|[\w.-]+\.title$|bench\.(need\.|eqNote|saveGh|saveZipNote)|lab\.fTitle$|aria\.)/;
 const glossed = (s, on) => String(s).replace(GLOSS, (m, t, e, at, all) => {
   if (!on) return t;
   const depth = (all.slice(0, at).match(/\(/g) || []).length - (all.slice(0, at).match(/\)/g) || []).length;

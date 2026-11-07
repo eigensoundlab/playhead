@@ -237,6 +237,198 @@ function curveAt(doc, name, t, fallback) {
   return a + (b - a) * f;
 }
 
+/* ---------------- combining documents: tracks in a folder ---------------- */
+// What the sum of several sounds looks like, from their documents alone: no audio, no new analysis. For folder tracks,
+// layered sound effects and stems. parts: [{ doc, offset, gain }], offset in seconds (where the part starts in the
+// whole, default 0), gain in dB (default 0). Analyse the parts with the same profile, asset class and curveRate.
+//
+//   Playhead.align(parts, opts)    the parts on one time axis: for each part its power per column (from its LUFS) and,
+//                                  when every part has a spectrogram, its power per column and band. For views that show
+//                                  which part carries what. opts: rate (columns per second, default the first part's),
+//                                  duration (default where the last part ends).
+//   Playhead.combine(parts, opts)  a document for the whole, drawn and read like any other (doc.combined says how it
+//                                  was made). opts as for align, and wave: a waveform overview of the real sum (same
+//                                  format as doc.wave) to use instead of the estimate; aligned: align()'s result for
+//                                  the same parts and options, when the caller has it already.
+//
+// The rules (COMBINE_RULES), tested on 14 sessions built from separate parts (experiments/compose; r against the
+// analysed mix, music / impacts): LUFS and the spectrogram add as power (0.94 / 1.00, within 0.4 dB), and loudness
+// follows from the summed LUFS. Harshness is loudness plus a factor, so it is the whole's loudness plus the parts'
+// power-weighted harshness above their own loudness (0.81 / 0.97); activity, arousal and tension take the strongest
+// part (0.84 / 0.92, 0.87 / 0.99, 0.72); onsets are merged (F 0.85 / 0.93). Context-dependent ones come out rough:
+// surprise 0.51, events F 0.49 / 0.57 (three layers struck together are one event in the mix). The descriptor curves
+// follow the loudest part (not tested). Sections are left out: they need the whole.
+const COMBINE_RULES = {
+  lufs: "power sum", loudness: "from the summed LUFS", harshness: "loudness + weighted excess", arousal: "max",
+  activity: "max", tension: "max", harmonicTension: "weighted mean", surprise: "max", onsetStrength: "sum", structureNovelty: "max", localPulse: "max",
+  n1Kurtosis: "loudest", n2RepetitionHz: "loudest", n4Velocity: "loudest", n5Cpp: "loudest", n5Coherence: "loudest", n6Arrow: "loudest",
+  n7Surprisal: "max", n8Recurrence: "weighted mean"
+};
+// how far a part's gain moves its 0..1 curves (fixed scales: loudness is (LUFS + 60) / 60, harshness is loudness plus a
+// factor, arousal half loudness)
+const GAIN_SHIFT = { loudness: 1, harshness: 1, arousal: 0.5 };
+const specPowCache = typeof WeakMap !== "undefined" ? new WeakMap() : null;
+function specPower(sp) {
+  if (specPowCache && specPowCache.has(sp)) return specPowCache.get(sp);
+  const u8 = specBytes(sp), lo = sp.dbTop - sp.dbRange, out = new Float32Array(u8 ? u8.length : 0);
+  for (let i = 0; i < out.length; i++) out[i] = u8[i] ? Math.pow(10, (lo + u8[i] / 255 * sp.dbRange) / 10) : 0;
+  if (specPowCache) specPowCache.set(sp, out);
+  return out;
+}
+function align(parts, opts) {
+  opts = opts || {};
+  const ps = (parts || []).filter(p => p && p.doc && p.doc.curves && p.doc.source);
+  if (!ps.length) throw new Error("Playhead.align: no parts (expected [{ doc, offset, gain }])");
+  const rate = opts.rate || ps[0].doc.curves.rate;
+  const duration = opts.duration || Math.max(...ps.map(p => (p.offset || 0) + p.doc.source.duration));
+  const cols = Math.max(1, Math.round(duration * rate));
+  const B = ps.every(p => p.doc.spectrum && p.doc.spectrum.bands === ps[0].doc.spectrum.bands) ? ps[0].doc.spectrum.bands : 0;
+  const out = { rate, duration, columns: cols, bands: B, parts: [] };
+  for (const p of ps) {
+    const d = p.doc, off = p.offset || 0, gain = p.gain || 0, g = Math.pow(10, gain / 10), cr = d.curves.rate, lufs = d.curves.lufs || [], n = lufs.length;
+    const idx = new Int32Array(cols), power = new Float32Array(cols);
+    for (let c = 0; c < cols; c++) {
+      const t = (c + 0.5) / rate - off, i = Math.floor(t * cr);
+      idx[c] = t >= 0 && i < n ? i : -1;
+      if (idx[c] >= 0 && lufs[i] != null) power[c] = Math.pow(10, lufs[i] / 10) * g;
+    }
+    let spectrum = null;
+    if (B) {
+      const sp = d.spectrum, P = specPower(sp), sr = sp.columns / d.source.duration;
+      spectrum = new Float32Array(cols * B);
+      for (let c = 0; c < cols; c++) {
+        const t = (c + 0.5) / rate - off, j = Math.floor(t * sr);
+        if (t < 0 || j >= sp.columns) continue;
+        for (let b = 0; b < B; b++) spectrum[c * B + b] = P[j * B + b] * g;
+      }
+    }
+    out.parts.push({ doc: d, offset: off, gain, idx, power, spectrum });
+  }
+  return out;
+}
+// times from several parts in one list; times closer than gap merge into the first
+function mergeTimes(lists, gap) {
+  const all = [].concat(...lists).filter(t => t != null).sort((a, b) => a - b), out = [];
+  for (const t of all) if (!out.length || t - out[out.length - 1] > gap) out.push(t);
+  return out;
+}
+const r4 = v => Math.round(v * 1e4) / 1e4;          // rnd(v, 4) without toFixed, for the per-column loops below
+function combine(parts, opts) {
+  opts = opts || {};
+  const A = opts.aligned || align(parts, opts), cols = A.columns, rate = A.rate, dur = A.duration, ps = A.parts, first = ps[0].doc;
+  const total = new Float64Array(cols);
+  for (const p of ps) for (let c = 0; c < cols; c++) total[c] += p.power[c];
+  const val = (p, k, c) => {        // a part's value of curve k in column c, moved by its gain where the curve follows level
+    const arr = p.doc.curves[k], i = p.idx[c];
+    if (!arr || i < 0 || arr[i] == null) return null;
+    const sh = GAIN_SHIFT[k];
+    return sh && p.gain ? Math.max(0, Math.min(1, arr[i] + sh * p.gain / 60)) : arr[i];
+  };
+  const curves = { rate: rnd(rate, 6), start: 0, scale: first.curves.scale };
+  const lufs = new Array(cols), loud = new Array(cols);
+  for (let c = 0; c < cols; c++) {
+    lufs[c] = total[c] > 0 ? r4(10 * Math.log10(total[c])) : null;
+    loud[c] = lufs[c] == null ? null : r4(Math.max(0, Math.min(1, (lufs[c] + 60) / 60)));
+  }
+  curves.lufs = lufs;
+  const names = Object.keys(COMBINE_RULES).filter(k => k !== "lufs" && ps.some(p => Array.isArray(p.doc.curves[k])));
+  for (const k of names) {
+    if (k === "loudness") { curves.loudness = loud; continue; }
+    const rule = COMBINE_RULES[k], out = new Array(cols), base = /excess/.test(rule) ? GAIN_SHIFT[k] : 0;
+    for (let c = 0; c < cols; c++) {
+      if (lufs[c] == null) { out[c] = null; continue; }
+      let v = null;
+      if (rule === "max") { for (const p of ps) { const x = val(p, k, c); if (x != null && (v == null || x > v)) v = x; } }
+      else if (rule === "sum") { for (const p of ps) { const x = val(p, k, c); if (x != null) v = (v || 0) + x; } if (v != null && k === "onsetStrength") v = Math.min(1, v); }
+      else if (rule === "loudest") { let bw = 0; for (const p of ps) { const x = val(p, k, c); if (x != null && p.power[c] > bw) { bw = p.power[c]; v = x; } } }
+      else {    // weighted by each part's power; the excess rules add it to the whole's loudness
+        let s = 0, w = 0;
+        for (const p of ps) {
+          const x = val(p, k, c); if (x == null || !p.power[c]) continue;
+          const l = base ? val(p, "loudness", c) : 0;
+          s += p.power[c] * (x - base * (l == null ? 0 : l)); w += p.power[c];
+        }
+        v = w ? (base ? Math.max(0, Math.min(1, base * loud[c] + s / w)) : s / w) : null;
+      }
+      out[c] = v == null ? null : r4(v);
+    }
+    curves[k] = out;
+  }
+  // the waveform: the sum of the parts' peaks (an upper bound) and of their RMS power, unless the real one is given
+  let wave = opts.wave || null;
+  if (!wave) {
+    const wc = opts.waveColumns || 1000, mn = new Array(wc).fill(0), mx = new Array(wc).fill(0), pw = new Float64Array(wc);
+    for (const p of ps) {
+      const w = p.doc.wave, a = Math.pow(10, p.gain / 20), pd = p.doc.source.duration;
+      if (!w) continue;
+      for (let c = 0; c < wc; c++) {
+        const t = (c + 0.5) / wc * dur - p.offset; if (t < 0 || t >= pd) continue;
+        const i = Math.min(w.columns - 1, Math.floor(t / pd * w.columns));
+        mn[c] += (w.min[i] || 0) * a; mx[c] += (w.max[i] || 0) * a; pw[c] += Math.pow((w.rms[i] || 0) * a, 2);
+      }
+    }
+    wave = { columns: wc, min: mn.map(r4), max: mx.map(r4), rms: Array.from(pw, v => r4(Math.sqrt(v))), estimate: "sum of the parts' peaks" };
+  }
+  // the spectrogram: power sum, encoded like a part's (80 dB below the whole's top)
+  let spectrum = null;
+  if (A.bands) {
+    const B = A.bands, sum = new Float64Array(cols * B);
+    for (const p of ps) for (let i = 0; i < sum.length; i++) sum[i] += p.spectrum[i];
+    // the top as for a part's spectrogram: the 99.9th percentile of the cells, from a 0.1 dB histogram below the maximum
+    const db = new Float32Array(sum.length); let mxDb = -Infinity, nFin = 0;
+    for (let i = 0; i < sum.length; i++) { const v = sum[i] > 0 ? 10 * Math.log10(sum[i]) : -Infinity; db[i] = v; if (v > -Infinity) { nFin++; if (v > mxDb) mxDb = v; } }
+    let top = nFin ? mxDb : 0;
+    if (nFin) {
+      const hist = new Uint32Array(1201); for (let i = 0; i < db.length; i++) if (db[i] > -Infinity) hist[Math.min(1200, Math.round((mxDb - db[i]) * 10))]++;
+      let above = 0; const need = nFin - Math.floor(0.999 * (nFin - 1));
+      for (let k = 0; k <= 1200; k++) { above += hist[k]; if (above >= need) { top = mxDb - k / 10; break; } }
+    }
+    const lo = top - 80, u8 = new Uint8Array(cols * B);
+    for (let i = 0; i < u8.length; i++) u8[i] = db[i] > -Infinity ? Math.max(0, Math.min(255, Math.round((db[i] - lo) / 80 * 255))) : 0;
+    const s0 = first.spectrum;
+    spectrum = { scale: s0.scale, bands: B, fmin: s0.fmin, fmax: s0.fmax, columns: cols, dbTop: rnd(top, 2), dbRange: 80, encoding: "base64-u8", data: toB64(u8) };
+  }
+  // marks: onsets, events and novelty ticks merged; the beat grid of the part with the clearest pulse
+  const shift = (ts, p) => (ts || []).map(t => t + p.offset).filter(t => t >= 0 && t <= dur);
+  // a part that starts with sound has no onset at its own time 0 (nothing came before it); placed later in the whole, it has one
+  const entry = p => { const s = p.doc.summary && p.doc.summary.soundStart, on = p.doc.onsets || []; return s != null && p.offset + s > 0.05 && !(on.length && on[0] - s < 0.05) ? [s] : []; };
+  const onsets = mergeTimes(ps.map(p => shift(entry(p).concat(p.doc.onsets || []), p)), 0.03).map(t => rnd(t, 4));
+  const noveltyTicks = mergeTimes(ps.map(p => shift(p.doc.noveltyTicks, p)), 0.05).map(t => rnd(t, 4));
+  let events = null;
+  if (ps.some(p => p.doc.events)) {
+    const all = [];
+    for (const p of ps) for (const e of p.doc.events || []) {
+      const mv = t => (t == null ? null : rnd(t + p.offset, 4));
+      all.push(Object.assign({}, e, { start: mv(e.start), end: mv(e.end), decayEnd: mv(e.decayEnd), peak: mv(e.peak), peakDb: e.peakDb == null ? null : rnd(e.peakDb + p.gain, 2), grains: (e.grains || []).map(mv) }));
+    }
+    all.sort((a, b) => a.start - b.start);
+    events = [];
+    for (const e of all) {
+      const last = events[events.length - 1];
+      if (last && e.start - last.start <= 0.03) { if ((e.peakDb || -99) > (last.peakDb || -99)) events[events.length - 1] = e; }
+      else events.push(e);
+    }
+  }
+  let rhythm = null;
+  const rh = ps.filter(p => p.doc.rhythm).sort((a, b) => (b.doc.rhythm.reliable - a.doc.rhythm.reliable) || ((b.doc.rhythm.clarity || 0) - (a.doc.rhythm.clarity || 0)))[0];
+  if (rh) {
+    const r = rh.doc.rhythm, inPart = t => t >= rh.offset && t <= rh.offset + rh.doc.source.duration && t <= dur;
+    rhythm = { tempo: r.tempo, reliable: r.reliable, clarity: r.clarity, beats: r.beats.map(t => rnd(t + rh.offset, 4)).filter(inPart), downbeats: r.downbeats.map(t => rnd(t + rh.offset, 4)).filter(inPart), from: ps.indexOf(rh) };
+  }
+  const lf = lufs.filter(v => v != null).sort((a, b) => a - b), q = p => lf.length ? lf[Math.floor(p * (lf.length - 1))] : null;
+  const starts = ps.map(p => p.doc.summary && p.doc.summary.soundStart != null ? p.doc.summary.soundStart + p.offset : null).filter(v => v != null);
+  const ends = ps.map(p => p.doc.summary && p.doc.summary.soundEnd != null ? p.doc.summary.soundEnd + p.offset : null).filter(v => v != null);
+  return {
+    schema: SCHEMA, schemaVersion: SCHEMA_VERSION,
+    generator: { name: "playhead", version: VERSION },
+    source: { name: opts.name || null, sampleRate: first.source.sampleRate, channels: Math.max(...ps.map(p => p.doc.source.channels || 1)), duration: rnd(dur, 4) },
+    profile: first.profile, assetClass: first.assetClass, guessedClass: first.guessedClass,
+    summary: { peakLufs: lf.length ? rnd(lf[lf.length - 1], 2) : null, loudnessRange: lf.length ? rnd(q(0.95) - q(0.1), 2) : null, soundStart: starts.length ? rnd(Math.min(...starts), 4) : null, soundEnd: ends.length ? rnd(Math.min(dur, Math.max(...ends)), 4) : null },
+    curves, wave, spectrum, onsets, noveltyTicks, rhythm, sections: null, events, layers: null, issues: null, descriptors: null,
+    combined: { parts: ps.map(p => ({ name: p.doc.source.name, offset: rnd(p.offset, 4), gain: rnd(p.gain, 2) })), rules: Object.fromEntries(["lufs"].concat(names).map(k => [k, COMBINE_RULES[k]])) }
+  };
+}
+
 /* ---------------- markers for editors and engines ---------------- */
 // { kind: "region" | "marker", start, end?, name } sorted by time: sections as regions, downbeats and events as markers
 function toMarkers(doc, opts) {
@@ -655,7 +847,7 @@ function drawStrip(ctx, doc, opts) {
   return { code: lookCode(layers), layers, legend: describeLook(layers, doc), items };
 }
 
-const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, drawStrip, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
+const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, align, combine, combineRules: COMBINE_RULES, drawStrip, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.Playhead = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

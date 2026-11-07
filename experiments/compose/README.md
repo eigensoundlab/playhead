@@ -12,8 +12,11 @@ node experiments/compose/compose.js [sonic-pi-samples-dir]    # table on stdout,
 The samples come with `tools/fetch-corpus.sh`; ffmpeg decodes them. One run takes about 80 s.
 
 **Rules.** Short-term loudness (LUFS) and the mel spectrogram by power sum; the 0–1 curves by the maximum of the parts,
-their loudness-weighted mean, or the loudest part's value (loudness also mapped from the summed LUFS); onset strength by
-sum; onsets and events by the union of the parts', merged within 30 ms. Measures: Pearson r over the frames where the
+their loudness-weighted mean, or the loudest part's value; loudness also from the summed LUFS (through a map learnt
+from the parts, and on the library's fixed scale); harshness and arousal also as the whole's loudness plus the parts'
+weighted excess over their own loudness; onset strength by sum; onsets and events by the union of the parts', merged
+within 30 ms. The best rule for each curve is what `Playhead.combine` uses, and the lab's **Tracks in a folder**
+section tries it on files you layer by hand. Measures: Pearson r over the frames where the
 mix sounds, mean absolute error, and F-measure at ±50 ms.
 
 ## Result (`results.json`, Playhead 0.2.0)
@@ -24,10 +27,11 @@ Median over the sessions, [range]:
 |---|---|---|---|
 | Spectral change (flux) | summed spectra | 1.00 [1.00, 1.00] | 1.00 [1.00, 1.00] |
 | Loudness, LUFS | power sum | r 0.94 [0.90, 0.99], 1.0 LU | r 1.00 [1.00, 1.00], 0.2 LU |
-| Loudness curve | from summed LUFS | 0.93 [0.88, 0.98] | 1.00 [0.99, 1.00] |
+| Loudness curve | from summed LUFS | 0.94 [0.91, 0.99] | 1.00 [1.00, 1.00] |
 | Arousal | max | 0.87 [0.36, 0.94] | 0.99 [0.85, 1.00] |
 | Onsets (F) | union | 0.85 [0.77, 0.96] | 0.93 [0.46, 1.00] |
 | Activity | max | 0.84 [0.76, 0.90] | 0.92 [0.79, 1.00] |
+| Harshness | loudness + weighted excess | 0.81 [0.78, 0.93] | 0.97 [0.97, 0.99] |
 | Harshness | weighted mean | 0.80 [0.73, 0.92] | 0.98 [0.96, 1.00] |
 | Onset strength | sum | 0.76 [0.73, 0.79] | 0.95 [0.82, 0.99] |
 | Tension | max | 0.72 [0.43, 0.80] | |
