@@ -670,7 +670,7 @@ function toMarkers(doc, opts) {
 /* ---------------- strip renderer: layers and looks ---------------- */
 // A strip is a list of layers drawn on one time axis, earlier layers behind later ones:
 //   { type: "wave", colour }          the waveform; colour names a 0..1 curve that tints each column along the theme's
-//                                      ramp (waveLow -> waveHigh), or null for the plain waveform. Over a spectrogram
+//                                      ramp (waveRamp, or waveLow -> waveHigh), or null for the plain waveform. Over a spectrogram
 //                                      it is drawn as an outline
 //   { type: "spec" }                  a mel spectrogram (40 bands, 40 Hz to 16 kHz), low frequencies at the bottom
 //   { type: "spec", of, cyclic, curve } a view in the spectrogram's place (see views below): of "tempo" ("spec:tempo",
@@ -704,6 +704,7 @@ const DEFAULT_THEME = {
   lane: null, laneDown: null, laneFlat: null,     // lanes: rises (default: line), drops (default: rule), level-neutral changes (default: wave)
   series: null,                                   // colours of the 2nd and 3rd lane (default below)
   outline: null,                                  // the outline layer (default: wave)
+  waveRamp: null,                                 // the tint as several stops, low -> high (default: waveLow -> waveHigh)
   halo: null,                                     // outline behind letters, for reading them over a spectrogram (none by default)
   grid: null,                                     // beat grid, section rules and letters on the bar raster (default: white)
   specRamp: [[0, 0, 4], [66, 10, 104], [147, 38, 103], [221, 81, 58], [252, 165, 10], [252, 255, 164]]   // spectrogram, quiet -> loud
@@ -1091,9 +1092,11 @@ function paintCells(ctx, rows, cols, cell, dx, dy, dw, dh, smooth) {
   for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) { const px = cell(r, c); if (!px) continue; ctx.fillStyle = "rgba(" + px[0] + "," + px[1] + "," + px[2] + "," + (px[3] / 255).toFixed(2) + ")"; ctx.fillRect(dx + c * cw, dy + r * ch, cw + 0.5, ch + 0.5); }
 }
 // a view's axis (tempo, lag, period, bar number) along the right edge, as the spectrogram's frequencies
+// (in light or dark by the ramp's low end, which is what the labels mostly sit on, not by the page)
 function axisLabels(ctx, v, h, W, th) {
   if (h < 48 || W < 200 || !v.yTicks) return;
-  ctx.fillStyle = th.text; ctx.globalAlpha = 0.65; ctx.font = "9px sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
+  const low = (th.specRamp || DEFAULT_THEME.specRamp)[0], dark = (0.2126 * low[0] + 0.7152 * low[1] + 0.0722 * low[2]) / 255 < 0.5;
+  ctx.fillStyle = dark ? "#e4e8ea" : "#13181b"; ctx.globalAlpha = 0.65; ctx.font = "9px sans-serif"; ctx.textAlign = "right"; ctx.textBaseline = "middle";
   let last = -1e9;
   for (const t of v.yTicks) { const y = t.row / v.rows * h; if (y > 6 && y < h - 6 && Math.abs(y - last) >= 11) { ctx.fillText(t.text, W - 3, y); last = y; } }
   ctx.globalAlpha = 1; ctx.textAlign = "left"; ctx.textBaseline = "alphabetic";
@@ -1179,7 +1182,6 @@ function drawStrip(ctx, doc, opts) {
   const mainH = hasMain ? Math.max(4, H - laneH * (stacked ? lanes.length : 0)) : (stacked ? 0 : H);
   if (th.background) { ctx.fillStyle = th.background; ctx.fillRect(0, 0, W, H); }
   const valAt = (arr, ta, tb) => curveValue(arr, rate, ta, tb);
-  const mix = (a, b, u) => "rgb(" + a.map((v, i) => Math.round(v + (b[i] - v) * u)).join(",") + ")";
   const specBefore = l => { const i = layers.indexOf(l); return layers.some((x, j) => x.type === "spec" && j < i && specOf(x)); };
   const sculptL = layers.find(l => l.type === "sculpt" && Array.isArray(curves[l.curve])), sculpt = sculptL ? curves[sculptL.curve] : null;
   // the waveform per pixel column as [top, bottom] (fractions of the half-height, + up); with a sculpt curve the
@@ -1211,7 +1213,8 @@ function drawStrip(ctx, doc, opts) {
       let peak = 1e-9; for (let c = 0; c < wc; c++) peak = Math.max(peak, Math.abs(wv.min[c] || 0), Math.abs(wv.max[c] || 0));
       const colour = l.colour && curves[l.colour] ? curves[l.colour] : null, sc = sculpt ? waveCols() : null;
       const outline = specBefore(l);
-      if (colour) items.push({ label: CURVE_LABELS[l.colour] || l.colour, ramp: [th.waveLow, th.waveHigh] });
+      const tint = th.waveRamp && th.waveRamp.length >= 2 ? th.waveRamp : [th.waveLow, th.waveHigh];
+      if (colour) items.push({ label: CURVE_LABELS[l.colour] || l.colour, ramp: tint });
       if (outline) { ctx.strokeStyle = th.wave; ctx.lineWidth = 1; ctx.globalAlpha = 0.8; }
       const top = [], bot = [];
       for (let x = 0; x < W; x++) {
@@ -1222,7 +1225,7 @@ function drawStrip(ctx, doc, opts) {
         const yTop = mid - hi / peak * (mid - 1), yBot = mid - lo / peak * (mid - 1);
         if (outline) { top.push(yTop); bot.push(yBot); continue; }
         const u = colour ? valAt(colour, ta, tb) : null;
-        ctx.fillStyle = u == null ? th.wave : mix(th.waveLow, th.waveHigh, Math.max(0, Math.min(1, u)));
+        ctx.fillStyle = u == null ? th.wave : "rgb(" + rampAt(tint, u).join(",") + ")";
         ctx.fillRect(x, yTop, 1, Math.max(1, yBot - yTop));
       }
       if (outline) {

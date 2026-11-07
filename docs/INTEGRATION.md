@@ -118,7 +118,7 @@ text that hosts can store, offer in a menu, paste between apps and send with fee
 
 | Layer | Code | Draws |
 |---|---|---|
-| waveform | `wave` or `wave:<curve>` | the waveform, plain or tinted along the theme's ramp (`waveLow` → `waveHigh`) by a 0–1 curve; over a spectrogram, its outline |
+| waveform | `wave` or `wave:<curve>` | the waveform, plain or tinted along the theme's ramp (`waveRamp`, several stops, or `waveLow` → `waveHigh`) by a 0–1 curve; over a spectrogram, its outline |
 | spectrogram | `spec` | the document's mel spectrogram (40 bands, 40 Hz–16 kHz, low at the bottom, colours from `specRamp`) |
 | line | `line:<curve>` | a curve over the waveform (descriptor curves on their 5th–95th percentile) |
 | lane | `lane:<curve>` or `lane:<curve>~signed` | a curve in its own lane under the waveform (up to three lanes share about half the height). `~signed` is for change curves such as `structureNovelty`: drawn up where the level rises across the change (an entry), down where it falls (a fall in level, a break into silence) and centred where only the material changes, so a break never reads as "more" |

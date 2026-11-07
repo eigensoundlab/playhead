@@ -757,9 +757,14 @@ function cmpEffective(code) {
   const ls = (PHAPI && PHAPI.parseLook(code)) || [], has = ls.some(l => l.type === "outline");
   return S.ghost && !has ? (code ? code + "," : "") + "outline" : code;
 }
+// Playhead's strips in the panel's colours. The tint of a waveform runs through the panel's six spectral colours (cool
+// to warm, each clear of the background), and spectrograms and views keep the library's magma ramp, whose black low
+// end gives faint detail (a tempo's harmonics, a weak repeat) room to show, as in REAPER's strip window
+const hexRGB = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
 function themeOf(P) {
-  return { background: null, wave: P.ink, waveLow: P.ramp[0], waveHigh: P.ramp[P.ramp.length - 1], line: P.line, tick: P.tick, text: P.rulerInk, rule: P.off,
-    lane: P.cat[0], laneDown: P.cat[1], laneFlat: P.off, series: [P.cat[2], P.cat[4]], specRamp: P.ramp, halo: P.halo, outline: P.outline };
+  const tint = P.spec6.map(hexRGB);
+  return { background: null, wave: P.ink, waveLow: tint[0], waveHigh: tint[tint.length - 1], waveRamp: tint, line: P.line, tick: P.tick, text: P.rulerInk, rule: P.off,
+    lane: P.cat[0], laneDown: P.cat[1], laneFlat: P.off, series: [P.cat[2], P.cat[4]], halo: P.halo, outline: P.outline };
 }
 // the Playhead document for a file, built once per asset class from the analysis the lab already has
 function composeDoc(f) {
