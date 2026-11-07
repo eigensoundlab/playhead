@@ -114,6 +114,12 @@ ordinary waveform and spectrogram of the same file; the same code works in every
 the feedback link sends it with your notes. Structural change is drawn signed: up for an entry, down for a fall in
 level or a break into silence.
 
+**Views of rhythm and form.** Four looks put something other than amplitude on the strip. The **bar raster** folds time
+into bars, a row per bar like a drum pattern, so bars that hit alike line up and fills and drops stand out (click a row
+to play from there). The **tempogram** shows which tempi are present over time, the **lag view** where the music repeats
+what played some bars before, and the **scalogram** (a research view, for any sound) the periodic patterns in a curve:
+beat, bar and phrase in music, flutter and tremolo in effects. `Playhead.view` gives them to other hosts as numbers.
+
 **Tracks in a folder.** Documents combine: `Playhead.combine([{ doc, offset, gain }, ...])` returns a document for the
 sum of several sounds without the audio or a new analysis, so a folder track, a group of layered effects or a set of
 stems can show the whole as the parts move. The app's **Tracks in a folder** section tries it hands-on: up to three

@@ -78,6 +78,8 @@ function reference(doc) {
   }
   for (const key of Object.keys(Playhead.looks)) {
     const L = Playhead.looks[key];
+    // the views of rhythm and form (bar raster, tempogram, lag view, scalogram) are not in the Lua port yet
+    if (L.code && /(^|,)(raster|scalogram)|spec:/.test(L.code)) continue;
     const small = drawOps(doc, key, 160, 60), tall = drawOps(doc, key, 120, 100);
     // the spectrogram is drawn as an image (or one rectangle per cell without a canvas), which the Lua port draws
     // differently, so its rectangles are not kept

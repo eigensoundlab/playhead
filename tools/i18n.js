@@ -100,6 +100,7 @@ function extract() {
   for (const [k, v] of Object.entries(P.looks)) { put("lib.look." + k + ".name", v.name, "playhead.js"); put("lib.look." + k + ".desc", v.desc, "playhead.js"); }
   const ph = code("src/playhead.js");
   for (const c of ph.matchAll(new RegExp('\\bL\\(\\s*"(lib\\.[\\w.]+)"\\s*,\\s*' + STR, "g"))) put(c[1], js(c[2]), "playhead.js");
+  for (const c of ph.matchAll(new RegExp('\\bLP\\(\\s*"(lib\\.[\\w.]+)"\\s*,\\s*[^,]+,\\s*' + STR + '\\s*,\\s*' + STR, "g"))) { put(c[1] + ".one", js(c[2]), "playhead.js"); put(c[1] + ".other", js(c[3]), "playhead.js"); }
   const tk = (ph.match(/const TICK_KINDS = \[([^\]]*)\]/) || [])[1];
   for (const c of (tk || "").matchAll(/"(\w+)"/g)) if (c[1] !== "downbeats") put("lib.mark." + c[1], c[1], "playhead.js");
   const FX = require("../src/effects.js");
@@ -186,7 +187,8 @@ function libTables() {
     if (!fs.existsSync(langFile(l))) continue;
     const tr = loadJSON(langFile(l));
     // other apps get the explanations with the English terms in brackets, as the lab shows them by default
-    out[l] = Object.fromEntries(Object.entries(tr).filter(([k]) => k.startsWith("lib.")).map(([k, v]) => [k, glossed(v, true)]));
+    // "lib.lang" tells Playhead.localize the language, for its plural forms
+    out[l] = Object.assign({ "lib.lang": l }, Object.fromEntries(Object.entries(tr).filter(([k]) => k.startsWith("lib.")).map(([k, v]) => [k, glossed(v, true)])));
   }
   return out;
 }

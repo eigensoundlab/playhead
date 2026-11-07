@@ -697,7 +697,10 @@ const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Bar lines"], ["beats
 const CMP_SCULPT = ["", "loudness", "arousal", "activity", "harshness", "tension", "onsetStrength", "localPulse"];
 const CMP_MAX_LANES = 3, CMP_HEIGHTS = [64, 96, 128, 160, 192];
 const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), h: store.get("lookHeight", 128), refs: store.get("lookRefs", true) };
-const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"]];
+const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"], ["raster", "Bar raster: a row per bar"], ["raster4", "Phrase raster: a row per 4 bars"], ["tempo", "Tempogram"], ["tempocyc", "Tempogram, octaves folded"], ["lag", "Repetition (lag view)"], ["scale", "Curve rhythms (scalogram)"]];
+// the views that show one chosen curve (the raster and the scalogram), and the curves offered for them
+const CMP_VIEW_CURVES = ["onsetStrength", "loudness", "activity", "localPulse", "harshness", "arousal", "tension", "surprise", "structureNovelty", "n1Kurtosis", "n7Surprisal"];
+const cmpRaster = bg => bg === "raster" || bg === "raster4", cmpCurveView = bg => cmpRaster(bg) || bg === "scale";
 const CMP_FORMS = [["lanes", "Separate, each in its own band"], ["overlay", "Overlaid on the waveform"]];
 const CMP_SHAPES = [["base", "From the baseline"], ["mirror", "Mirrored, like a waveform"], ["horizon", "Horizon (folded bands)"], ["line", "Line"]];
 const cmpLabel = k => k ? (PHAPI && PHAPI.curveLabels[k]) || k : T("cmp.none", "None");
@@ -705,10 +708,12 @@ const cmpOpts = (group, list) => list.map(([v, t]) => [v, T("cmp." + group + "."
 let cmpShow = null;
 // look code <-> control state
 function cmpState(code) {
-  const st = { bg: "none", colour: "", line: "", lanes: [], signed: true, marks: new Set(), form: "lanes", shape: "base", sculpt: "", outline: false };
-  let wave = false, spec = false;
+  const st = { bg: "none", colour: "", line: "", lanes: [], signed: true, marks: new Set(), form: "lanes", shape: "base", sculpt: "", outline: false, vcurve: "onsetStrength" };
+  let wave = false, spec = false, viewBg = "";
   for (const l of (PHAPI && PHAPI.parseLook(code)) || []) {
     if (l.type === "wave") { wave = true; st.colour = l.colour || ""; }
+    else if (l.type === "spec" && l.of) { viewBg = l.of === "tempo" ? (l.cyclic ? "tempocyc" : "tempo") : l.of; if (l.curve) st.vcurve = l.curve; }
+    else if (l.type === "raster") { viewBg = l.bars === 4 ? "raster4" : "raster"; st.vcurve = l.curve; }
     else if (l.type === "spec") spec = true;
     else if (l.type === "form") st.form = l.value;
     else if (l.type === "sculpt") st.sculpt = l.curve;
@@ -719,15 +724,25 @@ function cmpState(code) {
     else if (l.type === "sections") st.marks.add("sections");
     else if (l.type === "ticks") for (const k of l.of) st.marks.add(k);
   }
-  st.bg = spec && wave ? "specwave" : spec ? "spec" : wave ? "wave" : "none";
+  st.bg = viewBg || (spec && wave ? "specwave" : spec ? "spec" : wave ? "wave" : "none");
   return st;
 }
 function cmpCode(st) {
   const parts = [];
+  if (cmpRaster(st.bg)) {      // the raster takes the whole strip: sections and the marks that fall inside bars
+    parts.push("raster:" + st.vcurve + (st.bg === "raster4" ? "~4bars" : ""));
+    if (st.marks.has("sections")) parts.push("sections");
+    const dots = ["onsets", "events", "novelty"].filter(k => st.marks.has(k));
+    if (dots.length) parts.push("ticks:" + dots.join("+"));
+    return parts.join(",");
+  }
   if (st.form === "overlay") parts.push("form:overlay");
   if (st.sculpt) parts.push("sculpt:" + st.sculpt);
   if (st.shape !== "base") parts.push("shape:" + st.shape);
   if (st.bg === "spec" || st.bg === "specwave") parts.push("spec");
+  else if (st.bg === "tempo" || st.bg === "tempocyc") parts.push("spec:tempo" + (st.bg === "tempocyc" ? "~cyclic" : ""));
+  else if (st.bg === "lag") parts.push("spec:lag");
+  else if (st.bg === "scale") parts.push("scalogram:" + st.vcurve);
   if (st.bg === "wave" || st.bg === "specwave") parts.push("wave" + (st.bg === "wave" && st.colour ? ":" + st.colour : ""));
   if (st.marks.has("sections")) parts.push("sections");
   if (st.line) parts.push("line:" + st.line);
@@ -762,11 +777,12 @@ let repaintQueued = false;
 function repaintSoon() { if (repaintQueued) return; repaintQueued = true; requestAnimationFrame(() => { repaintQueued = false; render(); }); }
 // look: null for the composer's look, or a fixed look for the comparison rows; thumb: library thumbnails (no legend)
 function drawCompose(x, P, w, h, f, look, thumb) {
+  if (!look && !thumb) x.canvas._raster = null;
   if (!PHAPI) { drawOff(x, P, w, h, T("off.noApi", "The Playhead API (src/playhead.js) is not loaded")); return; }
   const ent = composeDoc(f);
   if (!ent.doc) { drawOff(x, P, w, h, ent.err ? T("off.prepFailed", "Could not prepare this file: {err}", { err: ent.err }) : T("off.preparing", "Preparing…")); return; }
   const r = PHAPI.drawStrip(x, ent.doc, { width: w, height: h, look: look || cmpEffective(CMP.code), theme: themeOf(P) });
-  if (!look && !thumb) { const ds = $("ds-compose"); if (ds) ds.textContent = r.legend; }
+  if (!look && !thumb) { const ds = $("ds-compose"); if (ds) ds.textContent = r.legend; x.canvas._raster = r.raster ? r.raster.rows : null; }
 }
 function redrawCompose() {
   const ruler = scopes.find(s => s.spec.id === "ruler"), cols = Math.max(50, Math.floor(ruler.cv.clientWidth || 800));
@@ -794,6 +810,7 @@ function buildComposer() {
   const [lLook, sLook] = sel("cmp-look", T("cmp.look", "Start from"), lookOpts, T("cmp.look.title", "Ready-made looks; changing anything below makes it your own"));
   const [lBg, sBg] = sel("cmp-bg", T("cmp.bg", "Behind"), cmpOpts("bg", CMP_BG), T("cmp.bg.title", "What the strip shows behind the curves: the waveform, a spectrogram, or nothing so the curves take the whole strip"));
   const [lCol, sCol] = sel("cmp-colour", T("cmp.colour", "Waveform colour"), CMP_COLOURS.map(k => [k, cmpLabel(k)]), T("cmp.colour.title", "A curve that tints the waveform, from the low to the high end of the colour ramp"));
+  const [lVc, sVc] = sel("cmp-vcurve", T("cmp.vcurve", "Curve shown"), CMP_VIEW_CURVES.map(k => [k, cmpLabel(k)]), T("cmp.vcurve.title", "The curve the bar raster colours its rows with, or whose rhythms the scalogram shows"));
   const [lForm, sForm] = sel("cmp-form", T("cmp.form", "Lanes"), cmpOpts("forms", CMP_FORMS), T("cmp.form.title", "Separate: each curve in its own band, like a stack of waveforms. Overlaid: the curves drawn on the waveform itself, to compare their shapes with it"));
   const [lShape, sShape] = sel("cmp-shape", T("cmp.shape", "Shape"), cmpOpts("shapes", CMP_SHAPES), T("cmp.shape.title", "How each lane's curve is drawn: filled from the baseline, mirrored around the middle like a waveform, folded into a horizon chart (compact), or as a line"));
   const [lH, sH] = sel("cmp-height", T("cmp.height", "Height"), CMP_HEIGHTS.map(v => [String(v), v + " px"]), T("cmp.height.title", "Height of the strips in this section"));
@@ -818,18 +835,21 @@ function buildComposer() {
   const fb = el("a", "", T("cmp.feedback", "Tell us if this helps")); fb.target = "_blank"; fb.rel = "noopener";
   codeRow.append(cl, copy, fb);
   const row1 = el("div", "cmp-row"), row2 = el("div", "cmp-row");
-  row1.append(lLook, lBg, lCol, lSc, lLine, olL);
+  row1.append(lLook, lBg, lVc, lCol, lSc, lLine, olL);
   row2.append(lForm, lShape, lH, refL);
   box.append(row1, lanes, row2, marks, codeRow);
 
   const show = () => {
-    const st = cmpState(CMP.code);
+    const st = cmpState(CMP.code), raster = cmpRaster(st.bg);
     sBg.value = st.bg; sCol.value = st.colour; sCol.disabled = st.bg !== "wave"; sLine.value = st.line; signed.checked = st.signed;
+    sVc.value = st.vcurve; lVc.hidden = !cmpCurveView(st.bg);
     sSc.value = st.sculpt; sSc.disabled = st.bg !== "wave" && st.bg !== "specwave"; outl.checked = !!S.ghost;
     sForm.value = st.form; sShape.value = st.shape; sH.value = String(CMP.h); refs.checked = CMP.refs;
-    laneBoxes.forEach(c => { c.checked = st.lanes.includes(c.value); c.disabled = !c.checked && st.lanes.length >= CMP_MAX_LANES; });
-    signed.disabled = !st.lanes.includes("structureNovelty");
-    markBoxes.forEach(c => { c.checked = st.marks.has(c.value); });
+    // on the raster, time runs in rows: curves, lines and the beat marks have no place there
+    sLine.disabled = sForm.disabled = sShape.disabled = raster;
+    laneBoxes.forEach(c => { c.checked = st.lanes.includes(c.value); c.disabled = raster || (!c.checked && st.lanes.length >= CMP_MAX_LANES); });
+    signed.disabled = raster || !st.lanes.includes("structureNovelty");
+    markBoxes.forEach(c => { c.checked = st.marks.has(c.value); c.disabled = raster && (c.value === "beats" || c.value === "downbeats"); });
     const norm = c => String(c || "").split(",").sort().join(","), eff = norm(cmpEffective(CMP.code));
     const named = Object.entries(PHAPI.looks).find(([, L]) => L.code && (norm(L.code) === norm(CMP.code) || norm(L.code) === eff));
     sLook.value = named ? named[0] : "";
@@ -843,7 +863,7 @@ function buildComposer() {
     CMP.code = c; store.set("look", c); show(); render();
   };
   const fromControls = () => {
-    const st = { bg: sBg.value, colour: sCol.value, line: sLine.value, signed: signed.checked, form: sForm.value, shape: sShape.value, sculpt: sSc.value,
+    const st = { bg: sBg.value, colour: sCol.value, line: sLine.value, signed: signed.checked, form: sForm.value, shape: sShape.value, sculpt: sSc.value, vcurve: sVc.value,
       lanes: CMP_LANES.filter(k => laneBoxes.find(c => c.value === k).checked).slice(0, CMP_MAX_LANES), marks: new Set(markBoxes.filter(c => c.checked).map(c => c.value)) };
     set(cmpCode(st));
   };
@@ -854,7 +874,7 @@ function buildComposer() {
     const f = S.sel, ent = f && f.F && f.phDocs && f.phDocs[effClass(f)];
     set(L.code || PHAPI.lookCode(PHAPI.parseLook(ent && ent.doc && (ent.doc.profile === "sfx") ? "wave:harshness,line:activity,ticks:events" : "wave:activity,sections,line:tension,ticks:downbeats+events")));
   });
-  [sBg, sCol, sLine, sSc, sForm, sShape, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
+  [sBg, sVc, sCol, sLine, sSc, sForm, sShape, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
   outl.addEventListener("change", () => { S.ghost = outl.checked; store.set("ghost", S.ghost); $("ghost").checked = S.ghost; show(); render(); });
   cmpShow = show;   // the top bar's outline switch (hooked once, at start) updates this composer
   sH.addEventListener("change", () => { CMP.h = parseInt(sH.value, 10) || 128; store.set("lookHeight", CMP.h); redrawCompose(); });
@@ -2215,13 +2235,26 @@ function seek(t, autoplay) {
   placeHead(offset);
   if (playing || autoplay) play();
 }
+// a cursor at time t: a line through the strip, or on the bar raster (time wrapped into rows of bars) a mark at the
+// moment's place in its bar, as tall as the row
+function cursorAt(el, s, t, dur) {
+  const rows = s.cv._raster;
+  if (!rows || !rows.length) { el.style.height = ""; el.style.transform = "translateX(" + ((dur ? t / dur : 0) * s.w.clientWidth) + "px)"; return; }
+  let r = 0; while (r < rows.length - 1 && t >= rows[r][1]) r++;
+  const [a, e] = rows[r], h = s.w.clientHeight / rows.length;
+  el.style.height = Math.max(3, h) + "px";
+  el.style.transform = "translate(" + (Math.max(0, Math.min(1, (t - a) / (e - a))) * s.w.clientWidth) + "px," + (r * h + Math.min(0, h - 3) / 2) + "px)";
+}
+// the time under the pointer in a strip
+function timeFrom(e, s, dur) {
+  const rows = s.cv._raster, fx = fracFrom(e, s.w);
+  if (!rows || !rows.length) return fx * dur;
+  const rc = s.w.getBoundingClientRect(), r = Math.max(0, Math.min(rows.length - 1, Math.floor((e.clientY - rc.top) / rc.height * rows.length)));
+  return Math.max(0, Math.min(dur, rows[r][0] + fx * (rows[r][1] - rows[r][0])));
+}
 function placeHead(t) {
   const f = S.sel; if (!f) return;
-  const frac = f.dur ? t / f.dur : 0;
-  for (const s of scopes) {
-    s.ph.classList.add("on");
-    s.ph.style.transform = "translateX(" + (frac * s.w.clientWidth) + "px)";
-  }
+  for (const s of scopes) { s.ph.classList.add("on"); cursorAt(s.ph, s, t, f.dur); }
   $("rulerlab").textContent = fmtT(t, true);
 }
 function loop() {
@@ -2278,12 +2311,12 @@ document.addEventListener("keydown", e => {
 function fracFrom(e, el) { const r = el.getBoundingClientRect(); return Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)); }
 function hookScopes() {
   for (const s of scopes) {
-    s.w.addEventListener("pointerdown", e => { if (!S.sel || !S.sel.F) return; seek(fracFrom(e, s.w) * S.sel.dur); });
+    s.w.addEventListener("pointerdown", e => { if (!S.sel || !S.sel.F) return; seek(timeFrom(e, s, S.sel.dur)); });
     s.w.addEventListener("pointermove", e => {
       if (!S.sel || !S.sel.F || e.pointerType === "touch") return;
-      const fr = fracFrom(e, s.w);
-      for (const o of scopes) { o.hv.classList.add("on"); o.hv.style.transform = "translateX(" + (fr * o.w.clientWidth) + "px)"; }
-      $("rulerlab").textContent = fmtT(fr * S.sel.dur, true);
+      const t = timeFrom(e, s, S.sel.dur);
+      for (const o of scopes) { o.hv.classList.add("on"); cursorAt(o.hv, o, t, S.sel.dur); }
+      $("rulerlab").textContent = fmtT(t, true);
     });
     s.w.addEventListener("pointerleave", () => {
       for (const o of scopes) o.hv.classList.remove("on");

@@ -44,7 +44,8 @@ const whole = Playhead.combine([{ doc: kick }, { doc: bass, offset: 0.5, gain: -
 | `align(parts, opts)` | the parts on one time axis: per part its power per column and, when all have spectrograms, per column and band. For views that show which part carries what |
 | `measureParts(parts, opts)` | measures of the whole around its main peak, from the documents: `rise` (s), `contrast` and `focus` (dB before and after the peak), `together`, `overlap`, `coverage`, `low`, `shared` (0..1), `tail` (s), `harshness`, and `scores` for the goals (`punch`, `size`, `clean`) |
 | `arrange(parts, opts)` | searches offsets and gains for a goal (`"punch"`, `"big"`, `"clean"` or weights) and returns `{ baseline, candidates: [{ parts: [{ offset, gain }], score, measures, changes }], evaluated, ms }`, about 500 arrangements in 0.1 to 0.3 s. Parts with `lock: true` stay; without any, the loudest stays. `opts`: `range` (s, default 0.25), `gainRange` (dB, default [-6, 3]), `minOffset`, `maxOffset`, `count`, `seed`, `maxHarshness` |
-| `localize(table)` | shows the curve names, looks, legends and tools in another language; `table` is `dist/i18n/<lang>.json` (Czech, German, Polish, Russian, Spanish), `null` returns to English. Documents are unaffected: only labels change |
+| `view(doc, kind, opts)` | a view as numbers, for hosts that draw it themselves or measure it ([Views](#views)): `{ kind, rows, cols, values, yTicks, colAt(t) }`, or for the raster `timeRows` in place of `colAt`. `kind`: `"raster"` (`opts.curve`, `opts.bars` 1 or 4), `"tempo"` (`opts.cyclic`), `"lag"`, `"scale"` (`opts.curve`); `null` when the document cannot give it |
+| `localize(table, lang)` | shows the curve names, looks, legends and tools in another language; `table` is `dist/i18n/<lang>.json` (Czech, German, Polish, Russian, Spanish), `null` returns to English. Counts follow the language's plural rules (from `lang`, or the table's `lib.lang`). Documents are unaffected: only labels change |
 
 **Profiles** (one core of the development machine, stereo 44.1 kHz; document size in brackets):
 
@@ -58,7 +59,8 @@ const whole = Playhead.combine([{ doc: kick }, { doc: bass, offset: 0.5, gain: -
 The first analysis at a new sample rate adds about 0.25 s of one-time calibration. The `sfx` and `music` documents
 also carry a small mel spectrogram for the spectrogram layer: about 5.3 KB per second of sound up to 10 s (100 columns
 per second) and 1.1 KB per second above (20 columns per second). `analyze(..., { spectrum: false })` leaves it out;
-`fast` leaves it out unless `spectrum: true`.
+`fast` leaves it out unless `spectrum: true`. Music documents add the tempogram (about 11 KB a minute) and the lag view
+(20 to 45 KB whatever the length) for the views of rhythm and form.
 
 **Combining documents.** Analyse the parts with the same `profile`, `assetClass` and `curveRate`. LUFS and the
 spectrogram add as power and a part's gain moves them exactly; loudness follows from the summed LUFS; harshness is the
@@ -95,7 +97,8 @@ see phase, so a host lines the chosen arrangement up to the sample (SFX Workbenc
 | `layers` | NMF layers: `name`, `hz`, `share`, `start`, `end` |
 | `issues` | asset checks: `severity` (`bad`, `warn`, `info`), `text` |
 | `descriptors` | whole-file summaries of N1–N9: `kurtosis`, `repetition`, `events` (burstiness, b-value, temporal entropy), `motion`, `periodicity`, `arrow`, `interest`, `recurrence`, `decay` (`t60`, `logTauD`, `material`) |
-| `rhythm`, `sections` | music profile: `tempo`, `reliable`, `clarity`, `beats`, `downbeats`; `[{ start, end, label }]` |
+| `rhythm`, `sections` | music profile: `tempo`, `reliable`, `clarity`, `beats`, `downbeats`, `tempogram`; `[{ start, end, label }]`. `tempogram`: how strongly each tempo is present, one column per 8 s window every `hop` s from `start`: `bins` rows from `bpmMin` (40 BPM) up, `perOctave` (24) to an octave, `peak` (the strongest value, mapped to 255), `data` base64 of one byte per bin and column, column after column, slowest first. The autocorrelation of the onset envelope with its mean removed, so only periodicity counts, faded where the onsets are weak; a tempo and its half show alike (about 11 KB per minute) |
+| `repetition` | music profile: how alike each moment is to the moment a lag earlier (the time-lag form of the self-similarity matrix behind `sections`). `unit` (`"beat"`, or `"time"` without a steady beat), `unitSeconds`, `columns` with their start `times` (s), `lags` rows, row `l` a lag of `(l + 1) × lagStep` units (with beats `lagStep` is 1, 2, 4… so rows are whole bars from 4 beats up), `data` base64 of one byte per lag and column, column after column, shortest lag first: 0 for no data (before the start of the sound), else 1 + 254 × similarity (at most 256 columns and 128 lags, 20 to 45 KB) |
 | `timing` | `ms` taken |
 
 Fields not computed by a profile are `null`. Version 1 may gain fields; a change that removes or redefines one raises `schemaVersion`.
@@ -117,6 +120,10 @@ text that hosts can store, offer in a menu, paste between apps and send with fee
 | height | `sculpt:<curve>` | reshapes the waveform layer: its envelope follows the curve while its detail stays. `sculpt:loudness` gives a waveform as loud as it sounds (a dB-like scale); the outline layer keeps the ordinary peaks for comparison |
 | form | `form:lanes` (default) or `form:overlay` | lanes each in their own band under the waveform, or all of them drawn on the waveform itself (light fill and a contour, so the waveform stays visible) |
 | shape | `shape:base` (default), `shape:mirror`, `shape:horizon`, `shape:line` | how a lane's curve is drawn: filled from the bottom; mirrored around the middle, like a waveform; a horizon chart (folded into three bands of rising strength, compact at small heights); a line |
+| tempogram | `spec:tempo` or `spec:tempo~cyclic` | in the spectrogram's place: how strongly each tempo is present over time, 40 to 240 BPM, fast at the top; `~cyclic` folds the octaves onto 80 to 160 BPM, so a tempo, its half and its double share a row (music profile) |
+| lag view | `spec:lag` | in the spectrogram's place: how alike each moment is to the moment a lag earlier, the lag going up; a bright horizontal line is a repeat (music profile) |
+| scalogram | `scalogram:<curve>` | in the spectrogram's place: the periodic patterns in a curve, fast at the top, slow at the bottom, fainter near the ends (any profile) |
+| bar raster | `raster:<curve>` or `raster:<curve>~4bars` | a row per bar (or per 4 bars), top to bottom, coloured by a curve; takes the whole strip, with `sections` as rules between rows and `ticks:onsets`, `events` or `novelty` as dots where they fall in the bar (music profile) |
 
 Without a waveform or spectrogram the lanes share the whole strip, so curves can stand in for the waveform
 (`shape:mirror,lane:loudness,lane:activity,lane:harshness`).
@@ -129,8 +136,10 @@ waveforms, no waveform), `overlay` (curves drawn on the waveform), `horizon` (ho
 sections, bar lines and novelty marks), `hits` (onset strength and local pulse under the waveform), two sound-effect
 looks suggested by testing, `character` (`form:overlay,shape:mirror,lane:onsetStrength,lane:harshness,lane:n1Kurtosis,ticks:onsets`:
 where the hits are, how harsh, how impulsive) and `surprise` (the same with spectral surprise in place of
-impulsiveness), and `sculpted` (`sculpt:loudness,wave:harshness,outline,ticks:events+novelty`: the waveform as loud as
-it sounds, coloured by harshness, over the ordinary peak outline).
+impulsiveness), `sculpted` (`sculpt:loudness,wave:harshness,outline,ticks:events+novelty`: the waveform as loud as
+it sounds, coloured by harshness, over the ordinary peak outline), and four views of rhythm and form: `raster`
+(`raster:onsetStrength,sections`), `tempogram` (`spec:tempo,ticks:downbeats`), `repetition` (`spec:lag,sections`) and
+`rhythms` (`scalogram:onsetStrength`).
 `Playhead.lookFits(doc, look)` says whether a look shows something for a document (every curve it uses is there and not
 empty), for menus that hide looks a file cannot use. A layer whose curve is not in the document is left out and the
 legend says so (`structure` and `rhythm` need the music profile).
@@ -139,6 +148,35 @@ legend says so (`structure` and `rhythm` need the music profile).
 const r = Playhead.drawStrip(g, doc, { look: "wave:harshness,lane:activity,ticks:events", theme });
 legendElement.textContent = r.legend;      // "colour: harshness · lane: activity · marks: events"
 ```
+
+### Views
+
+Four views read rhythm and form where the waveform shows only amplitude. Each draws in the spectrogram's place (the
+raster takes the whole strip), in the theme's `specRamp`, with its axis along the right edge. Where a document cannot
+give one (a beat view of a sound effect), the plain waveform is drawn instead and the legend says why.
+
+- **Bar raster** (`raster:<curve>`): time folded into bars, like a drum machine's pattern view or a DJ's beat grid.
+  Rows are bars cut at the downbeats (gaps where the beat dropped out are filled and both ends extended with the median
+  bar, so every moment is in a row); left to right is the position in the bar, with a faint beat grid. Bars that hit the
+  same way line up in columns; fills, breaks and drops are rows that differ. `drawStrip` returns
+  `raster: { rows: [[start, end], ...] }` for the rows drawn, so a host can seek by row and place its cursor at a
+  moment's position in its bar (the Playhead app does both).
+- **Tempogram** (`spec:tempo`): drawn from `rhythm.tempogram`. A steady beat is a bright line, a tempo change bends it,
+  double and half tempo are fainter lines.
+- **Lag view** (`spec:lag`): drawn from `repetition`, with the median likeness set to black so repeats stand out. A
+  bright horizontal line from some moment on means the music now repeats what played that lag before; its height says
+  how long before (in bars, with a beat).
+- **Scalogram** (`scalogram:<curve>`): a continuous wavelet transform (Morlet, ω₀ = 6) of any curve, computed when drawn
+  (about 35 ms for a minute at 20 curve samples per second): periods from four curve samples to a fifth of the sound,
+  8 rows an octave, power divided by scale so that equal swings read equally at every period (Liu et al. 2007), 30 dB
+  from the peak to black. Cells outside the cone of influence (Torrence & Compo 1998), where the period is longer than
+  the sound around the moment, are drawn faint. In music the beat, bar and phrase are marked on its axis; in effects it
+  shows flutter, tremolo and other modulation of the curve. A research view: what it shows best is still to be learnt.
+
+`Playhead.view(doc, kind, opts)` gives the same images as numbers (row 0 at the top, values 0 to 1, -1 where there is
+no data). The tests check them on signals with a known answer: the raster's rows are the cue arc's 2 s bars with its
+hits on the beats, the tempogram peaks at its 120 BPM and follows the tempo ramp from 96 to 144 BPM, the lag view lights
+up 40 s back where the groove returns, and the scalogram of a tremolo finds 0.125 s and 0.333 s.
 
 Hosts should draw only through `drawStrip` and take the legend from its return value, so a new Playhead build
 changes the look everywhere by replacing one file. The Playhead app's composer ("Compose your own") builds look codes

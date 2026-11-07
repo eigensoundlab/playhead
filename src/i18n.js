@@ -82,7 +82,7 @@ function setLanguage(l, opts) {
   table = lang === "en" ? {} : (DATA[lang] || {});
   if (!(opts && opts.remember === false)) { try { root.localStorage.setItem(STORE, lang); } catch (e) { /* not remembered */ } }
   if (root.document) { root.document.documentElement.lang = lang; applyDom(root.document); }
-  if (root.Playhead && root.Playhead.localize) root.Playhead.localize(lang === "en" ? null : Object.fromEntries(Object.entries(table).map(([k, v]) => [k, gloss(v)])));
+  if (root.Playhead && root.Playhead.localize) root.Playhead.localize(lang === "en" ? null : Object.fromEntries(Object.entries(table).map(([k, v]) => [k, gloss(v)])), lang);
   for (const fn of listeners) { try { fn(lang); } catch (e) { console.error(e); } }
   return lang;
 }

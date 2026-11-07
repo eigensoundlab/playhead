@@ -964,6 +964,20 @@ function rhythmOf(F) {
     clarW[w] = Math.min(1, mx) * (1 - Math.exp(-wS[w] / RHYTHM.strengthRef));
   }
 
+  /* tempogram for display: the clarity autocorrelation (mean removed, so only periodicity counts) on a log-tempo axis,
+     24 bins per octave from bpmMin, faded where the onsets are weak, as for clarity. One column per window. */
+  const TG_OCT = 24, tgBins = Math.floor(TG_OCT * Math.log2(RHYTHM.bpmMax / RHYTHM.bpmMin) + 1e-9) + 1;
+  const tgData = new Float32Array(NW * tgBins);
+  if (nL > 1) for (let k = 0; k < tgBins; k++) {
+    const x = 60 / (RHYTHM.bpmMin * Math.pow(2, k / TG_OCT) * dt) - lagMin, i = Math.floor(x), f = x - i;
+    if (x < 0 || i >= nL - 1) continue;
+    for (let w = 0; w < NW; w++) {
+      const v = acm[w * nL + i] * (1 - f) + acm[w * nL + i + 1] * f;
+      tgData[w * tgBins + k] = Math.max(0, v) * (1 - Math.exp(-wS[w] / RHYTHM.strengthRef));
+    }
+  }
+  const tempogram = { bpmMin: RHYTHM.bpmMin, perOctave: TG_OCT, bins: tgBins, start: centers[0] * dt, hop: hopT * dt, cols: NW, data: tgData };
+
   /* global tempo: mean tempogram over active windows + log-normal prior (librosa style) */
   const mean = new Float64Array(nL);
   let act = 0;
@@ -1161,7 +1175,7 @@ function rhythmOf(F) {
     tempoRange: [q(0.05), q(0.95)],
     beats, plpBeats, downbeats, downConf, downPhase,
     beatTimes: beats.map(frameTime), plpTimes: plpBeats.map(frameTime), downTimes: downbeats.map(frameTime),
-    onsetTimes: X.onsets.map(m => m * dt)
+    onsetTimes: X.onsets.map(m => m * dt), tempogram
   };
   return F._rhythm;
 }
@@ -1344,7 +1358,30 @@ function structureOf(F) {
   const tc = [], vc = [];
   for (let u = 0; u < U; u++) { tc.push(starts[u] * dt); vc.push(nv[u]); }
   const nov = interpTimes(tc, vc, n, dt);
-  F._struct = { units: U, useBeats, blk, L, nov, bounds: bnd.map(u => starts[u] * dt), segs, tooShort: false };
+
+  /* time-lag view of the self-similarity, for display: how alike each unit is to the unit a lag earlier. Columns group
+     units (at most 256 columns); rows are lags, grouped to 1, 2, 4, 8... units so that with beats a row is a whole number
+     of bars from 4 beats up (at most 128 rows). Row l is centred on a lag of (l + 1) * lstep units and takes the best match
+     within half a step either side; 0 marks no data (before the start of the sound). */
+  const tstep = Math.ceil(U / 256);
+  let lstep = 1; while (Math.floor((U - 1) / lstep) > 128) lstep *= 2;
+  const nLag = Math.max(1, Math.floor((U - 1) / lstep)), cols = Math.ceil(U / tstep);
+  const lagU8 = new Uint8Array(cols * nLag), lagTimes = [];
+  for (let c = 0; c < cols; c++) {
+    const ua = c * tstep, ub = Math.min(U, ua + tstep);
+    lagTimes.push(starts[ua] * dt);
+    for (let l = 0; l < nLag; l++) {
+      const ka = Math.max(1, Math.ceil((l + 0.5) * lstep)), kb = Math.max(ka + 1, Math.ceil((l + 1.5) * lstep));
+      let s = 0, cnt = 0;
+      for (let u = ua; u < ub; u++) {
+        let best = -1; for (let k = ka; k < kb && u - k >= 0; k++) { const v = S[u * U + u - k]; if (v > best) best = v; }
+        if (best >= 0) { s += best; cnt++; }
+      }
+      lagU8[c * nLag + l] = cnt ? 1 + Math.round(254 * s / cnt) : 0;
+    }
+  }
+  const lag = { lstep, nLag, cols, times: lagTimes, data: lagU8 };
+  F._struct = { units: U, useBeats, blk, L, nov, bounds: bnd.map(u => starts[u] * dt), segs, tooShort: false, lag };
   return F._struct;
 }
 
