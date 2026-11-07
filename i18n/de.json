@@ -763,5 +763,13 @@
   "lib.tool.widen.opt.where.tails": "Nur die Ausklänge",
   "lib.tool.widen.opt.where.all": "Überall (auch Attacks, zum Vergleich)",
   "lib.tool.widen.param.holdMs": "Mittig nach jedem Spitzenwert",
-  "lib.tool.widen.param.lowHz": "Tiefen mittig unterhalb"
+  "lib.tool.widen.param.lowHz": "Tiefen mittig unterhalb",
+  "lib.tool.stretch.name": "Dehnen, Attacks erhalten",
+  "lib.tool.stretch.desc": "Ändert die Länge, ohne die Tonhöhe zu ändern, und lässt jeden Attack, wie er ist. Playheads Onsets (oder nur die Anfänge der Ereignisse) markieren die Attacks; die ersten Millisekunden jedes Attacks werden unverändert kopiert und nur der Klang dazwischen gedehnt, so bleiben Schläge scharf und landen dort, wo der gedehnte Rhythmus sie hinsetzt. Einfaches Dehnen verschmiert oder verdoppelt Schläge und verschiebt sie: der Vergleichsrender macht das hörbar.",
+  "lib.tool.stretch.param.ratio": "Länge",
+  "lib.tool.stretch.param.attackMs": "Erhaltener Attack",
+  "lib.tool.stretch.param.from": "Attacks",
+  "lib.tool.stretch.opt.from.onsets": "Jeder Onset",
+  "lib.tool.stretch.opt.from.events": "Nur Anfänge der Ereignisse",
+  "lib.tool.stretch.param.plain": "Auch einfach gedehnt rendern"
 }

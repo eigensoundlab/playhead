@@ -763,5 +763,13 @@
  "lib.tool.widen.opt.where.tails": "Only the tails",
  "lib.tool.widen.opt.where.all": "Everywhere (attacks too, for comparison)",
  "lib.tool.widen.param.holdMs": "Centred after each peak",
- "lib.tool.widen.param.lowHz": "Lows centred below"
+ "lib.tool.widen.param.lowHz": "Lows centred below",
+ "lib.tool.stretch.name": "Stretch keeping the attacks",
+ "lib.tool.stretch.desc": "Changes the length without changing the pitch and keeps every attack as it is. Playhead's onsets (or only its event starts) mark the attacks; the first milliseconds of each are copied unchanged and only the sound between them is stretched, so hits stay sharp and land where the stretched rhythm puts them. A plain stretch smears or doubles hits and moves them: the comparison render lets you hear it.",
+ "lib.tool.stretch.param.ratio": "Length",
+ "lib.tool.stretch.param.attackMs": "Attack kept",
+ "lib.tool.stretch.param.from": "Attacks",
+ "lib.tool.stretch.opt.from.onsets": "Every onset",
+ "lib.tool.stretch.opt.from.events": "Event starts only",
+ "lib.tool.stretch.param.plain": "Also render a plain stretch"
 }

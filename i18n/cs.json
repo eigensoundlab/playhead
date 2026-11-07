@@ -774,5 +774,13 @@
  "lib.tool.widen.opt.where.tails": "Jen doznění",
  "lib.tool.widen.opt.where.all": "Všude (i náběhy, pro srovnání)",
  "lib.tool.widen.param.holdMs": "Uprostřed po každé špičce",
- "lib.tool.widen.param.lowHz": "Hloubky uprostřed pod"
+ "lib.tool.widen.param.lowHz": "Hloubky uprostřed pod",
+ "lib.tool.stretch.name": "Natažení se zachováním náběhů",
+ "lib.tool.stretch.desc": "Mění délku beze změny výšky a každý náběh ponechá, jak je. Náběhy označí [[nástupy|onsets]] Playheadu (nebo jen začátky událostí); prvních několik milisekund každého se zkopíruje beze změny a natahuje se jen zvuk mezi nimi, takže údery zůstanou ostré a dopadnou tam, kam je posune natažený rytmus. Prosté natažení údery rozmazává nebo zdvojuje a posouvá je: srovnávací render to dá slyšet.",
+ "lib.tool.stretch.param.ratio": "Délka",
+ "lib.tool.stretch.param.attackMs": "Zachovaný náběh",
+ "lib.tool.stretch.param.from": "Náběhy",
+ "lib.tool.stretch.opt.from.onsets": "Každý nástup",
+ "lib.tool.stretch.opt.from.events": "Jen začátky událostí",
+ "lib.tool.stretch.param.plain": "Renderovat i prosté natažení"
 }

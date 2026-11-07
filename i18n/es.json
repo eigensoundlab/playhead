@@ -764,5 +764,13 @@
  "lib.tool.widen.opt.where.tails": "Solo las colas",
  "lib.tool.widen.opt.where.all": "En todas partes (también los ataques, para comparar)",
  "lib.tool.widen.param.holdMs": "Centrado tras cada pico",
- "lib.tool.widen.param.lowHz": "Graves centrados bajo"
+ "lib.tool.widen.param.lowHz": "Graves centrados bajo",
+ "lib.tool.stretch.name": "Estirar conservando los ataques",
+ "lib.tool.stretch.desc": "Cambia la duración sin cambiar la altura y deja cada ataque tal como es. Los inicios de Playhead (o solo los comienzos de los eventos) marcan los ataques; los primeros milisegundos de cada uno se copian sin cambios y solo se estira el sonido entre ellos, de modo que los golpes siguen nítidos y caen donde los pone el ritmo estirado. Un estiramiento simple emborrona o duplica los golpes y los desplaza: el render de comparación permite oírlo.",
+ "lib.tool.stretch.param.ratio": "Duración",
+ "lib.tool.stretch.param.attackMs": "Ataque conservado",
+ "lib.tool.stretch.param.from": "Ataques",
+ "lib.tool.stretch.opt.from.onsets": "Cada inicio",
+ "lib.tool.stretch.opt.from.events": "Solo comienzos de eventos",
+ "lib.tool.stretch.param.plain": "Renderizar también el estiramiento simple"
 }

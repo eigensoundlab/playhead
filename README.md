@@ -90,6 +90,12 @@ the material descriptor N9 reads), which no ordinary EQ offers.
 Together the last two make a round trip: widening a mono sound and folding it back returns the original exactly, and
 a stereo file that folds badly is caught by the fold's report before it ships.
 
+### Time, guided by the onsets
+
+| Tool | What it does | Measured |
+|---|---|---|
+| Stretch keeping the attacks | Changes the length (×0.25 to ×4) without changing the pitch. Playhead's onsets (or its event starts), each refined to the sample where the level starts to rise, mark the attacks; the first 30 ms of each are copied as they are and placed at onset × length, and only the sound between them is stretched (WSOLA). A plain stretch is rendered beside it | Five decaying hits ×2 and ×0.5: every attack within 1 ms of onset × length and copied sample for sample; the plain stretch moves them by up to 25 ms, smears or doubles them, and loses some when shrinking hard |
+
 ## Using Playhead in other applications
 
 The analysis is also a library and a command line, so other tools can use it ([docs/INTEGRATION.md](docs/INTEGRATION.md)):

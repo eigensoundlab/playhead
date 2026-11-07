@@ -122,6 +122,23 @@ module.exports = async function (check) {
     for (let k = Math.round(0.08 * sr); k < 0.2 * sr; k++) { sideTail += (wl[a0 + k] - wr[a0 + k]) ** 2 / 4; midTail += x[a0 + k] ** 2; }
     check("effects: level the events, fold to mono, widen the tails", `spread ${before.toFixed(1)} → ${after.toFixed(1)} dB; fold worst third-octave ${wA.toFixed(1)} dB (plain ${wP.toFixed(1)}), inverted ${wI.toFixed(1)} dB; widened side ${(10 * Math.log10(sideTail / midTail)).toFixed(1)} dB`,
       after < before / 3 && rmax / rmin < 1.001 && wA > -1 && wP < -10 && wI > -1 && same.outputs[0].channels[0].every((v, i) => v === L[i]) && back < 1e-6 && sideAtt < 1e-6 && sideTail > 0.3 * midTail && ["level", "mono", "widen"].every(id => Playhead.tools().some(t => t.id === id))); }
+  // stretch keeping the attacks: five decaying hits stretched x2 and x0.5. Each attack lands where onset x ratio puts it
+  // (within 1 ms) and its first 20 ms are the source's, sample for sample; the plain stretch rendered beside it moves them
+  { let s8 = 8; const RR = () => (s8 = (s8 * 16807) % 2147483647) / 2147483647, n = sr * 4, x = new Float32Array(n), at = [0.3, 1.05, 1.8, 2.55, 3.3];
+    at.forEach((t0, j) => { const i0 = Math.round(t0 * sr); for (let k = 0; k < 0.4 * sr; k++) x[i0 + k] += [0.8, 0.3, 0.6, 0.2, 0.5][j] * Math.exp(-k / (0.05 * sr)) * (0.6 * Math.sin(2 * Math.PI * 300 * k / sr) + 0.4 * (RR() * 2 - 1)); });
+    const where = (y, t0, ratio) => { const i0 = Math.round(t0 * sr), w0 = Math.round(t0 * ratio * sr), L = Math.round(0.02 * sr); let best = -Infinity, bi = 0;
+      for (let w = w0 - Math.round(0.03 * sr); w <= w0 + Math.round(0.03 * sr); w++) { let c = 0, e = 1e-12; for (let i = 0; i < L; i++) { c += y[w + i] * x[i0 + i]; e += y[w + i] ** 2; } if (c / Math.sqrt(e) > best) { best = c / Math.sqrt(e); bi = w; } } return (bi - w0) / sr * 1000; };
+    let keep = 0, plain = 0, same = true, lens = true;
+    for (const ratio of [2, 0.5]) {
+      const r = await Playhead.process({ sampleRate: sr, channels: [x] }, "stretch", { ratio }), y = r.outputs[0].channels[0], z = r.outputs[1].channels[0];
+      lens = lens && y.length === Math.round(n * ratio) && z.length === y.length;
+      for (const t0 of at) {
+        const dk = where(y, t0, ratio); keep = Math.max(keep, Math.abs(dk)); plain = Math.max(plain, Math.abs(where(z, t0, ratio)));
+        const i0 = Math.round(t0 * sr), w = Math.round(t0 * ratio * sr) + Math.round(dk * sr / 1000); for (let i = Math.round(0.004 * sr); i < Math.round(0.02 * sr); i++) if (y[w + i] !== x[i0 + i]) same = false;
+      }
+    }
+    check("effects: stretch keeping the attacks", `attacks within ${keep.toFixed(1)} ms of onset × ratio, copied as they are; plain stretch up to ${plain.toFixed(1)} ms off`,
+      lens && keep <= 1 && same && plain > keep && Playhead.tools().some(t => t.id === "stretch")); }
   const fa = await Playhead.fromAnalysis(await WL.analyse(glass), glass, { name: "glass" });
   check("api: fromAnalysis gives the analyze() document", "", JSON.stringify(strip(fa)) === JSON.stringify(strip(g1)));
   const pr = await Playhead.process(glass, "layers", { gains: [-12] });

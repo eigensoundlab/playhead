@@ -782,5 +782,13 @@
   "lib.tool.widen.opt.where.tails": "Только хвосты",
   "lib.tool.widen.opt.where.all": "Везде (и атаки, для сравнения)",
   "lib.tool.widen.param.holdMs": "Центр после каждого пика",
-  "lib.tool.widen.param.lowHz": "Низы по центру ниже"
+  "lib.tool.widen.param.lowHz": "Низы по центру ниже",
+  "lib.tool.stretch.name": "Растяжение с сохранением атак",
+  "lib.tool.stretch.desc": "Меняет длительность, не меняя высоту, и оставляет каждую атаку как есть. Онсеты Playhead (или только начала событий) отмечают атаки; первые миллисекунды каждой копируются без изменений, а растягивается только звук между ними, так что удары остаются чёткими и попадают туда, куда их ставит растянутый ритм. Простое растяжение размывает или удваивает удары и сдвигает их: сравнительный рендер позволяет это услышать.",
+  "lib.tool.stretch.param.ratio": "Длительность",
+  "lib.tool.stretch.param.attackMs": "Сохраняемая атака",
+  "lib.tool.stretch.param.from": "Атаки",
+  "lib.tool.stretch.opt.from.onsets": "Каждый онсет",
+  "lib.tool.stretch.opt.from.events": "Только начала событий",
+  "lib.tool.stretch.param.plain": "Также отрендерить простое растяжение"
 }

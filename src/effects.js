@@ -767,6 +767,102 @@ async function widenTails(src, an, opt) {
   return { outputs: [{ suffix: "wide", buf: mkBuf(sr, outs) }], report };
 }
 
+/* ---------- stretch keeping the attacks ----------
+   WSOLA (Verhelst & Roelands 1993) changes the length without changing the pitch: overlap-added segments of the input,
+   each nudged (within 12 ms) to where it best continues the previous one. Clean on noise and textures, but it smears or
+   doubles an attack and moves it by up to its tolerance, more at large ratios. Here every attack is kept out of it: from
+   Playhead's onsets (or its event starts), each refined to the sample where the level starts to rise, the first
+   milliseconds are copied as they are and placed so the onset lands at onset x ratio; only the sound between one attack
+   and the next is stretched (a shorter window for short stretches; copied and cut with a fade, or followed by silence,
+   under 24 ms). Each attack is entered through the source's own 2 ms before it and crossfades into its stretched
+   continuation, so the joins are the source's. The slicing approach of DAWs' rhythmic stretch modes; SFX Workbench's
+   "Keep every attack" is the same algorithm. */
+function wsola(chans, sr, factor, winMs) {
+  const n = chans[0].length, N = Math.max(64, 2 * Math.round(winMs * sr / 2000)), Hs = N / 2, Ha = Hs / factor;
+  const outLen = Math.max(1, Math.round(n * factor)), tol = Math.max(4, Math.min(Math.round(Hs * 0.5), Math.round(0.012 * sr)));
+  const x = new Float32Array(n); for (const c of chans) for (let i = 0; i < n; i++) x[i] += c[i] / chans.length;
+  const score = (cp, tmpl, step) => { let s = 0, e = 1e-9; for (let i = 0; i < Hs; i += step) { const v = x[cp + i]; s += x[tmpl + i] * v; e += v * v; } return s / Math.sqrt(e); };
+  const pos = []; let prev = 0;
+  for (let k = 0; k * Hs < outLen; k++) {
+    if (k === 0) { pos.push(0); continue; }
+    const nominal = Math.round(k * Ha), tmpl = prev + Hs;
+    let best = Math.max(0, Math.min(n - 1, nominal));
+    if (tmpl + Hs <= n) {
+      const lo = Math.max(0, nominal - tol), hi = Math.min(n - Hs, nominal + tol);
+      let bc = -Infinity;
+      for (let cp = lo; cp <= hi; cp += 4) { const v = score(cp, tmpl, 4); if (v > bc) { bc = v; best = cp; } }
+      const lo2 = Math.max(lo, best - 3), hi2 = Math.min(hi, best + 3); bc = -Infinity;
+      for (let cp = lo2; cp <= hi2; cp++) { const v = score(cp, tmpl, 1); if (v > bc) { bc = v; best = cp; } }
+    }
+    pos.push(best); prev = best;
+  }
+  const w = new Float64Array(N); for (let i = 0; i < N; i++) w[i] = 0.5 - 0.5 * Math.cos(2 * Math.PI * i / N) + 1e-3;
+  return chans.map(c => {
+    const out = new Float64Array(outLen), ws = new Float64Array(outLen);
+    pos.forEach((p, k) => { const o = k * Hs; for (let i = 0; i < N && o + i < outLen; i++) { const s = p + i; out[o + i] += (s < c.length ? c[s] : 0) * w[i]; ws[o + i] += w[i]; } });
+    const r = new Float32Array(outLen); for (let i = 0; i < outLen; i++) r[i] = ws[i] > 0 ? out[i] / ws[i] : 0;
+    return r;
+  });
+}
+// an onset (sample) moved to where the level starts to rise: within 15 ms before to 25 ms after it, the first sample
+// whose 1 ms envelope reaches a tenth of the way from the quietest point before the peak to the peak
+function refineOnset(x, sr, o) {
+  const a = Math.max(0, o - Math.round(0.015 * sr)), b = Math.min(x.length, o + Math.round(0.025 * sr)), r = Math.max(1, Math.round(0.001 * sr));
+  if (b - a < 4 * r) return o;
+  const env = new Float32Array(b - a); let acc = 0;
+  for (let i = a; i < b; i++) { acc += Math.abs(x[i]); if (i - r >= a) acc -= Math.abs(x[i - r]); env[i - a] = acc / r; }
+  let pk = 0; for (let i = 1; i < env.length; i++) if (env[i] > env[pk]) pk = i;
+  let lo = 0; for (let i = 1; i <= pk; i++) if (env[i] < env[lo]) lo = i;
+  const th = env[lo] + 0.1 * (env[pk] - env[lo]);
+  for (let i = lo; i <= pk; i++) if (env[i] >= th) return a + Math.max(0, i - r);
+  return o;
+}
+function stretchAttacks(chans, sr, factor, onsets, attackMs, winMs) {
+  const n = chans[0].length;
+  factor = Math.max(0.05, Math.min(64, factor));
+  const A = Math.max(1, Math.round(attackMs * sr / 1000)), X = Math.max(1, Math.round(0.002 * sr)), gap = Math.round(0.01 * sr), lead = Math.round(0.003 * sr);
+  const on = []; for (const o of onsets.map(Math.round).filter(v => v >= 0 && v < n).sort((p, q) => p - q)) if (!on.length || o - on[on.length - 1] >= gap) on.push(o);
+  const N = Math.max(1, Math.round(n * factor));
+  if (!on.length) return wsola(chans, sr, factor, winMs);
+  const out = chans.map(() => new Float32Array(N));
+  const sIn = on.map(o => Math.max(0, o - lead)), sOut = on.map((o, i) => Math.max(0, Math.min(N, Math.round(o * factor)) - (o - sIn[i])));
+  const render = (a, b, m) => {
+    const L = b - a;
+    if (m <= 0) return chans.map(() => new Float32Array(0));
+    if (L < Math.round(0.024 * sr) || Math.abs(m / L - 1) < 1e-3) return chans.map(c => { const o = new Float32Array(m); o.set(c.subarray(a, a + Math.min(L, m))); if (m < L) fadeEnd(o, X); return o; });
+    return wsola(chans.map(c => c.subarray(a, b)), sr, m / L, Math.max(8, Math.min(winMs, L / sr * 1000 / 3))).map(c => { const o = new Float32Array(m); o.set(c.subarray(0, Math.min(m, c.length))); return o; });
+  };
+  const write = (y, w, xf) => y.forEach((c, k) => { const o = out[k]; for (let j = 0; j < c.length && w + j < N; j++) { const u = j < xf ? (j + 1) / (xf + 1) : 1; o[w + j] = o[w + j] * (1 - u) + c[j] * u; } });
+  if (sIn[0] > 0) write(render(0, sIn[0], sOut[0]), 0, 0);
+  for (let i = 0; i < on.length; i++) {
+    const a0 = sIn[i], w = sOut[i], last = i + 1 >= on.length, next = last ? n : sIn[i + 1], room = (last ? N : sOut[i + 1]) - w;
+    if (room <= 0 || next <= a0) continue;
+    const want = Math.min(A + (on[i] - a0), next - a0), a = Math.max(1, Math.min(want, room));
+    const x = Math.min(X, a0 - (i ? sIn[i - 1] : 0), w);
+    const att = chans.map(c => c.slice(a0 - x, a0 + a));
+    if (a < want) att.forEach(c => fadeEnd(c, Math.min(X, a)));
+    write(att, w - x, x);
+    if (room > a && next > a0 + a) { const xr = Math.min(X, a); write(render(a0 + a - xr, next, room - a + xr), w + a - xr, xr); }
+  }
+  return out;
+}
+const fadeEnd = (c, m) => { for (let j = 0; j < m && j < c.length; j++) c[c.length - 1 - j] *= j / m; };
+async function stretchKeep(src, an, opt) {
+  const sr = src.sampleRate, ch = chansOf(src), n = ch[0].length, dt = an.F.dt;
+  const ev = ((an.X && an.X.events) || []).map(e => e.t0);
+  const times = opt.from === "events" ? ev : ((an.X && an.X.onsets) || []).map(m => m * dt).concat(ev);
+  const mono = new Float32Array(n); for (const c of ch) for (let i = 0; i < n; i++) mono[i] += c[i] / ch.length;
+  const onsets = times.map(t => refineOnset(mono, sr, Math.round(t * sr)));
+  const ratio = Math.max(0.25, Math.min(4, opt.ratio)), outs = stretchAttacks(ch, sr, ratio, onsets, opt.attackMs, 40);
+  const kept = new Set(onsets.map(o => Math.round(o / (0.01 * sr)))).size;
+  const report = ["Length × " + ratio.toFixed(2) + " (" + (n / sr).toFixed(2) + " s → " + (outs[0].length / sr).toFixed(2) + " s), pitch unchanged",
+    onsets.length ? kept + " attack" + (kept === 1 ? "" : "s") + " kept as they are (the first " + opt.attackMs + " ms of each, at " + (opt.from === "events" ? "event starts" : "Playhead's onsets") + "); only the sound between them stretched" : "No attacks found: the whole sound stretched"];
+  finish(src, outs, null, report);
+  const outputs = [{ suffix: "stretch", buf: mkBuf(sr, outs) }];
+  if (opt.plain) { const p = wsola(ch, sr, ratio, 40); finish(src, p, null, []); outputs.push({ suffix: "stretch-plain", buf: mkBuf(sr, p) }); report.push("Also rendered: the same stretch without keeping the attacks, for comparison"); }
+  return { outputs, report };
+}
+
 const TOOLS = [
   { id: "cleanup", name: "Clean up for export", kind: "Game audio",
     desc: "Fixes what the asset checks find: removes DC offset, rebuilds clipped peaks, trims silence, adds fades where the file clicks or the tail was cut, folds identical channels to mono, and normalises the peak.",
@@ -828,7 +924,12 @@ const TOOLS = [
     desc: "Makes stereo from mono (or widens stereo) by adding a decorrelated copy of the sound (a velvet-noise decorrelator) to the side, only after the attacks the analysis finds: attacks stay centred and punchy, tails and background open up, and the lows stay centred. Only the side changes, so (L+R)/2 gives back the original exactly: the result is fully mono-compatible.",
     params: [{ id: "width", label: "Width", min: 0, max: 100, step: 5, value: 60, unit: "%" }, { id: "where", label: "Where", type: "select", value: "rest", options: [["rest", "Tails and background (not the attacks)"], ["tails", "Only the tails"], ["all", "Everywhere (attacks too, for comparison)"]] },
       { id: "holdMs", label: "Centred after each peak", min: 0, max: 200, step: 5, value: 25, unit: "ms" }, { id: "lowHz", label: "Lows centred below", min: 40, max: 400, step: 10, value: 150, unit: "Hz" }],
-    run: widenTails }
+    run: widenTails },
+  { id: "stretch", name: "Stretch keeping the attacks", kind: "Sound design",
+    desc: "Changes the length without changing the pitch and keeps every attack as it is. Playhead's onsets (or only its event starts) mark the attacks; the first milliseconds of each are copied unchanged and only the sound between them is stretched, so hits stay sharp and land where the stretched rhythm puts them. A plain stretch smears or doubles hits and moves them: the comparison render lets you hear it.",
+    params: [{ id: "ratio", label: "Length", min: 0.25, max: 4, step: 0.05, value: 1.5, unit: "×" }, { id: "attackMs", label: "Attack kept", min: 5, max: 150, step: 5, value: 30, unit: "ms" },
+      { id: "from", label: "Attacks", type: "select", value: "onsets", options: [["onsets", "Every onset"], ["events", "Event starts only"]] }, { id: "plain", label: "Also render a plain stretch", type: "bool", value: true }],
+    run: stretchKeep }
 ];
 
 /* ---------- comparison with a static EQ ----------
@@ -917,7 +1018,7 @@ function zipStore(files) {
   return out;
 }
 
-const api = { TOOLS, eqExplained, encodeWav, zipStore, crc32, mkBuf, chansOf, resample, lufsOf, stftApply, stftMagnitudes, _stftMag: stftMagnitudes, cleanup, deharsh, layerMix, hpss, tensionShape, loopMaker, variations, tailVerb, driveHits, ringTime, levelEvents, eventLevelGain, kWeighted, eventsOf, foldMono, widenTails, velvet };
+const api = { TOOLS, eqExplained, encodeWav, zipStore, crc32, mkBuf, chansOf, resample, lufsOf, stftApply, stftMagnitudes, _stftMag: stftMagnitudes, cleanup, deharsh, layerMix, hpss, tensionShape, loopMaker, variations, tailVerb, driveHits, ringTime, levelEvents, eventLevelGain, kWeighted, eventsOf, foldMono, widenTails, velvet, wsola, stretchAttacks, refineOnset, stretchKeep };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.WLFX = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

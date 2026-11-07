@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Stretch keeping the attacks** (tool `stretch`, in the lab, the command line and REAPER's Process items): changes the
+  length without changing the pitch and keeps every attack as it is. Playhead's onsets (or its event starts), refined to
+  the sample where the level starts to rise, mark the attacks; the first 30 ms of each are copied unchanged and placed
+  at onset × length, and only the sound between them is stretched (WSOLA). Tested on five hits ×2 and ×0.5: each attack
+  within 1 ms of its place and copied sample for sample, where a plain stretch, rendered beside it, moves them by up to
+  25 ms. In all six languages.
+
 ## 0.3.0 (2026-11-07)
 
 ### Added

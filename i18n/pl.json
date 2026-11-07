@@ -781,5 +781,13 @@
  "lib.tool.widen.opt.where.tails": "Tylko ogony",
  "lib.tool.widen.opt.where.all": "Wszędzie (także ataki, dla porównania)",
  "lib.tool.widen.param.holdMs": "W środku po każdym szczycie",
- "lib.tool.widen.param.lowHz": "Niskie w środku poniżej"
+ "lib.tool.widen.param.lowHz": "Niskie w środku poniżej",
+ "lib.tool.stretch.name": "Rozciąganie z zachowaniem ataków",
+ "lib.tool.stretch.desc": "Zmienia długość bez zmiany wysokości i zostawia każdy atak bez zmian. Początki dźwięków wykryte przez Playhead (albo tylko początki zdarzeń) wyznaczają ataki; pierwsze milisekundy każdego są kopiowane bez zmian, a rozciągany jest tylko dźwięk między nimi, więc uderzenia pozostają ostre i trafiają tam, gdzie stawia je rozciągnięty rytm. Zwykłe rozciąganie rozmywa lub podwaja uderzenia i je przesuwa: render porównawczy pozwala to usłyszeć.",
+ "lib.tool.stretch.param.ratio": "Długość",
+ "lib.tool.stretch.param.attackMs": "Zachowany atak",
+ "lib.tool.stretch.param.from": "Ataki",
+ "lib.tool.stretch.opt.from.onsets": "Każdy początek dźwięku",
+ "lib.tool.stretch.opt.from.events": "Tylko początki zdarzeń",
+ "lib.tool.stretch.param.plain": "Renderuj też zwykłe rozciągnięcie"
 }
