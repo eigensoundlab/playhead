@@ -38,10 +38,12 @@
 - Asset checks carry a key and values, so the lab shows them in other languages (`text` stays English).
 - **Views of rhythm and form**, as looks and in the composer's "Behind" menu, in all six languages: the **bar raster**
   (`raster:<curve>`, a row per bar or per 4 bars, seekable by row), the **tempogram** (`spec:tempo`, `~cyclic` folds the
-  octaves), the **lag view** (`spec:lag`, where the music repeats) and the **curve scalogram** (`scalogram:<curve>`,
-  a Morlet wavelet transform of any curve with its cone of influence). Music documents carry `rhythm.tempogram` and
-  `repetition` (the tempogram about 11 KB a minute, the lag view at most about 45 KB); `Playhead.view(doc, kind)` returns any view as numbers. A view a document
-  cannot give leaves the waveform in its place.
+  octaves), the **lag view** (`spec:lag`, where the music repeats), the **modulation spectrogram** (`spec:mod`, any
+  sound: how fast the level pulses, 0.5 to 128 Hz, from rhythm through tremolo and flutter to roughness, from the band
+  envelopes at analysis) and the **curve scalogram** (`scalogram:<curve>`, a Morlet wavelet transform of any curve with
+  its cone of influence). Sound effect and music documents carry `modulation` (up to about 26 KB), music documents also
+  `rhythm.tempogram` and `repetition` (the tempogram about 11 KB a minute, the lag view at most about 45 KB);
+  `Playhead.view(doc, kind)` returns any view as numbers. A view a document cannot give leaves the waveform in its place.
 - `Playhead.localize(table, lang)`: counts in the library's labels ("4 bars") follow the language's plural rules.
 - `experiments/arrange`: arrangements found by `arrange()` mixed and analysed. Predicted and rendered measures agree
   (peak level r 0.99, rise 0.90, contrast 0.92, focus 0.95, coverage 0.97), the search ranks arrangements as their mixes

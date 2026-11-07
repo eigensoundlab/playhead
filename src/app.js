@@ -697,7 +697,7 @@ const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Bar lines"], ["beats
 const CMP_SCULPT = ["", "loudness", "arousal", "activity", "harshness", "tension", "onsetStrength", "localPulse"];
 const CMP_MAX_LANES = 3, CMP_HEIGHTS = [64, 96, 128, 160, 192];
 const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), h: store.get("lookHeight", 128), refs: store.get("lookRefs", true) };
-const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"], ["raster", "Bar raster: a row per bar"], ["raster4", "Phrase raster: a row per 4 bars"], ["tempo", "Tempogram"], ["tempocyc", "Tempogram, octaves folded"], ["lag", "Repetition (lag view)"], ["scale", "Curve rhythms (scalogram)"]];
+const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"], ["raster", "Bar raster: a row per bar"], ["raster4", "Phrase raster: a row per 4 bars"], ["tempo", "Tempogram"], ["tempocyc", "Tempogram, octaves folded"], ["lag", "Repetition (lag view)"], ["mod", "Modulation spectrogram"], ["scale", "Curve rhythms (scalogram)"]];
 // the views that show one chosen curve (the raster and the scalogram), and the curves offered for them
 const CMP_VIEW_CURVES = ["onsetStrength", "loudness", "activity", "localPulse", "harshness", "arousal", "tension", "surprise", "structureNovelty", "n1Kurtosis", "n7Surprisal"];
 const cmpRaster = bg => bg === "raster" || bg === "raster4", cmpCurveView = bg => cmpRaster(bg) || bg === "scale";
@@ -741,7 +741,7 @@ function cmpCode(st) {
   if (st.shape !== "base") parts.push("shape:" + st.shape);
   if (st.bg === "spec" || st.bg === "specwave") parts.push("spec");
   else if (st.bg === "tempo" || st.bg === "tempocyc") parts.push("spec:tempo" + (st.bg === "tempocyc" ? "~cyclic" : ""));
-  else if (st.bg === "lag") parts.push("spec:lag");
+  else if (st.bg === "lag" || st.bg === "mod") parts.push("spec:" + st.bg);
   else if (st.bg === "scale") parts.push("scalogram:" + st.vcurve);
   if (st.bg === "wave" || st.bg === "specwave") parts.push("wave" + (st.bg === "wave" && st.colour ? ":" + st.colour : ""));
   if (st.marks.has("sections")) parts.push("sections");

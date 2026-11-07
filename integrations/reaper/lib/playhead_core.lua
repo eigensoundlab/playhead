@@ -766,7 +766,13 @@ function M.parse_look(code)
       local ty = i and sub(main, 1, i - 1) or main
       local arg = i and sub(main, i + 1) or ""
       if ty == "wave" then out[#out + 1] = { type = "wave", colour = arg ~= "" and arg or nil }
-      elseif ty == "spec" or ty == "outline" then out[#out + 1] = { type = ty }
+      elseif (ty == "spec" and (arg == "" or arg == "mel")) or ty == "outline" then out[#out + 1] = { type = ty }
+      elseif ty == "spec" or ty == "raster" or ty == "scalogram" then
+        -- the views of rhythm and form (tempogram, lag view, modulation, bar raster, scalogram) are drawn by the
+        -- JavaScript library only; here the plain waveform stands in for them, as it does there for a sound without them
+        local has = false
+        for _, l in ipairs(out) do if l.type == "wave" then has = true end end
+        if not has then out[#out + 1] = { type = "wave" } end
       elseif ty == "sculpt" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg }
       elseif ty == "line" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg }
       elseif ty == "lane" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg, signed = flags.signed or false }

@@ -9,7 +9,7 @@ module.exports = async function (check) {
   const P = require("../src/playhead.js"), WL = require("../src/analysis.js"), Pr = require("../src/probes.js");
   const SR = 44100;
   {
-    const codes = ["spec:tempo~cyclic,ticks:downbeats", "spec:lag,sections", "scalogram:loudness,lane:activity", "raster:activity~4bars,sections,ticks:onsets", "spec"];
+    const codes = ["spec:tempo~cyclic,ticks:downbeats", "spec:lag,sections", "spec:mod,lane:loudness", "scalogram:loudness,lane:activity", "raster:activity~4bars,sections,ticks:onsets", "spec"];
     const back = codes.map(c => P.lookCode(P.parseLook(c)));
     check("views: look codes read and written back", back.filter((c, i) => c === codes[i]).length + "/" + codes.length, back.every((c, i) => c === codes[i]));
   }
@@ -58,6 +58,19 @@ module.exports = async function (check) {
     const fits = ["raster", "spec:tempo", "spec:lag", "scalogram:loudness"].map(c => (P.lookFits(d, c) ? "1" : "0") + (P.lookFits(ds, c) ? "1" : "0")).join(" ");
     check("views: scalogram finds tremolo periods", p1.toFixed(3) + " s and " + p2.toFixed(3) + " s (true 0.125, 0.333); fits " + fits,
       Math.abs(p1 / 0.125 - 1) < 0.06 && Math.abs(p2 / 0.3333 - 1) < 0.06 && fits === "10 10 10 11");
+  }
+  {
+    // modulation spectrogram: noise whose level swings fully at 4, 16 and 60 Hz, then steady noise. Each part's
+    // brightest row is its rate (within one row, 12 %); steady noise stays dark; fast documents carry no modulation
+    let s = 9;
+    const x = Float32Array.from({ length: 12 * SR }, (_, i) => { s = (s * 16807) % 2147483647; const t = i / SR, f = t < 3 ? 4 : t < 6 ? 16 : t < 9 ? 60 : 0; return 0.3 * (s / 2147483647 * 2 - 1) * (f ? 0.5 + 0.5 * Math.sin(2 * Math.PI * f * t) : 0.7); });
+    const dm = await P.analyze({ sampleRate: SR, channels: [x] }, { profile: "sfx" }), v = P.view(dm, "mod");
+    const rowMean = (a, b) => { const m = new Float32Array(v.rows); for (let r = 0; r < v.rows; r++) for (let c = v.colAt(a); c < v.colAt(b); c++) m[r] += Math.max(0, v.values[r * v.cols + c]) / (v.colAt(b) - v.colAt(a)); return m; };
+    const best = (a, b) => { const m = rowMean(a, b); let k = 0; m.forEach((q, r) => { if (q > m[k] + 1e-6) k = r; }); return { rate: v.rateOf(k), level: m[k] }; };
+    const parts = [[0.5, 2.5, 4], [3.5, 5.5, 16], [6.5, 8.5, 60]].map(([a, b, f]) => ({ f, ...best(a, b) }));
+    const steady = Math.max(...rowMean(9.5, 11.5)), fast = await P.analyze({ sampleRate: SR, channels: [x.subarray(0, SR)] }, { profile: "fast" });
+    check("views: modulation spectrogram finds the rate the level swings at", parts.map(p => p.rate.toFixed(1) + " Hz").join(", ") + " (true 4, 16, 60); steady noise " + steady.toFixed(2),
+      parts.every(p => Math.abs(Math.log2(p.rate / p.f)) <= Math.log2(1.13) && p.level > 0.7) && steady < 0.35 && !fast.modulation && P.lookFits(dm, "spec:mod") && !P.lookFits(fast, "spec:mod"));
   }
   {
     // drawn: each view fills the strip and says what it is; the raster returns its rows, so a host can seek by row

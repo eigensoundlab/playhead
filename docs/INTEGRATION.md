@@ -44,30 +44,32 @@ const whole = Playhead.combine([{ doc: kick }, { doc: bass, offset: 0.5, gain: -
 | `align(parts, opts)` | the parts on one time axis: per part its power per column and, when all have spectrograms, per column and band. For views that show which part carries what |
 | `measureParts(parts, opts)` | measures of the whole around its main peak, from the documents: `rise` (s), `contrast` and `focus` (dB before and after the peak), `together`, `overlap`, `coverage`, `low`, `shared` (0..1), `tail` (s), `harshness`, and `scores` for the goals (`punch`, `size`, `clean`) |
 | `arrange(parts, opts)` | searches offsets and gains for a goal (`"punch"`, `"big"`, `"clean"` or weights) and returns `{ baseline, candidates: [{ parts: [{ offset, gain }], score, measures, changes }], evaluated, ms }`, about 500 arrangements in 0.1 to 0.3 s. Parts with `lock: true` stay; without any, the loudest stays. `opts`: `range` (s, default 0.25), `gainRange` (dB, default [-6, 3]), `minOffset`, `maxOffset`, `count`, `seed`, `maxHarshness` |
-| `view(doc, kind, opts)` | a view as numbers, for hosts that draw it themselves or measure it ([Views](#views)): `{ kind, rows, cols, values, yTicks, colAt(t) }`, or for the raster `timeRows` in place of `colAt`. `kind`: `"raster"` (`opts.curve`, `opts.bars` 1 or 4), `"tempo"` (`opts.cyclic`), `"lag"`, `"scale"` (`opts.curve`); `null` when the document cannot give it |
+| `view(doc, kind, opts)` | a view as numbers, for hosts that draw it themselves or measure it ([Views](#views)): `{ kind, rows, cols, values, yTicks, colAt(t) }`, or for the raster `timeRows` in place of `colAt`. `kind`: `"raster"` (`opts.curve`, `opts.bars` 1 or 4), `"tempo"` (`opts.cyclic`), `"lag"`, `"mod"`, `"scale"` (`opts.curve`); `null` when the document cannot give it |
 | `localize(table, lang)` | shows the curve names, looks, legends and tools in another language; `table` is `dist/i18n/<lang>.json` (Czech, German, Polish, Russian, Spanish), `null` returns to English. Counts follow the language's plural rules (from `lang`, or the table's `lib.lang`). Documents are unaffected: only labels change |
 
-**Profiles** (one core of the development machine, stereo 44.1 kHz; document size in brackets):
+**Profiles** (one core of the development machine, stereo 44.1 kHz; document size in brackets, measured with 0.3.0 on
+`tools/profile.js`'s signals; the times were measured with 0.2.0):
 
 | Profile | Computes | 2 s | 30 s | 120 s |
 |---|---|---|---|---|
-| `fast` | curves C1–C7, onsets, loudness summary, waveform overview | 0.13 s (27 KB) | 0.37 s (54 KB) | 1.3 s (151 KB) |
-| `sfx` | + events with tags, NMF layers, asset checks, descriptors N1–N9 | 0.41 s (38 KB) | 1.5 s (94 KB) | |
-| `music` | + beats, downbeats, sections | 0.54 s | 1.7 s (94 KB) | 4.1 s (315 KB) |
+| `fast` | curves C1–C7, onsets, loudness summary, waveform overview | 0.13 s (25 KB) | 0.37 s (54 KB) | 1.3 s (151 KB) |
+| `sfx` | + events with tags, NMF layers, asset checks, descriptors N1–N9, spectrogram, modulation spectrogram | 0.41 s (54 KB) | 1.5 s (154 KB) | |
+| `music` | + beats, downbeats, sections, tempogram, lag view | 0.54 s (58 KB) | 1.7 s (172 KB) | 4.1 s (566 KB) |
 | `auto` | `sfx` up to 10 s, `music` above | | | |
 
 The first analysis at a new sample rate adds about 0.25 s of one-time calibration. The `sfx` and `music` documents
 also carry a small mel spectrogram for the spectrogram layer: about 5.3 KB per second of sound up to 10 s (100 columns
-per second) and 1.1 KB per second above (20 columns per second). `analyze(..., { spectrum: false })` leaves it out;
-`fast` leaves it out unless `spectrum: true`. Music documents add the tempogram (about 11 KB a minute) and the lag view
-(20 to 45 KB whatever the length) for the views of rhythm and form.
+per second) and 1.1 KB per second above (20 columns per second), and the modulation spectrogram (at most about 26 KB).
+`analyze(..., { spectrum: false })` leaves both out; `fast` leaves them out unless `spectrum: true`. Music documents add
+the tempogram (about 11 KB a minute) and the lag view (20 to 45 KB whatever the length) for the views of rhythm and
+form.
 
 **Combining documents.** Analyse the parts with the same `profile`, `assetClass` and `curveRate`. LUFS and the
 spectrogram add as power and a part's gain moves them exactly; loudness follows from the summed LUFS; harshness is the
 whole's loudness plus the parts' power-weighted harshness above their own loudness; activity, arousal, tension and
 novelty take the strongest part; onset strength adds up; onsets, events and novelty ticks are merged (a part that starts
-with sound gets an onset at its entry). The beat grid is the clearest part's, and sections are left out: they need the
-whole. On 14 sessions built from separate parts ([experiments/compose](../experiments/compose/README.md)) loudness and
+with sound gets an onset at its entry). The beat grid is the clearest part's, and sections, the tempogram, the lag view
+and the modulation spectrogram are left out: they need the whole (their looks draw the waveform instead). On 14 sessions built from separate parts ([experiments/compose](../experiments/compose/README.md)) loudness and
 the spectrogram matched the analysed mix closely, activity, arousal and harshness roughly (r 0.8 to 0.99), tension and
 novelty less (0.72, 0.51), events poorly (F about 0.5): three layers struck together are one event in the mix. Where
 the combined and the analysed whole differ is itself worth showing: it is where the parts interact.
@@ -95,6 +97,7 @@ any mix it is placed in.
 | `summary` | `peakLufs`, `loudnessRange`, `soundStart`, `soundEnd`; with events also `peakDb`, `attack` |
 | `curves` | `rate` (samples per second), `start` (0), then one array per curve, `null` where silent. 0–1 on fixed library-wide scales: `loudness`, `activity`, `arousal`, `harshness`, `tension`, `harmonicTension`, `surprise`; in LUFS: `lufs`; with descriptors also `n1Kurtosis`, `n2RepetitionHz`, `n4Velocity` (oct/s), `n5Cpp` (dB), `n5Coherence`, `n6Arrow`, `n7Surprisal`, `n8Recurrence`; `onsetStrength` (spectral flux, the beat tracker's input, 0–1 to its 99th percentile: where the hits and attacks are); music profile also `structureNovelty` (Foote novelty, 0–1, values in silence too) and `localPulse` (PLP scaled by its clarity, 0–1). `n1Kurtosis` is drawn where the impulses are (each 0.5 s window's value given to its frames in proportion to their power), so it no longer rises half a window before an impulse; the descriptor summaries keep the window values. New curves are added without changing the schema version: read the ones you know and ignore the rest |
 | `noveltyTicks` | times (s) of the strongest spectral surprises, the lab's novelty ticks (music and ambience; empty for sound effects) |
+| `modulation` | `sfx` and `music` profiles: the modulation spectrogram, how strongly the level pulses at each rate over time. `rows` rates from `rateMin` (0.5 Hz) up, `perOctave` (6) to an octave, to 128 Hz; `columns` every `hop` s; `data` base64 of one byte per rate and column, column after column, slowest rate first: 0 for no data (silence, or a rate too slow for the sound's length), else 1 + 254 × the square root of the modulation depth (`scale: "sqrt"`; depth 1 is a level swinging fully at that rate). From the band envelopes (12 pairs of Bark bands at about 345 per second), each band's envelope spectrum over its mean, averaged over the bands by power, at three resolutions (windows of 3, 0.75 and 0.19 s for rates below 4 Hz, 4 to 24 Hz and above). At most 400 columns: up to about 26 KB |
 | `spectrum` | `sfx` and `music` profiles: a mel spectrogram for drawing. `bands` (40), `fmin`, `fmax` (Hz), `columns` (as the curves), `dbTop` and `dbRange` (80 dB mapped to 0–255), `data`: base64 of one byte per band and column, column after column, lowest band first |
 | `wave` | `columns`, `min`, `max`, `rms`: a waveform overview for thumbnails without decoding again |
 | `onsets` | onset times (s) |
@@ -127,6 +130,7 @@ text that hosts can store, offer in a menu, paste between apps and send with fee
 | shape | `shape:base` (default), `shape:mirror`, `shape:horizon`, `shape:line` | how a lane's curve is drawn: filled from the bottom; mirrored around the middle, like a waveform; a horizon chart (folded into three bands of rising strength, compact at small heights); a line |
 | tempogram | `spec:tempo` or `spec:tempo~cyclic` | in the spectrogram's place: how strongly each tempo is present over time, 40 to 240 BPM, fast at the top; `~cyclic` folds the octaves onto 80 to 160 BPM, so a tempo, its half and its double share a row (music profile) |
 | lag view | `spec:lag` | in the spectrogram's place: how alike each moment is to the moment a lag earlier, the lag going up; a bright horizontal line is a repeat (music profile) |
+| modulation | `spec:mod` | in the spectrogram's place: how fast the level pulses and how strongly, 0.5 to 128 Hz, fast at the top: rhythm, then fluctuation, tremolo and flutter, then roughness (sound effects and music) |
 | scalogram | `scalogram:<curve>` | in the spectrogram's place: the periodic patterns in a curve, fast at the top, slow at the bottom, fainter near the ends (any profile) |
 | bar raster | `raster:<curve>` or `raster:<curve>~4bars` | a row per bar (or per 4 bars), top to bottom, coloured by a curve; takes the whole strip, with `sections` as rules between rows and `ticks:onsets`, `events` or `novelty` as dots where they fall in the bar (music profile) |
 
@@ -144,7 +148,7 @@ where the hits are, how harsh, how impulsive) and `surprise` (the same with spec
 impulsiveness), `sculpted` (`sculpt:loudness,wave:harshness,outline,ticks:events+novelty`: the waveform as loud as
 it sounds, coloured by harshness, over the ordinary peak outline), and four views of rhythm and form: `raster`
 (`raster:onsetStrength,sections`), `tempogram` (`spec:tempo,ticks:downbeats`), `repetition` (`spec:lag,sections`) and
-`rhythms` (`scalogram:onsetStrength`).
+`rhythms` (`scalogram:onsetStrength`), and for any sound `modulation` (`spec:mod`).
 `Playhead.lookFits(doc, look)` says whether a look shows something for a document (every curve it uses is there and not
 empty), for menus that hide looks a file cannot use. A layer whose curve is not in the document is left out and the
 legend says so (`structure` and `rhythm` need the music profile).
@@ -156,7 +160,7 @@ legendElement.textContent = r.legend;      // "colour: harshness · lane: activi
 
 ### Views
 
-Four views read rhythm and form where the waveform shows only amplitude. Each draws in the spectrogram's place (the
+Five views read rhythm, texture and form where the waveform shows only amplitude. Each draws in the spectrogram's place (the
 raster takes the whole strip), in the theme's `specRamp`, with its axis along the right edge. Where a document cannot
 give one (a beat view of a sound effect), the plain waveform is drawn instead and the legend says why.
 
@@ -171,6 +175,12 @@ give one (a beat view of a sound effect), the plain waveform is drawn instead an
 - **Lag view** (`spec:lag`): drawn from `repetition`, with the median likeness set to black so repeats stand out. A
   bright horizontal line from some moment on means the music now repeats what played that lag before; its height says
   how long before (in bars, with a beat).
+- **Modulation spectrogram** (`spec:mod`): drawn from `modulation`, from the image's median depth (black: the
+  texture every moment has, such as the envelope fluctuation of noise) to its 99th percentile (white). A level that
+  pulses at one rate is a bright row at that rate: the beat and its subdivisions below 4 Hz, tremolo, flutter, engine
+  and rotor rates from 4 to 20 Hz, roughness (growls, buzzes, beating partials) above. It reaches rates the curves
+  cannot (they have 20 or 100 samples a second), and it is computed from the audio at analysis, so it costs about 60 ms
+  a file whatever its length.
 - **Scalogram** (`scalogram:<curve>`): a continuous wavelet transform (Morlet, ω₀ = 6) of any curve, computed when drawn
   (about 35 ms for a minute at 20 curve samples per second): periods from four curve samples to a fifth of the sound,
   8 rows an octave, power divided by scale so that equal swings read equally at every period (Liu et al. 2007), 30 dB
@@ -181,7 +191,8 @@ give one (a beat view of a sound effect), the plain waveform is drawn instead an
 `Playhead.view(doc, kind, opts)` gives the same images as numbers (row 0 at the top, values 0 to 1, -1 where there is
 no data). The tests check them on signals with a known answer: the raster's rows are the cue arc's 2 s bars with its
 hits on the beats, the tempogram peaks at its 120 BPM and follows the tempo ramp from 96 to 144 BPM, the lag view lights
-up 40 s back where the groove returns, and the scalogram of a tremolo finds 0.125 s and 0.333 s.
+up 40 s back where the groove returns, the scalogram of a tremolo finds 0.125 s and 0.333 s, and the modulation
+spectrogram of noise swinging at 4, 16 and 60 Hz finds each rate within a row while steady noise stays dark.
 
 Hosts should draw only through `drawStrip` and take the legend from its return value, so a new Playhead build
 changes the look everywhere by replacing one file. The Playhead app's composer ("Compose your own") builds look codes

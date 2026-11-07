@@ -237,6 +237,12 @@ return function(T)
       if out ~= p.out then ok_parse = false; T.note("parse " .. p.code .. ": " .. out .. " vs " .. p.out) end
     end
     check("looks: look codes parse and print as Playhead.parseLook and lookCode", ok_parse)
+    -- the views of rhythm and form are not drawn here: the plain waveform stands in for them (once)
+    local views = { ["spec:tempo~cyclic,ticks:downbeats"] = "wave,ticks:downbeats", ["raster:onsetStrength~4bars,sections"] = "wave,sections",
+      ["wave:harshness,spec:mod"] = "wave:harshness", ["spec:lag,scalogram:loudness,lane:activity"] = "wave,lane:activity", ["spec"] = "spec" }
+    local ok_views = true
+    for code, want in pairs(views) do local got = M.look_code(M.parse_look(code) or {}); if got ~= want then ok_views = false; T.note("view " .. code .. ": " .. got) end end
+    check("looks: the views of rhythm and form fall back to the waveform", ok_views)
     local function recorder()
       local ops = { rects = {}, triangles = {}, texts = {}, lines = 0, polylines = 0, dashed = 0 }
       local function r4(v) return floor(v * 1e4 + 0.5) / 1e4 end

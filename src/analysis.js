@@ -324,12 +324,13 @@ async function extractFeatures(buf, onProgress, opts) {
   onProgress(0.95);
   await tick();
 
+  const mod = modulationOf(env, NCOARSE, nE, envRate, dur);
   const melRaw = FEAT.keepRaw ? Float32Array.from(melDb) : null;
   applyMelFloor(melDb, melDb);
   return {
     sr, len, dur, H, N, nF, dt, nch, fine,
     kz, pk, melDb, melRaw, bark, chroma, sfm,
-    rough, roughT, nB
+    rough, roughT, nB, mod
   };
 }
 
@@ -862,6 +863,62 @@ function parabolic(a, i) {
   if (i <= 0 || i >= a.length - 1) return 0;
   const y0 = a[i - 1], y1 = a[i], y2 = a[i + 1], den = y0 - 2 * y1 + y2;
   return den !== 0 ? Math.max(-0.5, Math.min(0.5, 0.5 * (y0 - y2) / den)) : 0;
+}
+
+/* ===================================================================
+   Modulation spectrogram: how strongly the level pulses at each rate, over time
+   =================================================================== */
+// From the fine band envelopes (12 pairs of Bark bands at sr/128, about 345 per second): in each window, every band's
+// envelope spectrum over its mean (the modulation depth: 1 for a level swinging fully at that rate, 0 for a steady one),
+// averaged over the bands weighted by their power. Rates 0.5 to 128 Hz, 6 rows an octave, from three resolutions so
+// that every rate gets a window of a few of its periods: the envelope averaged to about 22, 86 and 345 per second, with
+// windows of 3, 0.75 and 0.19 s for rates below 4 Hz, 4 to 24 Hz and above 24 Hz. A row needs at least 1.5 periods in
+// its window (short sounds have no slow rows). At most 400 columns. -1 marks no data (silence, or rates too slow).
+const MOD = { rateMin: 0.5, perOctave: 6, octaves: 8, maxCols: 400, branches: [{ dec: 16, win: 3, lo: 0, hi: 4 }, { dec: 4, win: 0.75, lo: 4, hi: 24 }, { dec: 1, win: 0.19, lo: 24, hi: Infinity }] };
+function modulationOf(env, B, nE, envRate, dur) {
+  const rows = MOD.perOctave * MOD.octaves + 1, rateOf = r => MOD.rateMin * Math.pow(2, r / MOD.perOctave);
+  const hop = Math.max(0.01, dur / MOD.maxCols), cols = Math.max(1, Math.ceil(dur / hop));
+  const data = new Float32Array(rows * cols).fill(-1), weight = new Float64Array(cols * MOD.branches.length);
+  MOD.branches.forEach((br, bi) => {
+    const er = envRate / br.dec, nd = Math.floor(nE / br.dec);
+    if (nd < 8) return;
+    const e = new Float32Array(nd * B);
+    for (let j = 0; j < nd; j++) for (let b = 0; b < B; b++) { let s = 0; for (let i = 0; i < br.dec; i++) s += env[(j * br.dec + i) * B + b]; e[j * B + b] = s / br.dec; }
+    const W = Math.max(8, Math.min(nd, Math.round(br.win * er))), M = 2 * nextPow2(W), w = hannP(W), fft = getFFT(M);
+    let ws = 0; for (let i = 0; i < W; i++) ws += w[i];
+    const here = [];
+    for (let r = 0; r < rows; r++) {
+      const f = rateOf(r);
+      if (f < br.lo || f >= br.hi || f > 0.4 * er || f < 1.5 * er / W) continue;
+      const k0 = Math.max(1, Math.round(f * Math.pow(2, -1 / 12) * M / er)), k1 = Math.max(k0, Math.round(f * Math.pow(2, 1 / 12) * M / er));
+      here.push([r, k0, k1]);
+    }
+    if (!here.length) return;
+    const re = new Float64Array(M), im = new Float64Array(M), acc = new Float64Array(here.length);
+    for (let c = 0; c < cols; c++) {
+      const j0 = Math.round((c + 0.5) * hop * er) - (W >> 1);
+      acc.fill(0); let wsum = 0;
+      for (let b = 0; b < B; b++) {
+        let mean = 0, cnt = 0;
+        for (let i = 0; i < W; i++) { const j = j0 + i; if (j >= 0 && j < nd) { mean += e[j * B + b]; cnt++; } }
+        if (cnt < W / 2) continue;
+        mean /= cnt;
+        if (mean < 3e-5) continue;
+        re.fill(0); im.fill(0);
+        for (let i = 0; i < W; i++) { const j = j0 + i; re[i] = ((j >= 0 && j < nd ? e[j * B + b] : mean) - mean) * w[i]; }
+        fft(re, im);
+        const pw = mean * mean;
+        here.forEach(([, k0, k1], q) => { let mx = 0; for (let k = k0; k <= k1; k++) mx = Math.max(mx, Math.hypot(re[k], im[k])); acc[q] += pw * Math.min(1, 2 * mx / (ws * mean)); });
+        wsum += pw;
+      }
+      weight[bi * cols + c] = wsum;
+      if (wsum > 0) here.forEach(([r], q) => { data[r * cols + c] = acc[q] / wsum; });
+    }
+  });
+  // silence: columns far below the loudest are no data
+  let top = 0; for (const v of weight) if (v > top) top = v;
+  MOD.branches.forEach((br, bi) => { for (let c = 0; c < cols; c++) if (weight[bi * cols + c] < top * 1e-7) for (let r = 0; r < rows; r++) { const f = rateOf(r); if (f >= br.lo && f < br.hi) data[r * cols + c] = -1; } });
+  return { rateMin: MOD.rateMin, perOctave: MOD.perOctave, rows, cols, hop, data };
 }
 
 function rhythmOf(F) {
@@ -1976,7 +2033,7 @@ function disagreements(curve, ref, mask, k, minSepFrac) {
 
 // re-derive everything downstream of the features after a parameter change (calibration)
 function resetDerived(F) { F.melDb = F.melRaw ? applyMelFloor(F.melRaw, F.melDb) : F.melDb; delete F._base; delete F._rhythm; delete F._struct; delete F._events; delete F._sfx; delete F._desc; F.guess = guessClass(F); return F; }
-const api = { FEAT, ONSET, applyMelFloor, resetDerived, extractFeatures, computeCurves, analyse, calibrate, guessClass, pool, pearson, diffCorr, disagreements, CLASSES, REF, quantileMasked, kFilterCoeffs, rhythmOf, eventsOf, structureOf, beatF, RHYTHM, STRUCT, sfxOf, SFX, getFFT, hannP, movMean, interpTimes, biquadInto, NMEL };
+const api = { FEAT, ONSET, MOD, modulationOf, applyMelFloor, resetDerived, extractFeatures, computeCurves, analyse, calibrate, guessClass, pool, pearson, diffCorr, disagreements, CLASSES, REF, quantileMasked, kFilterCoeffs, rhythmOf, eventsOf, structureOf, beatF, RHYTHM, STRUCT, sfxOf, SFX, getFFT, hannP, movMean, interpTimes, biquadInto, NMEL };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.WL = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

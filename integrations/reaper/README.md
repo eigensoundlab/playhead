@@ -95,7 +95,9 @@ waveform (filled, mirrored, horizon or line), events, onsets, beats, bar lines, 
 legend under the strip. It follows the take (offset, rate, loop, reversed sections), shows the edit and play
 cursors, and moves the edit cursor where you click. Right-click for the ready-made looks (those a file cannot show
 are greyed), your own look code (for example `wave:harshness lane:activity ticks:events`; codes from the Playhead
-app can be pasted), analysing again, automatic analysis of newly selected items, and docking. Space starts and stops
+app can be pasted; the views of rhythm and form, such as the bar raster, the tempogram and the modulation spectrogram,
+are not drawn here yet and the waveform stands in for them), analysing again, automatic analysis of newly selected
+items, and docking. Space starts and stops
 playback. Colours follow the REAPER theme where it offers them. The strip is drawn once and redrawn only when the
 item, the look, the window size or the theme changes. As a toolbar button it shows whether the window is open.
 
