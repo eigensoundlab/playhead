@@ -75,7 +75,8 @@ the best candidate still beats the rough placement once mixed:
 
 **Limits.**
 - What the measures say about punch, size and cleanness is not yet checked by listening. This experiment checks only
-  that the search's view of an arrangement matches the arrangement mixed.
+  that the search's view of an arrangement matches the arrangement mixed. The listening test in
+  [experiments/listening](../listening/README.md) asks listeners, with these arrangements as its stimuli.
 - Mono samples, power sums: the search does not see phase, so layers that cancel are not caught. SFX Workbench's
   "Align hits" handles that to the sample after the search.
 - As a proxy for *together*, onsets of the rendered mix within 80 ms before its peak were counted. It did not separate

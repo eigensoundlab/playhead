@@ -128,5 +128,6 @@ else if (args[0] === "--fragment") {
   writeDist(path.join(root, "dist"));
   writeDist(path.join(site, "dist"));
   copyDir(path.join(root, "examples"), path.join(site, "examples"));
+  copyDir(path.join(root, "experiments", "listening", "site"), path.join(site, "listening"));     // the listening test
   console.log("built", site, "and dist/ (playhead-core.js, playhead-core.mjs, playhead-cli.cjs)");
 }

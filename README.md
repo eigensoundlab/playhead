@@ -142,7 +142,9 @@ Because a whole combines in about a millisecond, a computer can search it: `Play
 tries some 500 offsets and gains in a fraction of a second and returns the best few arrangements that differ from each
 other, for punchy, big (cinematic) or clean layering, with `Playhead.measureParts` reporting the measures behind them
 (rise time, the layers starting together, focus, spectral coverage, tail, shared bands). SFX Workbench offers it as
-"Find arrangements" in its layer stack.
+"Find arrangements" in its layer stack. Whether the arrangements survive mixing is measured in
+[experiments/arrange](experiments/arrange/README.md); whether they *sound* punchier, bigger or cleaner is the question of
+a short [listening test](https://eigensoundlab.github.io/playhead/listening/) ([experiments/listening](experiments/listening/README.md)).
 
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
 
@@ -380,6 +382,7 @@ tools/export-features.js  one feature vector per file (MFCC baseline, psychoacou
 experiments/esc50/    ESC-50 experiment: librosa baseline, evaluation, negative controls, HTML report, results
 experiments/corpus/   results on the 73-file corpus behind the README and the paper (self-checks, calibration, tools vs EQ, triggers)
 experiments/paper/    figure data, figure script and a sound for the paper (tools/paper-data.js, figures.py)
+experiments/listening/  the listening test of the arrangement goals: stimuli, test page (on the site at /listening/), analysis
 tools/audio-io.js     WAV reader/writer; other formats through ffmpeg
 tools/build.js        builds _site/, a single-file version and dist/ (library bundles, command-line bundle)
 tools/playhead-cli.js command line: analyze, markers, process, tools
@@ -419,6 +422,7 @@ The Asset Store submission guidelines (§1.2.b) currently exclude packages carry
 - Code: Apache License 2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 - Paper and its figures: CC BY 4.0, see [paper/LICENSE.md](paper/LICENSE.md).
 - Generated test signals: CC0 1.0.
+- The listening test's stimuli (`experiments/listening/site/stimuli/`), mixed from CC0 Sonic Pi samples: CC0 1.0.
 - `experiments/paper/robot-hit-steel.wav`, a sound by the author used for one of the paper's figures: CC BY 4.0.
 - Audio you process with Playhead is yours; the tool claims no rights in its output.
 

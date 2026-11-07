@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Punchy, big, clean? A short listening test · Playhead</title>
+<!-- SPDX-License-Identifier: Apache-2.0 · Copyright 2026 Daniel Sandner -->
+<style>
+  :root { --bg: #f6f7f8; --card: #fff; --ink: #13181b; --mute: #5b666d; --line: #d9dee1; --accent: #eb6834; --accent-ink: #fff; --sel: #184f95; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #15191c; --card: #1e2327; --ink: #e4e8ea; --mute: #9aa5ac; --line: #343c42; --accent: #f07a45; --accent-ink: #111; --sel: #78b6ff; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  main { max-width: 680px; margin: 0 auto; padding: 28px 18px 60px; }
+  h1 { font-size: 1.5rem; margin: 0 0 4px; }
+  h2 { font-size: 1.15rem; margin: 0 0 10px; }
+  .sub { color: var(--mute); margin: 0 0 22px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 20px; margin-bottom: 16px; }
+  .card p:first-child { margin-top: 0; }
+  ul.tight { margin: 6px 0; padding-left: 20px; } ul.tight li { margin: 3px 0; }
+  label.row { display: flex; gap: 10px; align-items: baseline; margin: 8px 0; }
+  select, textarea { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 6px 8px; }
+  textarea { width: 100%; min-height: 80px; }
+  button { font: inherit; border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink); padding: 9px 16px; cursor: pointer; }
+  button:hover:not(:disabled) { border-color: var(--mute); }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); font-weight: 600; }
+  .question { font-size: 1.3rem; font-weight: 600; margin: 0 0 4px; }
+  .help { color: var(--mute); margin: 0 0 18px; font-size: 0.95rem; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .side { border: 2px solid var(--line); border-radius: 10px; padding: 14px; text-align: center; }
+  .side.chosen { border-color: var(--sel); }
+  .side .name { font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+  .side button { width: 100%; margin-top: 8px; }
+  .side .plays { color: var(--mute); font-size: 0.85rem; margin-top: 6px; min-height: 1.3em; }
+  .side.playing { box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 40%, transparent); }
+  .nav { display: flex; justify-content: space-between; align-items: center; margin-top: 16px; gap: 12px; }
+  .progress { height: 6px; background: var(--line); border-radius: 3px; overflow: hidden; margin: 6px 0 18px; }
+  .progress > div { height: 100%; width: 0; background: var(--accent); transition: width 0.2s; }
+  .mute { color: var(--mute); font-size: 0.9rem; }
+  kbd { font: 0.8rem ui-monospace, monospace; border: 1px solid var(--line); border-radius: 4px; padding: 0 4px; }
+  .hidden { display: none; }
+  a { color: var(--sel); }
+</style>
+</head>
+<body>
+<main>
+  <h1>Punchy, big, clean?</h1>
+  <p class="sub">A short listening test for <a href="https://github.com/eigensoundlab/playhead">Playhead</a>. About 8 minutes.</p>
+
+  <section id="intro" class="card">
+    <p>You will hear pairs of short impact sounds (booms, hits, cracks), each made of a few layered samples. For each pair,
+      one question: which one is <b>punchier</b>, <b>bigger</b> or <b>cleaner</b>. There are no right answers; go with
+      what you hear. Play each sound as often as you like.</p>
+    <ul class="tight">
+      <li><b>Punchy</b>: the hit lands hard and at once, tight and focused, with nothing soft or late around it.</li>
+      <li><b>Big</b>: large and full, with weight in the low end, a wide spread of frequencies and a long body or tail.</li>
+      <li><b>Clean</b>: one clear hit whose parts don't smear or cover each other; no flams, no mud.</li>
+    </ul>
+    <p>Please use <b>headphones</b> or good speakers in a quiet room. The two sounds of a pair are equally loud, so
+      loudness alone won't decide.</p>
+    <p class="mute">Nothing is sent from this page. At the end you save a small file with your answers (which sound you
+      chose, how often you played each, how long you took, and the two questions below) and send it as described at the end.
+      No name, no address, no tracking.</p>
+    <label class="row">I'm listening on
+      <select id="device"><option value="">choose…</option><option value="headphones">headphones</option><option value="studio">studio monitors</option><option value="speakers">other speakers</option><option value="laptop">laptop or phone speakers</option></select>
+    </label>
+    <label class="row">Sound design, mixing or music production
+      <select id="experience"><option value="">choose…</option><option value="none">no experience</option><option value="hobby">as a hobby</option><option value="study">studying it</option><option value="pro">professionally</option></select>
+    </label>
+    <div class="nav"><span id="loading" class="mute">Loading the sounds…</span><button id="start" class="primary" disabled>Start</button></div>
+  </section>
+
+  <section id="level" class="card hidden">
+    <h2>Set the volume</h2>
+    <p>Play this sound and set your volume so it is clearly audible but comfortable. Please don't change it during the
+      test.</p>
+    <div class="nav"><button id="levelPlay">Play</button><button id="levelOk" class="primary" disabled>Continue</button></div>
+  </section>
+
+  <section id="trial" class="card hidden">
+    <div class="mute" id="count"></div>
+    <div class="progress"><div id="bar"></div></div>
+    <p class="question" id="question"></p>
+    <p class="help" id="help"></p>
+    <div class="pair">
+      <div class="side" id="sideA"><div class="name">A</div><button id="playA">Play A <kbd>1</kbd></button><button id="pickA" disabled>A <span class="pickword"></span></button><div class="plays" id="playsA"></div></div>
+      <div class="side" id="sideB"><div class="name">B</div><button id="playB">Play B <kbd>2</kbd></button><button id="pickB" disabled>B <span class="pickword"></span></button><div class="plays" id="playsB"></div></div>
+    </div>
+    <div class="nav"><span class="mute" id="hint">Play both, then choose.</span><button id="next" class="primary" disabled>Next <kbd>Enter</kbd></button></div>
+  </section>
+
+  <section id="done" class="card hidden">
+    <h2>Thank you</h2>
+    <p>Anything you noticed (optional): a pair that was hard to judge, a word you'd use instead, problems with playback.</p>
+    <textarea id="comments" placeholder="Your comments"></textarea>
+    <div class="nav"><span class="mute">Saves <span id="fname"></span></span><button id="save" class="primary">Save my answers</button></div>
+    <p id="send" class="hidden">Then please send the file: attach it to a
+      <a href="https://github.com/eigensoundlab/playhead/issues/new?template=listening-results.yml" target="_blank" rel="noopener">results form in the Playhead repository</a>
+      (drag it into the box), or send it to the address in your invitation. Thank you for your ears.</p>
+  </section>
+  <p class="mute" id="foot">The sounds are mixed from CC0 samples of Sonic Pi. How the test is built and analysed:
+    <a href="https://github.com/eigensoundlab/playhead/tree/main/experiments/listening">experiments/listening</a>.</p>
+</main>
+<script src="plan.js"></script>
+<script>
+"use strict";
+const $ = id => document.getElementById(id);
+const STORE = "playhead.listening.v1";
+let M = null, ctx = null, buffers = {}, state = null, playing = null;
+
+const store = { get() { try { return JSON.parse(localStorage.getItem(STORE)); } catch (e) { return null; } }, set(v) { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch (e) { /* storage unavailable: the test still runs */ } }, clear() { try { localStorage.removeItem(STORE); } catch (e) { /* nothing kept */ } } };
+const newId = () => { const a = new Uint8Array(6); (self.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.floor(Math.random() * 256)); return Array.from(a, v => v.toString(16).padStart(2, "0")).join(""); };
+
+async function load() {
+  M = await (await fetch("manifest.json")).json();
+  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  let n = 0;
+  await Promise.all(M.stimuli.map(async s => {
+    const data = await (await fetch(s.file)).arrayBuffer();
+    buffers[s.id] = await new Promise((ok, bad) => ctx.decodeAudioData(data, ok, bad));
+    $("loading").textContent = "Loading the sounds… " + (++n) + " of " + M.stimuli.length;
+  }));
+  $("loading").textContent = "";
+  const saved = store.get();
+  if (saved && saved.manifest === M.generator && saved.answers.length < saved.plan.length) {
+    state = saved;
+    $("start").textContent = "Continue (" + saved.answers.length + " of " + saved.plan.length + " done)";
+    $("device").value = saved.device; $("experience").value = saved.experience;
+  }
+  checkStart();
+}
+function checkStart() { $("start").disabled = !M || !$("device").value || !$("experience").value; }
+$("device").onchange = $("experience").onchange = checkStart;
+
+function play(id, side) {
+  if (ctx.state === "suspended") ctx.resume();
+  if (playing) { try { playing.src.stop(); } catch (e) { /* already ended */ } if (playing.side) $("side" + playing.side).classList.remove("playing"); }
+  const src = ctx.createBufferSource();
+  src.buffer = buffers[id]; src.connect(ctx.destination); src.start();
+  playing = { src, side };
+  if (side) $("side" + side).classList.add("playing");
+  src.onended = () => { if (playing && playing.src === src) { if (side) $("side" + side).classList.remove("playing"); playing = null; } };
+}
+
+$("start").onclick = () => {
+  if (ctx.state === "suspended") ctx.resume();
+  if (!state) {
+    const id = newId();
+    state = { test: M.test, version: M.version, manifest: M.generator, id, started: new Date().toISOString(), device: $("device").value, experience: $("experience").value, plan: ListeningPlan.plan(M, id), answers: [] };
+    store.set(state);
+  }
+  show("level");
+};
+$("levelPlay").onclick = () => { play(M.trials.find(t => t.type === "main").pair[0], null); $("levelOk").disabled = false; };
+$("levelOk").onclick = () => { show("trial"); trial(); };
+
+let cur = null;
+function trial() {
+  const k = state.answers.length;
+  if (k >= state.plan.length) return finish();
+  const p = state.plan[k], t = M.trials.find(x => x.id === p.trial), g = M.goals[t.goal];
+  cur = { p, t, plays: { A: 0, B: 0 }, pick: null, shown: performance.now(), firstPlay: null };
+  $("count").textContent = "Pair " + (k + 1) + " of " + state.plan.length;
+  $("bar").style.width = (100 * k / state.plan.length) + "%";
+  $("question").textContent = g.question;
+  $("help").textContent = g.help;
+  const word = { punch: "is punchier", big: "is bigger", clean: "is cleaner" }[t.goal];
+  document.querySelectorAll(".pickword").forEach(e => { e.textContent = word; });
+  for (const s of ["A", "B"]) { $("side" + s).classList.remove("chosen"); $("plays" + s).textContent = ""; $("pick" + s).disabled = true; }
+  $("next").disabled = true;
+  $("hint").textContent = "Play both, then choose.";
+}
+function playSide(s) {
+  if (!cur) return;
+  play(s === "A" ? cur.p.a : cur.p.b, s);
+  cur.plays[s]++;
+  if (cur.firstPlay == null) cur.firstPlay = performance.now();
+  $("plays" + s).textContent = "played " + cur.plays[s] + (cur.plays[s] === 1 ? " time" : " times");
+  if (cur.plays.A && cur.plays.B) { $("pickA").disabled = $("pickB").disabled = false; $("hint").textContent = "Choose, then Next."; }
+}
+function pick(s) {
+  if (!cur || !(cur.plays.A && cur.plays.B)) return;
+  cur.pick = s;
+  $("sideA").classList.toggle("chosen", s === "A"); $("sideB").classList.toggle("chosen", s === "B");
+  $("next").disabled = false;
+}
+function next() {
+  if (!cur || !cur.pick) return;
+  const now = performance.now();
+  state.answers.push({ trial: cur.t.id, repeat: cur.p.repeat, a: cur.p.a, b: cur.p.b, chosen: cur.pick === "A" ? cur.p.a : cur.p.b,
+    playsA: cur.plays.A, playsB: cur.plays.B, ms: Math.round(now - cur.shown) });
+  store.set(state);
+  if (playing) { try { playing.src.stop(); } catch (e) { /* ended */ } }
+  trial();
+}
+$("playA").onclick = () => playSide("A"); $("playB").onclick = () => playSide("B");
+$("pickA").onclick = () => pick("A"); $("pickB").onclick = () => pick("B");
+$("next").onclick = next;
+document.addEventListener("keydown", e => {
+  if ($("trial").classList.contains("hidden") || e.target.tagName === "TEXTAREA") return;
+  if (e.key === "1") playSide("A"); else if (e.key === "2") playSide("B");
+  else if (e.key === "Enter") next();
+});
+
+function finish() {
+  cur = null;
+  state.finished = state.finished || new Date().toISOString();
+  store.set(state);
+  $("fname").textContent = "playhead-listening-" + state.id + ".json";
+  show("done");
+}
+$("save").onclick = () => {
+  const out = { test: state.test, version: state.version, manifest: state.manifest, id: state.id, started: state.started, finished: state.finished,
+    device: state.device, experience: state.experience, comments: $("comments").value.trim(), answers: state.answers };
+  const url = URL.createObjectURL(new Blob([JSON.stringify(out, null, 1) + "\n"], { type: "application/json" }));
+  const a = Object.assign(document.createElement("a"), { href: url, download: "playhead-listening-" + state.id + ".json" });
+  document.body.append(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+  $("send").classList.remove("hidden");
+  store.clear();
+};
+function show(id) { for (const s of ["intro", "level", "trial", "done"]) $(s).classList.toggle("hidden", s !== id); window.scrollTo(0, 0); }
+
+load().catch(e => { $("loading").textContent = "The sounds could not be loaded (" + e.message + "). Please try another browser."; });
+</script>
+</body>
+</html>

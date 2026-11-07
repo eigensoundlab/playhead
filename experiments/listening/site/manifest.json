@@ -1,0 +1,3375 @@
+{
+ "test": "playhead-listening-goals",
+ "version": 1,
+ "generator": "experiments/listening/render.js, Playhead 0.3.0, from experiments/arrange/results.json (experiments/arrange/arrange.js, Playhead 0.3.0)",
+ "loudness": {
+  "measure": "maximum momentary loudness (ITU-R BS.1770, 400 ms windows)",
+  "target": -20.163
+ },
+ "goals": {
+  "punch": {
+   "question": "Which one hits punchier?",
+   "help": "Punchy: the hit lands hard and at once, tight and focused, with nothing soft or late around it."
+  },
+  "big": {
+   "question": "Which one sounds bigger?",
+   "help": "Big: large and full, with weight in the low end, a wide spread of frequencies and a long body or tail."
+  },
+  "clean": {
+   "question": "Which one sounds cleaner?",
+   "help": "Clean: one clear hit whose parts don't smear or cover each other; no flams, no mud."
+  }
+ },
+ "stimuli": [
+  {
+   "id": "s1-rough",
+   "file": "stimuli/s1-rough.flac",
+   "session": 1,
+   "kind": "rough",
+   "kit": {
+    "sub": "bd_boom",
+    "body": "drum_tom_lo_hard",
+    "transient": "perc_snap",
+    "tail": "drum_splash_hard"
+   },
+   "duration": 2.634,
+   "gainDb": -16.699,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.11869678611806445,
+     "gain": 0
+    },
+    {
+     "offset": 0.11188428630907289,
+     "gain": 0
+    },
+    {
+     "offset": 0.13419999658791348,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.553,
+     "rendered": 0.504
+    },
+    "big": {
+     "predicted": 0.732,
+     "rendered": 0.692
+    },
+    "clean": {
+     "predicted": 0.575,
+     "rendered": 0.542
+    }
+   },
+   "predicted": {
+    "peakLufs": -1.64,
+    "peakTime": 0.19,
+    "rise": 0.09,
+    "contrast": 48.62,
+    "focus": 4.37,
+    "together": 0.667,
+    "overlap": 1,
+    "coverage": 0.95,
+    "low": 0.702,
+    "tail": 1.56,
+    "shared": 0.498,
+    "harshness": 0.747,
+    "scores": {
+     "punch": 0.553,
+     "size": 0.777,
+     "clean": 0.581
+    },
+    "score": 0.553
+   },
+   "rendered": {
+    "peakLufs": -1.824,
+    "peakTime": 0.2,
+    "rise": 0.11,
+    "contrast": 36.32,
+    "focus": 4.38,
+    "together": 0.667,
+    "overlap": 1,
+    "coverage": 0.925,
+    "low": 0.716,
+    "tail": 1.562,
+    "shared": 0.498,
+    "harshness": 0.582,
+    "scores": {
+     "punch": 0.62,
+     "size": 0.773,
+     "clean": 0.85
+    },
+    "score": 0.62
+   }
+  },
+  {
+   "id": "s1-punch",
+   "file": "stimuli/s1-punch.flac",
+   "session": 1,
+   "kind": "punch",
+   "kit": {
+    "sub": "bd_boom",
+    "body": "drum_tom_lo_hard",
+    "transient": "perc_snap",
+    "tail": "drum_splash_hard"
+   },
+   "duration": 2.6,
+   "gainDb": -16.143,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.17,
+     "gain": -5
+    },
+    {
+     "offset": 0.13,
+     "gain": 0
+    },
+    {
+     "offset": 0.1,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.623,
+     "rendered": 0.606
+    },
+    "big": {
+     "predicted": 0.721,
+     "rendered": 0.711
+    },
+    "clean": {
+     "predicted": 0.786,
+     "rendered": 0.783
+    }
+   },
+   "predicted": {
+    "peakLufs": -2.1,
+    "peakTime": 0.23,
+    "rise": 0.14,
+    "contrast": 37.32,
+    "focus": 5.17,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 0.85,
+    "low": 0.689,
+    "tail": 1.52,
+    "shared": 0.046,
+    "harshness": 0.74,
+    "scores": {
+     "punch": 0.623,
+     "size": 0.745,
+     "clean": 0.827
+    },
+    "score": 0.623
+   },
+   "rendered": {
+    "peakLufs": -2.061,
+    "peakTime": 0.23,
+    "rise": 0.14,
+    "contrast": 30.19,
+    "focus": 5.21,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 0.825,
+    "low": 0.694,
+    "tail": 1.52,
+    "shared": 0.046,
+    "harshness": 0.616,
+    "scores": {
+     "punch": 0.61,
+     "size": 0.737,
+     "clean": 0.85
+    },
+    "score": 0.61
+   }
+  },
+  {
+   "id": "s1-big",
+   "file": "stimuli/s1-big.flac",
+   "session": 1,
+   "kind": "big",
+   "kit": {
+    "sub": "bd_boom",
+    "body": "drum_tom_lo_hard",
+    "transient": "perc_snap",
+    "tail": "drum_splash_hard"
+   },
+   "duration": 2.6,
+   "gainDb": -16.921,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.1187,
+     "gain": 0
+    },
+    {
+     "offset": 0.1119,
+     "gain": 2.5
+    },
+    {
+     "offset": 0.09,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.63,
+     "rendered": 0.61
+    },
+    "big": {
+     "predicted": 0.796,
+     "rendered": 0.775
+    },
+    "clean": {
+     "predicted": 0.635,
+     "rendered": 0.619
+    }
+   },
+   "predicted": {
+    "peakLufs": -1.02,
+    "peakTime": 0.15,
+    "rise": 0.06,
+    "contrast": 57.1,
+    "focus": 4.48,
+    "together": 0.75,
+    "overlap": 1,
+    "coverage": 0.975,
+    "low": 0.694,
+    "tail": 1.56,
+    "shared": 0.502,
+    "harshness": 0.752,
+    "scores": {
+     "punch": 0.63,
+     "size": 0.837,
+     "clean": 0.636
+    },
+    "score": 0.63
+   },
+   "rendered": {
+    "peakLufs": -1.034,
+    "peakTime": 0.15,
+    "rise": 0.07,
+    "contrast": 44.26,
+    "focus": 4.46,
+    "together": 0.75,
+    "overlap": 1,
+    "coverage": 0.95,
+    "low": 0.688,
+    "tail": 1.57,
+    "shared": 0.502,
+    "harshness": 0.565,
+    "scores": {
+     "punch": 0.71,
+     "size": 0.841,
+     "clean": 0.91
+    },
+    "score": 0.71
+   }
+  },
+  {
+   "id": "s1-clean",
+   "file": "stimuli/s1-clean.flac",
+   "session": 1,
+   "kind": "clean",
+   "kit": {
+    "sub": "bd_boom",
+    "body": "drum_tom_lo_hard",
+    "transient": "perc_snap",
+    "tail": "drum_splash_hard"
+   },
+   "duration": 2.59,
+   "gainDb": -15.85,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0,
+     "gain": -1
+    },
+    {
+     "offset": 0.15,
+     "gain": -3.5
+    },
+    {
+     "offset": 0.04,
+     "gain": -0.5
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.577,
+     "rendered": 0.57
+    },
+    "big": {
+     "predicted": 0.695,
+     "rendered": 0.695
+    },
+    "clean": {
+     "predicted": 0.764,
+     "rendered": 0.762
+    }
+   },
+   "predicted": {
+    "peakLufs": -2.15,
+    "peakTime": 0.19,
+    "rise": 0.2,
+    "contrast": 20.87,
+    "focus": 4.88,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 0.775,
+    "low": 0.754,
+    "tail": 1.54,
+    "shared": 0.079,
+    "harshness": 0.745,
+    "scores": {
+     "punch": 0.577,
+     "size": 0.725,
+     "clean": 0.811
+    },
+    "score": 0.577
+   },
+   "rendered": {
+    "peakLufs": -2.218,
+    "peakTime": 0.19,
+    "rise": 0.2,
+    "contrast": 18.52,
+    "focus": 4.81,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 0.775,
+    "low": 0.744,
+    "tail": 1.55,
+    "shared": 0.079,
+    "harshness": 0.63,
+    "scores": {
+     "punch": 0.578,
+     "size": 0.726,
+     "clean": 0.85
+    },
+    "score": 0.578
+   }
+  },
+  {
+   "id": "s2-rough",
+   "file": "stimuli/s2-rough.flac",
+   "session": 2,
+   "kind": "rough",
+   "kit": {
+    "sub": "misc_cineboom",
+    "body": "perc_impact1",
+    "transient": "elec_wood",
+    "tail": "perc_swash"
+   },
+   "duration": 2.617,
+   "gainDb": -7.595,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.09345794951238574,
+     "gain": 0
+    },
+    {
+     "offset": 0.08275745466712744,
+     "gain": 0
+    },
+    {
+     "offset": 0.11954059041083819,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.679,
+     "rendered": 0.664
+    },
+    "big": {
+     "predicted": 0.531,
+     "rendered": 0.536
+    },
+    "clean": {
+     "predicted": 0.756,
+     "rendered": 0.753
+    }
+   },
+   "predicted": {
+    "peakLufs": -7.32,
+    "peakTime": 0.2,
+    "rise": 0.13,
+    "contrast": 36.35,
+    "focus": 21.52,
+    "together": 1,
+    "overlap": 0.75,
+    "coverage": 0.775,
+    "low": 0.218,
+    "tail": 0.42,
+    "shared": 0.05,
+    "harshness": 0.668,
+    "scores": {
+     "punch": 0.679,
+     "size": 0.494,
+     "clean": 0.775
+    },
+    "score": 0.679
+   },
+   "rendered": {
+    "peakLufs": -7.269,
+    "peakTime": 0.2,
+    "rise": 0.13,
+    "contrast": 30.92,
+    "focus": 21.29,
+    "together": 1,
+    "overlap": 0.75,
+    "coverage": 0.775,
+    "low": 0.238,
+    "tail": 0.42,
+    "shared": 0.05,
+    "harshness": 0.576,
+    "scores": {
+     "punch": 0.719,
+     "size": 0.504,
+     "clean": 0.85
+    },
+    "score": 0.719
+   }
+  },
+  {
+   "id": "s2-punch",
+   "file": "stimuli/s2-punch.flac",
+   "session": 2,
+   "kind": "punch",
+   "kit": {
+    "sub": "misc_cineboom",
+    "body": "perc_impact1",
+    "transient": "elec_wood",
+    "tail": "perc_swash"
+   },
+   "duration": 2.71,
+   "gainDb": -7.683,
+   "parts": [
+    {
+     "offset": 0.2,
+     "gain": 0
+    },
+    {
+     "offset": 0.0935,
+     "gain": 0
+    },
+    {
+     "offset": 0.09,
+     "gain": 0
+    },
+    {
+     "offset": 0.1195,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.684,
+     "rendered": 0.668
+    },
+    "big": {
+     "predicted": 0.531,
+     "rendered": 0.532
+    },
+    "clean": {
+     "predicted": 0.753,
+     "rendered": 0.75
+    }
+   },
+   "predicted": {
+    "peakLufs": -7.25,
+    "peakTime": 0.2,
+    "rise": 0.12,
+    "contrast": 38.31,
+    "focus": 21.59,
+    "together": 1,
+    "overlap": 0.75,
+    "coverage": 0.775,
+    "low": 0.219,
+    "tail": 0.41,
+    "shared": 0.06,
+    "harshness": 0.655,
+    "scores": {
+     "punch": 0.684,
+     "size": 0.493,
+     "clean": 0.77
+    },
+    "score": 0.684
+   },
+   "rendered": {
+    "peakLufs": -7.119,
+    "peakTime": 0.2,
+    "rise": 0.13,
+    "contrast": 32.33,
+    "focus": 21.5,
+    "together": 1,
+    "overlap": 0.75,
+    "coverage": 0.775,
+    "low": 0.229,
+    "tail": 0.41,
+    "shared": 0.06,
+    "harshness": 0.562,
+    "scores": {
+     "punch": 0.724,
+     "size": 0.498,
+     "clean": 0.85
+    },
+    "score": 0.724
+   }
+  },
+  {
+   "id": "s2-big",
+   "file": "stimuli/s2-big.flac",
+   "session": 2,
+   "kind": "big",
+   "kit": {
+    "sub": "misc_cineboom",
+    "body": "perc_impact1",
+    "transient": "elec_wood",
+    "tail": "perc_swash"
+   },
+   "duration": 2.66,
+   "gainDb": -9.694,
+   "parts": [
+    {
+     "offset": 0.18,
+     "gain": 3
+    },
+    {
+     "offset": 0.17,
+     "gain": 3
+    },
+    {
+     "offset": 0.18,
+     "gain": 0
+    },
+    {
+     "offset": 0.1195,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.691,
+     "rendered": 0.671
+    },
+    "big": {
+     "predicted": 0.794,
+     "rendered": 0.778
+    },
+    "clean": {
+     "predicted": 0.782,
+     "rendered": 0.766
+    }
+   },
+   "predicted": {
+    "peakLufs": -5.23,
+    "peakTime": 0.21,
+    "rise": 0.06,
+    "contrast": 49.99,
+    "focus": 16.73,
+    "together": 0.667,
+    "overlap": 0.75,
+    "coverage": 0.85,
+    "low": 0.345,
+    "tail": 2.47,
+    "shared": 0.04,
+    "harshness": 0.713,
+    "scores": {
+     "punch": 0.691,
+     "size": 0.819,
+     "clean": 0.805
+    },
+    "score": 0.691
+   },
+   "rendered": {
+    "peakLufs": -5.258,
+    "peakTime": 0.21,
+    "rise": 0.07,
+    "contrast": 44.98,
+    "focus": 16.73,
+    "together": 0.667,
+    "overlap": 0.75,
+    "coverage": 0.85,
+    "low": 0.346,
+    "tail": 2.5,
+    "shared": 0.04,
+    "harshness": 0.612,
+    "scores": {
+     "punch": 0.792,
+     "size": 0.838,
+     "clean": 0.91
+    },
+    "score": 0.792
+   }
+  },
+  {
+   "id": "s2-clean",
+   "file": "stimuli/s2-clean.flac",
+   "session": 2,
+   "kind": "clean",
+   "kit": {
+    "sub": "misc_cineboom",
+    "body": "perc_impact1",
+    "transient": "elec_wood",
+    "tail": "perc_swash"
+   },
+   "duration": 2.58,
+   "gainDb": -9.641,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.17,
+     "gain": 3
+    },
+    {
+     "offset": 0.19,
+     "gain": 0
+    },
+    {
+     "offset": 0.1195,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.689,
+     "rendered": 0.668
+    },
+    "big": {
+     "predicted": 0.793,
+     "rendered": 0.635
+    },
+    "clean": {
+     "predicted": 0.775,
+     "rendered": 0.759
+    }
+   },
+   "predicted": {
+    "peakLufs": -5.24,
+    "peakTime": 0.21,
+    "rise": 0.06,
+    "contrast": 49.98,
+    "focus": 16.65,
+    "together": 0.667,
+    "overlap": 0.75,
+    "coverage": 0.85,
+    "low": 0.345,
+    "tail": 2.39,
+    "shared": 0.057,
+    "harshness": 0.686,
+    "scores": {
+     "punch": 0.689,
+     "size": 0.819,
+     "clean": 0.797
+    },
+    "score": 0.689
+   },
+   "rendered": {
+    "peakLufs": -5.216,
+    "peakTime": 0.21,
+    "rise": 0.07,
+    "contrast": 45.05,
+    "focus": 16.59,
+    "together": 0.667,
+    "overlap": 0.75,
+    "coverage": 0.85,
+    "low": 0.338,
+    "tail": 0.61,
+    "shared": 0.057,
+    "harshness": 0.586,
+    "scores": {
+     "punch": 0.791,
+     "size": 0.66,
+     "clean": 0.91
+    },
+    "score": 0.791
+   }
+  },
+  {
+   "id": "s3-rough",
+   "file": "stimuli/s3-rough.flac",
+   "session": 3,
+   "kind": "rough",
+   "kit": {
+    "sub": "bd_808",
+    "body": "elec_fuzz_tom",
+    "transient": "elec_tick",
+    "tail": "elec_cymbal"
+   },
+   "duration": 0.7,
+   "gainDb": -14.594,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.06821911290670704,
+     "gain": 0
+    },
+    {
+     "offset": 0.133630623025182,
+     "gain": 0
+    },
+    {
+     "offset": 0.10488118423376289,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.53,
+     "rendered": 0.506
+    },
+    "big": {
+     "predicted": 0.553,
+     "rendered": 0.543
+    },
+    "clean": {
+     "predicted": 0.672,
+     "rendered": 0.655
+    }
+   },
+   "predicted": {
+    "peakLufs": -2.57,
+    "peakTime": 0.14,
+    "rise": 0.08,
+    "contrast": 52.78,
+    "focus": 10.85,
+    "together": 0.5,
+    "overlap": 0.5,
+    "coverage": 0.7,
+    "low": 0.427,
+    "tail": 0.43,
+    "shared": 0.025,
+    "harshness": 0.874,
+    "scores": {
+     "punch": 0.53,
+     "size": 0.559,
+     "clean": 0.708
+    },
+    "score": 0.53
+   },
+   "rendered": {
+    "peakLufs": -2.514,
+    "peakTime": 0.14,
+    "rise": 0.09,
+    "contrast": 44.18,
+    "focus": 10.22,
+    "together": 0.5,
+    "overlap": 0.5,
+    "coverage": 0.725,
+    "low": 0.429,
+    "tail": 0.439,
+    "shared": 0.025,
+    "harshness": 0.774,
+    "scores": {
+     "punch": 0.708,
+     "size": 0.602,
+     "clean": 0.88
+    },
+    "score": 0.708
+   }
+  },
+  {
+   "id": "s3-punch",
+   "file": "stimuli/s3-punch.flac",
+   "session": 3,
+   "kind": "punch",
+   "kit": {
+    "sub": "bd_808",
+    "body": "elec_fuzz_tom",
+    "transient": "elec_tick",
+    "tail": "elec_cymbal"
+   },
+   "duration": 0.71,
+   "gainDb": -14.568,
+   "parts": [
+    {
+     "offset": 0.1199,
+     "gain": 0
+    },
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.07,
+     "gain": 0
+    },
+    {
+     "offset": 0.1049,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.669,
+     "rendered": 0.624
+    },
+    "big": {
+     "predicted": 0.662,
+     "rendered": 0.636
+    },
+    "clean": {
+     "predicted": 0.769,
+     "rendered": 0.736
+    }
+   },
+   "predicted": {
+    "peakLufs": -2.74,
+    "peakTime": 0.15,
+    "rise": 0.06,
+    "contrast": 53.87,
+    "focus": 11.26,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.775,
+    "low": 0.465,
+    "tail": 0.42,
+    "shared": 0.062,
+    "harshness": 0.863,
+    "scores": {
+     "punch": 0.669,
+     "size": 0.66,
+     "clean": 0.794
+    },
+    "score": 0.669
+   },
+   "rendered": {
+    "peakLufs": -2.792,
+    "peakTime": 0.15,
+    "rise": 0.08,
+    "contrast": 42.85,
+    "focus": 10.48,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.8,
+    "low": 0.464,
+    "tail": 0.43,
+    "shared": 0.062,
+    "harshness": 0.734,
+    "scores": {
+     "punch": 0.73,
+     "size": 0.639,
+     "clean": 0.895
+    },
+    "score": 0.73
+   }
+  },
+  {
+   "id": "s3-big",
+   "file": "stimuli/s3-big.flac",
+   "session": 3,
+   "kind": "big",
+   "kit": {
+    "sub": "bd_808",
+    "body": "elec_fuzz_tom",
+    "transient": "elec_tick",
+    "tail": "elec_cymbal"
+   },
+   "duration": 0.75,
+   "gainDb": -14.272,
+   "parts": [
+    {
+     "offset": 0.1899,
+     "gain": 0
+    },
+    {
+     "offset": 0.1,
+     "gain": -1
+    },
+    {
+     "offset": 0.1299,
+     "gain": 0.5
+    },
+    {
+     "offset": 0.1049,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.682,
+     "rendered": 0.643
+    },
+    "big": {
+     "predicted": 0.713,
+     "rendered": 0.652
+    },
+    "clean": {
+     "predicted": 0.791,
+     "rendered": 0.759
+    }
+   },
+   "predicted": {
+    "peakLufs": -3.27,
+    "peakTime": 0.14,
+    "rise": 0.05,
+    "contrast": 56.73,
+    "focus": 9.93,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.925,
+    "low": 0.415,
+    "tail": 0.43,
+    "shared": 0.043,
+    "harshness": 0.873,
+    "scores": {
+     "punch": 0.682,
+     "size": 0.721,
+     "clean": 0.819
+    },
+    "score": 0.682
+   },
+   "rendered": {
+    "peakLufs": -3.295,
+    "peakTime": 0.15,
+    "rise": 0.07,
+    "contrast": 46.65,
+    "focus": 10.1,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.8,
+    "low": 0.421,
+    "tail": 0.43,
+    "shared": 0.043,
+    "harshness": 0.749,
+    "scores": {
+     "punch": 0.747,
+     "size": 0.654,
+     "clean": 0.91
+    },
+    "score": 0.747
+   }
+  },
+  {
+   "id": "s3-clean",
+   "file": "stimuli/s3-clean.flac",
+   "session": 3,
+   "kind": "clean",
+   "kit": {
+    "sub": "bd_808",
+    "body": "elec_fuzz_tom",
+    "transient": "elec_tick",
+    "tail": "elec_cymbal"
+   },
+   "duration": 0.718,
+   "gainDb": -13.543,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.2199,
+     "gain": -4.5
+    },
+    {
+     "offset": 0.03,
+     "gain": 0
+    },
+    {
+     "offset": 0.1049,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.664,
+     "rendered": 0.621
+    },
+    "big": {
+     "predicted": 0.663,
+     "rendered": 0.632
+    },
+    "clean": {
+     "predicted": 0.798,
+     "rendered": 0.766
+    }
+   },
+   "predicted": {
+    "peakLufs": -4.51,
+    "peakTime": 0.14,
+    "rise": 0.05,
+    "contrast": 52.11,
+    "focus": 6.81,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 1,
+    "low": 0.234,
+    "tail": 0.45,
+    "shared": 0.016,
+    "harshness": 0.851,
+    "scores": {
+     "punch": 0.664,
+     "size": 0.663,
+     "clean": 0.832
+    },
+    "score": 0.664
+   },
+   "rendered": {
+    "peakLufs": -4.447,
+    "peakTime": 0.14,
+    "rise": 0.07,
+    "contrast": 40.49,
+    "focus": 6.43,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 1,
+    "low": 0.235,
+    "tail": 0.459,
+    "shared": 0.016,
+    "harshness": 0.758,
+    "scores": {
+     "punch": 0.723,
+     "size": 0.635,
+     "clean": 0.91
+    },
+    "score": 0.723
+   }
+  },
+  {
+   "id": "check-smeared",
+   "file": "stimuli/check-smeared.flac",
+   "session": 3,
+   "kind": "check",
+   "kit": {
+    "sub": "bd_808",
+    "body": "elec_fuzz_tom",
+    "transient": "elec_tick",
+    "tail": "elec_cymbal"
+   },
+   "duration": 0.668,
+   "gainDb": -13.484,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.2649,
+     "gain": -4.5
+    },
+    {
+     "offset": 0.12,
+     "gain": 0
+    },
+    {
+     "offset": 0.1049,
+     "gain": 0
+    }
+   ],
+   "scores": null,
+   "predicted": null,
+   "rendered": null
+  },
+  {
+   "id": "s4-rough",
+   "file": "stimuli/s4-rough.flac",
+   "session": 4,
+   "kind": "rough",
+   "kit": {
+    "sub": "drum_heavy_kick",
+    "body": "perc_impact2",
+    "transient": "perc_snap2",
+    "tail": "drum_cymbal_open"
+   },
+   "duration": 1.904,
+   "gainDb": -12.486,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.12298027630102834,
+     "gain": 0
+    },
+    {
+     "offset": 0.10450379138323655,
+     "gain": 0
+    },
+    {
+     "offset": 0.09022177805668757,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.663,
+     "rendered": 0.621
+    },
+    "big": {
+     "predicted": 0.646,
+     "rendered": 0.581
+    },
+    "clean": {
+     "predicted": 0.653,
+     "rendered": 0.621
+    }
+   },
+   "predicted": {
+    "peakLufs": -1.68,
+    "peakTime": 0.13,
+    "rise": 0.05,
+    "contrast": 58.32,
+    "focus": 12.83,
+    "together": 0.5,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.128,
+    "tail": 1.103,
+    "shared": 0.429,
+    "harshness": 0.739,
+    "scores": {
+     "punch": 0.663,
+     "size": 0.642,
+     "clean": 0.65
+    },
+    "score": 0.663
+   },
+   "rendered": {
+    "peakLufs": -2.208,
+    "peakTime": 0.14,
+    "rise": 0.07,
+    "contrast": 45.87,
+    "focus": 12.58,
+    "together": 0.5,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.044,
+    "tail": 1.113,
+    "shared": 0.429,
+    "harshness": 0.564,
+    "scores": {
+     "punch": 0.764,
+     "size": 0.621,
+     "clean": 0.91
+    },
+    "score": 0.764
+   }
+  },
+  {
+   "id": "s4-punch",
+   "file": "stimuli/s4-punch.flac",
+   "session": 4,
+   "kind": "punch",
+   "kit": {
+    "sub": "drum_heavy_kick",
+    "body": "perc_impact2",
+    "transient": "perc_snap2",
+    "tail": "drum_cymbal_open"
+   },
+   "duration": 1.905,
+   "gainDb": -12.548,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 1
+    },
+    {
+     "offset": 0.1002,
+     "gain": 0
+    },
+    {
+     "offset": 0.1045,
+     "gain": 0
+    },
+    {
+     "offset": 0.1002,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.738,
+     "rendered": 0.695
+    },
+    "big": {
+     "predicted": 0.702,
+     "rendered": 0.635
+    },
+    "clean": {
+     "predicted": 0.726,
+     "rendered": 0.694
+    }
+   },
+   "predicted": {
+    "peakLufs": -1.42,
+    "peakTime": 0.13,
+    "rise": 0.04,
+    "contrast": 58.58,
+    "focus": 13.02,
+    "together": 0.75,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.151,
+    "tail": 1.103,
+    "shared": 0.388,
+    "harshness": 0.74,
+    "scores": {
+     "punch": 0.738,
+     "size": 0.693,
+     "clean": 0.724
+    },
+    "score": 0.738
+   },
+   "rendered": {
+    "peakLufs": -2.086,
+    "peakTime": 0.14,
+    "rise": 0.06,
+    "contrast": 45.23,
+    "focus": 12.62,
+    "together": 0.75,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.059,
+    "tail": 1.123,
+    "shared": 0.388,
+    "harshness": 0.527,
+    "scores": {
+     "punch": 0.784,
+     "size": 0.645,
+     "clean": 0.925
+    },
+    "score": 0.784
+   }
+  },
+  {
+   "id": "s4-big",
+   "file": "stimuli/s4-big.flac",
+   "session": 4,
+   "kind": "big",
+   "kit": {
+    "sub": "drum_heavy_kick",
+    "body": "perc_impact2",
+    "transient": "perc_snap2",
+    "tail": "drum_cymbal_open"
+   },
+   "duration": 2.14,
+   "gainDb": -12.03,
+   "parts": [
+    {
+     "offset": 0.2406,
+     "gain": 1
+    },
+    {
+     "offset": 0.2907,
+     "gain": 0
+    },
+    {
+     "offset": 0.1045,
+     "gain": 0
+    },
+    {
+     "offset": 0.3402,
+     "gain": -1.5
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.602,
+     "rendered": 0.581
+    },
+    "big": {
+     "predicted": 0.833,
+     "rendered": 0.737
+    },
+    "clean": {
+     "predicted": 0.732,
+     "rendered": 0.715
+    }
+   },
+   "predicted": {
+    "peakLufs": -5.64,
+    "peakTime": 0.13,
+    "rise": 0.04,
+    "contrast": 54.36,
+    "focus": 2.97,
+    "together": 1,
+    "overlap": 0.25,
+    "coverage": 1,
+    "low": 0.397,
+    "tail": 1.494,
+    "shared": 0.082,
+    "harshness": 0.723,
+    "scores": {
+     "punch": 0.602,
+     "size": 0.89,
+     "clean": 0.764
+    },
+    "score": 0.602
+   },
+   "rendered": {
+    "peakLufs": -5.584,
+    "peakTime": 0.14,
+    "rise": 0.05,
+    "contrast": 50.99,
+    "focus": 2.95,
+    "together": 1,
+    "overlap": 0.25,
+    "coverage": 1,
+    "low": 0.2,
+    "tail": 1.483,
+    "shared": 0.082,
+    "harshness": 0.668,
+    "scores": {
+     "punch": 0.74,
+     "size": 0.775,
+     "clean": 0.94
+    },
+    "score": 0.74
+   }
+  },
+  {
+   "id": "s4-clean",
+   "file": "stimuli/s4-clean.flac",
+   "session": 4,
+   "kind": "clean",
+   "kit": {
+    "sub": "drum_heavy_kick",
+    "body": "perc_impact2",
+    "transient": "perc_snap2",
+    "tail": "drum_cymbal_open"
+   },
+   "duration": 1.94,
+   "gainDb": -11.776,
+   "parts": [
+    {
+     "offset": 0.1504,
+     "gain": 0
+    },
+    {
+     "offset": 0.2205,
+     "gain": 3
+    },
+    {
+     "offset": 0.1045,
+     "gain": 0
+    },
+    {
+     "offset": 0.1403,
+     "gain": -5.5
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.718,
+     "rendered": 0.708
+    },
+    "big": {
+     "predicted": 0.744,
+     "rendered": 0.673
+    },
+    "clean": {
+     "predicted": 0.843,
+     "rendered": 0.828
+    }
+   },
+   "predicted": {
+    "peakLufs": -5.64,
+    "peakTime": 0.13,
+    "rise": 0.04,
+    "contrast": 54.36,
+    "focus": 7.68,
+    "together": 0.667,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.28,
+    "tail": 1.113,
+    "shared": 0.063,
+    "harshness": 0.666,
+    "scores": {
+     "punch": 0.718,
+     "size": 0.751,
+     "clean": 0.874
+    },
+    "score": 0.718
+   },
+   "rendered": {
+    "peakLufs": -4.696,
+    "peakTime": 0.14,
+    "rise": 0.05,
+    "contrast": 50.95,
+    "focus": 9.09,
+    "together": 0.667,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.15,
+    "tail": 1.062,
+    "shared": 0.063,
+    "harshness": 0.596,
+    "scores": {
+     "punch": 0.781,
+     "size": 0.698,
+     "clean": 0.94
+    },
+    "score": 0.781
+   }
+  },
+  {
+   "id": "s5-rough",
+   "file": "stimuli/s5-rough.flac",
+   "session": 5,
+   "kind": "rough",
+   "kit": {
+    "sub": "bd_zum",
+    "body": "glitch_perc3",
+    "transient": "elec_pop",
+    "tail": "ambi_dark_woosh"
+   },
+   "duration": 2.6,
+   "gainDb": -9.411,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.09774143969534964,
+     "gain": 0
+    },
+    {
+     "offset": 0.0753769597412911,
+     "gain": 0
+    },
+    {
+     "offset": 0.07556237187961228,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.579,
+     "rendered": 0.558
+    },
+    "big": {
+     "predicted": 0.677,
+     "rendered": 0.687
+    },
+    "clean": {
+     "predicted": 0.718,
+     "rendered": 0.702
+    }
+   },
+   "predicted": {
+    "peakLufs": -5.15,
+    "peakTime": 0.14,
+    "rise": 0.07,
+    "contrast": 52.67,
+    "focus": 12.64,
+    "together": 0.333,
+    "overlap": 0.75,
+    "coverage": 0.525,
+    "low": 0.598,
+    "tail": 2.44,
+    "shared": 0.014,
+    "harshness": 0.708,
+    "scores": {
+     "punch": 0.579,
+     "size": 0.701,
+     "clean": 0.753
+    },
+    "score": 0.579
+   },
+   "rendered": {
+    "peakLufs": -5.427,
+    "peakTime": 0.14,
+    "rise": 0.08,
+    "contrast": 43.93,
+    "focus": 12.38,
+    "together": 0.333,
+    "overlap": 0.75,
+    "coverage": 0.65,
+    "low": 0.392,
+    "tail": 2.436,
+    "shared": 0.014,
+    "harshness": 0.615,
+    "scores": {
+     "punch": 0.743,
+     "size": 0.786,
+     "clean": 0.895
+    },
+    "score": 0.743
+   }
+  },
+  {
+   "id": "s5-punch",
+   "file": "stimuli/s5-punch.flac",
+   "session": 5,
+   "kind": "punch",
+   "kit": {
+    "sub": "bd_zum",
+    "body": "glitch_perc3",
+    "transient": "elec_pop",
+    "tail": "ambi_dark_woosh"
+   },
+   "duration": 2.72,
+   "gainDb": -8.531,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.3477,
+     "gain": -6
+    },
+    {
+     "offset": 0.16,
+     "gain": 0
+    },
+    {
+     "offset": 0.22,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.702,
+     "rendered": 0.679
+    },
+    "big": {
+     "predicted": 0.462,
+     "rendered": 0.464
+    },
+    "clean": {
+     "predicted": 0.774,
+     "rendered": 0.757
+    }
+   },
+   "predicted": {
+    "peakLufs": -5.48,
+    "peakTime": 0.17,
+    "rise": 0.08,
+    "contrast": 49.75,
+    "focus": 21.45,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.475,
+    "low": 0.209,
+    "tail": 0.08,
+    "shared": 0.007,
+    "harshness": 0.682,
+    "scores": {
+     "punch": 0.702,
+     "size": 0.402,
+     "clean": 0.792
+    },
+    "score": 0.702
+   },
+   "rendered": {
+    "peakLufs": -5.166,
+    "peakTime": 0.17,
+    "rise": 0.09,
+    "contrast": 43.29,
+    "focus": 21,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.5,
+    "low": 0.232,
+    "tail": 0.11,
+    "shared": 0.007,
+    "harshness": 0.615,
+    "scores": {
+     "punch": 0.78,
+     "size": 0.41,
+     "clean": 0.88
+    },
+    "score": 0.78
+   }
+  },
+  {
+   "id": "s5-big",
+   "file": "stimuli/s5-big.flac",
+   "session": 5,
+   "kind": "big",
+   "kit": {
+    "sub": "bd_zum",
+    "body": "glitch_perc3",
+    "transient": "elec_pop",
+    "tail": "ambi_dark_woosh"
+   },
+   "duration": 2.74,
+   "gainDb": -8.675,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.13,
+     "gain": 0
+    },
+    {
+     "offset": 0,
+     "gain": -3
+    },
+    {
+     "offset": 0.19,
+     "gain": -5
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.638,
+     "rendered": 0.549
+    },
+    "big": {
+     "predicted": 0.772,
+     "rendered": 0.678
+    },
+    "clean": {
+     "predicted": 0.774,
+     "rendered": 0.708
+    }
+   },
+   "predicted": {
+    "peakLufs": -5.94,
+    "peakTime": 0.16,
+    "rise": 0.07,
+    "contrast": 31.69,
+    "focus": 11.92,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.65,
+    "low": 0.487,
+    "tail": 2.5,
+    "shared": 0.004,
+    "harshness": 0.641,
+    "scores": {
+     "punch": 0.638,
+     "size": 0.805,
+     "clean": 0.808
+    },
+    "score": 0.638
+   },
+   "rendered": {
+    "peakLufs": -5.797,
+    "peakTime": 0.16,
+    "rise": 0.17,
+    "contrast": 27.69,
+    "focus": 12.07,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.675,
+    "low": 0.315,
+    "tail": 2.5,
+    "shared": 0.004,
+    "harshness": 0.592,
+    "scores": {
+     "punch": 0.65,
+     "size": 0.71,
+     "clean": 0.85
+    },
+    "score": 0.65
+   }
+  },
+  {
+   "id": "s5-clean",
+   "file": "stimuli/s5-clean.flac",
+   "session": 5,
+   "kind": "clean",
+   "kit": {
+    "sub": "bd_zum",
+    "body": "glitch_perc3",
+    "transient": "elec_pop",
+    "tail": "ambi_dark_woosh"
+   },
+   "duration": 2.72,
+   "gainDb": -9.418,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.14,
+     "gain": 0
+    },
+    {
+     "offset": 0.17,
+     "gain": 0
+    },
+    {
+     "offset": 0.22,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.689,
+     "rendered": 0.673
+    },
+    "big": {
+     "predicted": 0.668,
+     "rendered": 0.664
+    },
+    "clean": {
+     "predicted": 0.809,
+     "rendered": 0.794
+    }
+   },
+   "predicted": {
+    "peakLufs": -5.79,
+    "peakTime": 0.17,
+    "rise": 0.08,
+    "contrast": 49.44,
+    "focus": 11.99,
+    "together": 1,
+    "overlap": 0.75,
+    "coverage": 0.65,
+    "low": 0.145,
+    "tail": 2.55,
+    "shared": 0.011,
+    "harshness": 0.703,
+    "scores": {
+     "punch": 0.689,
+     "size": 0.662,
+     "clean": 0.84
+    },
+    "score": 0.689
+   },
+   "rendered": {
+    "peakLufs": -5.229,
+    "peakTime": 0.17,
+    "rise": 0.09,
+    "contrast": 44.02,
+    "focus": 12.54,
+    "together": 1,
+    "overlap": 0.75,
+    "coverage": 0.675,
+    "low": 0.158,
+    "tail": 2.55,
+    "shared": 0.011,
+    "harshness": 0.648,
+    "scores": {
+     "punch": 0.724,
+     "size": 0.661,
+     "clean": 0.88
+    },
+    "score": 0.724
+   }
+  },
+  {
+   "id": "s6-rough",
+   "file": "stimuli/s6-rough.flac",
+   "session": 6,
+   "kind": "rough",
+   "kit": {
+    "sub": "bass_hit_c",
+    "body": "drum_tom_mid_hard",
+    "transient": "drum_snare_hard",
+    "tail": "drum_splash_soft"
+   },
+   "duration": 1.958,
+   "gainDb": -12.63,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.07250260308967094,
+     "gain": 0
+    },
+    {
+     "offset": 0.12625012809934566,
+     "gain": 0
+    },
+    {
+     "offset": 0.06090296570253697,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.546,
+     "rendered": 0.541
+    },
+    "big": {
+     "predicted": 0.643,
+     "rendered": 0.65
+    },
+    "clean": {
+     "predicted": 0.534,
+     "rendered": 0.533
+    }
+   },
+   "predicted": {
+    "peakLufs": -2.9,
+    "peakTime": 0.15,
+    "rise": 0.09,
+    "contrast": 47.89,
+    "focus": 13.38,
+    "together": 0.333,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.374,
+    "tail": 0.939,
+    "shared": 0.499,
+    "harshness": 0.66,
+    "scores": {
+     "punch": 0.546,
+     "size": 0.668,
+     "clean": 0.53
+    },
+    "score": 0.546
+   },
+   "rendered": {
+    "peakLufs": -3.051,
+    "peakTime": 0.14,
+    "rise": 0.09,
+    "contrast": 41.59,
+    "focus": 12.66,
+    "together": 0.333,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.389,
+    "tail": 0.959,
+    "shared": 0.499,
+    "harshness": 0.533,
+    "scores": {
+     "punch": 0.724,
+     "size": 0.744,
+     "clean": 0.88
+    },
+    "score": 0.724
+   }
+  },
+  {
+   "id": "s6-punch",
+   "file": "stimuli/s6-punch.flac",
+   "session": 6,
+   "kind": "punch",
+   "kit": {
+    "sub": "bass_hit_c",
+    "body": "drum_tom_mid_hard",
+    "transient": "drum_snare_hard",
+    "tail": "drum_splash_soft"
+   },
+   "duration": 1.908,
+   "gainDb": -11.565,
+   "parts": [
+    {
+     "offset": 0.0599,
+     "gain": -4.5
+    },
+    {
+     "offset": 0.0725,
+     "gain": 0
+    },
+    {
+     "offset": 0.04,
+     "gain": -1
+    },
+    {
+     "offset": 0,
+     "gain": -1.5
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.734,
+     "rendered": 0.709
+    },
+    "big": {
+     "predicted": 0.759,
+     "rendered": 0.751
+    },
+    "clean": {
+     "predicted": 0.767,
+     "rendered": 0.75
+    }
+   },
+   "predicted": {
+    "peakLufs": -3.73,
+    "peakTime": 0.1,
+    "rise": 0.07,
+    "contrast": 47.3,
+    "focus": 12.11,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.384,
+    "tail": 0.909,
+    "shared": 0.269,
+    "harshness": 0.638,
+    "scores": {
+     "punch": 0.734,
+     "size": 0.766,
+     "clean": 0.776
+    },
+    "score": 0.734
+   },
+   "rendered": {
+    "peakLufs": -3.919,
+    "peakTime": 0.09,
+    "rise": 0.08,
+    "contrast": 44.52,
+    "focus": 11.45,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.4,
+    "tail": 0.929,
+    "shared": 0.269,
+    "harshness": 0.559,
+    "scores": {
+     "punch": 0.736,
+     "size": 0.761,
+     "clean": 0.895
+    },
+    "score": 0.736
+   }
+  },
+  {
+   "id": "s6-big",
+   "file": "stimuli/s6-big.flac",
+   "session": 6,
+   "kind": "big",
+   "kit": {
+    "sub": "bass_hit_c",
+    "body": "drum_tom_mid_hard",
+    "transient": "drum_snare_hard",
+    "tail": "drum_splash_soft"
+   },
+   "duration": 2.198,
+   "gainDb": -11.725,
+   "parts": [
+    {
+     "offset": 0.0699,
+     "gain": 0
+    },
+    {
+     "offset": 0.0725,
+     "gain": 0
+    },
+    {
+     "offset": 0.1898,
+     "gain": -4.5
+    },
+    {
+     "offset": 0.3097,
+     "gain": 0.5
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.671,
+     "rendered": 0.634
+    },
+    "big": {
+     "predicted": 0.824,
+     "rendered": 0.784
+    },
+    "clean": {
+     "predicted": 0.601,
+     "rendered": 0.569
+    }
+   },
+   "predicted": {
+    "peakLufs": -4.59,
+    "peakTime": 0.11,
+    "rise": 0.05,
+    "contrast": 55.41,
+    "focus": 9.32,
+    "together": 1,
+    "overlap": 0.75,
+    "coverage": 1,
+    "low": 0.403,
+    "tail": 1.379,
+    "shared": 0.614,
+    "harshness": 0.678,
+    "scores": {
+     "punch": 0.671,
+     "size": 0.862,
+     "clean": 0.583
+    },
+    "score": 0.671
+   },
+   "rendered": {
+    "peakLufs": -4.188,
+    "peakTime": 0.12,
+    "rise": 0.07,
+    "contrast": 47.57,
+    "focus": 9.86,
+    "together": 1,
+    "overlap": 0.75,
+    "coverage": 1,
+    "low": 0.411,
+    "tail": 1.289,
+    "shared": 0.614,
+    "harshness": 0.59,
+    "scores": {
+     "punch": 0.746,
+     "size": 0.821,
+     "clean": 0.91
+    },
+    "score": 0.746
+   }
+  },
+  {
+   "id": "s6-clean",
+   "file": "stimuli/s6-clean.flac",
+   "session": 6,
+   "kind": "clean",
+   "kit": {
+    "sub": "bass_hit_c",
+    "body": "drum_tom_mid_hard",
+    "transient": "drum_snare_hard",
+    "tail": "drum_splash_soft"
+   },
+   "duration": 1.918,
+   "gainDb": -11.373,
+   "parts": [
+    {
+     "offset": 0.0699,
+     "gain": -6
+    },
+    {
+     "offset": 0.0725,
+     "gain": 0
+    },
+    {
+     "offset": 0.04,
+     "gain": -2.5
+    },
+    {
+     "offset": 0.01,
+     "gain": -1.5
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.737,
+     "rendered": 0.697
+    },
+    "big": {
+     "predicted": 0.762,
+     "rendered": 0.736
+    },
+    "clean": {
+     "predicted": 0.793,
+     "rendered": 0.761
+    }
+   },
+   "predicted": {
+    "peakLufs": -4.21,
+    "peakTime": 0.1,
+    "rise": 0.07,
+    "contrast": 48.69,
+    "focus": 11.6,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.383,
+    "tail": 0.939,
+    "shared": 0.205,
+    "harshness": 0.633,
+    "scores": {
+     "punch": 0.737,
+     "size": 0.769,
+     "clean": 0.808
+    },
+    "score": 0.737
+   },
+   "rendered": {
+    "peakLufs": -3.977,
+    "peakTime": 0.1,
+    "rise": 0.09,
+    "contrast": 42.82,
+    "focus": 11.65,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 1,
+    "low": 0.427,
+    "tail": 0.929,
+    "shared": 0.205,
+    "harshness": 0.557,
+    "scores": {
+     "punch": 0.718,
+     "size": 0.746,
+     "clean": 0.88
+    },
+    "score": 0.718
+   }
+  },
+  {
+   "id": "check-small",
+   "file": "stimuli/check-small.flac",
+   "session": 6,
+   "kind": "check",
+   "kit": {
+    "sub": "bass_hit_c",
+    "body": "drum_tom_mid_hard",
+    "transient": "drum_snare_hard",
+    "tail": "drum_splash_soft"
+   },
+   "duration": 2.195,
+   "gainDb": -10.15,
+   "parts": [
+    {
+     "offset": 0.0699,
+     "gain": -80
+    },
+    {
+     "offset": 0.0725,
+     "gain": 0
+    },
+    {
+     "offset": 0.1898,
+     "gain": -4.5
+    },
+    {
+     "offset": 0.3097,
+     "gain": -80
+    }
+   ],
+   "scores": null,
+   "predicted": null,
+   "rendered": null
+  },
+  {
+   "id": "s7-rough",
+   "file": "stimuli/s7-rough.flac",
+   "session": 7,
+   "kind": "rough",
+   "kit": {
+    "sub": "bd_gas",
+    "body": "glitch_perc1",
+    "transient": "hat_tap",
+    "tail": "perc_swoosh"
+   },
+   "duration": 1.967,
+   "gainDb": -8.791,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.12726376648399224,
+     "gain": 0
+    },
+    {
+     "offset": 0.09712329645740023,
+     "gain": 0
+    },
+    {
+     "offset": 0.12624355952546168,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.509,
+     "rendered": 0.508
+    },
+    "big": {
+     "predicted": 0.597,
+     "rendered": 0.617
+    },
+    "clean": {
+     "predicted": 0.585,
+     "rendered": 0.584
+    }
+   },
+   "predicted": {
+    "peakLufs": -7.51,
+    "peakTime": 0.17,
+    "rise": 0.08,
+    "contrast": 48.1,
+    "focus": 9.08,
+    "together": 0.333,
+    "overlap": 0.75,
+    "coverage": 0.925,
+    "low": 0.32,
+    "tail": 0.829,
+    "shared": 0.283,
+    "harshness": 0.623,
+    "scores": {
+     "punch": 0.509,
+     "size": 0.619,
+     "clean": 0.603
+    },
+    "score": 0.509
+   },
+   "rendered": {
+    "peakLufs": -7.28,
+    "peakTime": 0.16,
+    "rise": 0.08,
+    "contrast": 45,
+    "focus": 8.95,
+    "together": 0.333,
+    "overlap": 0.75,
+    "coverage": 0.925,
+    "low": 0.367,
+    "tail": 0.842,
+    "shared": 0.283,
+    "harshness": 0.585,
+    "scores": {
+     "punch": 0.72,
+     "size": 0.711,
+     "clean": 0.895
+    },
+    "score": 0.72
+   }
+  },
+  {
+   "id": "s7-punch",
+   "file": "stimuli/s7-punch.flac",
+   "session": 7,
+   "kind": "punch",
+   "kit": {
+    "sub": "bd_gas",
+    "body": "glitch_perc1",
+    "transient": "hat_tap",
+    "tail": "perc_swoosh"
+   },
+   "duration": 1.944,
+   "gainDb": -9.007,
+   "parts": [
+    {
+     "offset": 0.1198,
+     "gain": 0
+    },
+    {
+     "offset": 0.1273,
+     "gain": 0
+    },
+    {
+     "offset": 0.1398,
+     "gain": 0
+    },
+    {
+     "offset": 0.1198,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.611,
+     "rendered": 0.594
+    },
+    "big": {
+     "predicted": 0.68,
+     "rendered": 0.684
+    },
+    "clean": {
+     "predicted": 0.631,
+     "rendered": 0.616
+    }
+   },
+   "predicted": {
+    "peakLufs": -6.95,
+    "peakTime": 0.17,
+    "rise": 0.06,
+    "contrast": 53.05,
+    "focus": 9.8,
+    "together": 0.667,
+    "overlap": 0.75,
+    "coverage": 0.925,
+    "low": 0.35,
+    "tail": 0.829,
+    "shared": 0.378,
+    "harshness": 0.619,
+    "scores": {
+     "punch": 0.611,
+     "size": 0.698,
+     "clean": 0.636
+    },
+    "score": 0.611
+   },
+   "rendered": {
+    "peakLufs": -6.519,
+    "peakTime": 0.17,
+    "rise": 0.07,
+    "contrast": 46.02,
+    "focus": 10.19,
+    "together": 0.667,
+    "overlap": 0.75,
+    "coverage": 0.925,
+    "low": 0.406,
+    "tail": 0.822,
+    "shared": 0.378,
+    "harshness": 0.539,
+    "scores": {
+     "punch": 0.748,
+     "size": 0.74,
+     "clean": 0.91
+    },
+    "score": 0.748
+   }
+  },
+  {
+   "id": "s7-big",
+   "file": "stimuli/s7-big.flac",
+   "session": 7,
+   "kind": "big",
+   "kit": {
+    "sub": "bd_gas",
+    "body": "glitch_perc1",
+    "transient": "hat_tap",
+    "tail": "perc_swoosh"
+   },
+   "duration": 1.937,
+   "gainDb": -8.515,
+   "parts": [
+    {
+     "offset": 0.1398,
+     "gain": 0
+    },
+    {
+     "offset": 0.1273,
+     "gain": 0
+    },
+    {
+     "offset": 0.1897,
+     "gain": -0.5
+    },
+    {
+     "offset": 0.3762,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.603,
+     "rendered": 0.602
+    },
+    "big": {
+     "predicted": 0.726,
+     "rendered": 0.726
+    },
+    "clean": {
+     "predicted": 0.64,
+     "rendered": 0.64
+    }
+   },
+   "predicted": {
+    "peakLufs": -7.79,
+    "peakTime": 0.18,
+    "rise": 0.06,
+    "contrast": 52.21,
+    "focus": 5.75,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.925,
+    "low": 0.433,
+    "tail": 0.829,
+    "shared": 0.351,
+    "harshness": 0.628,
+    "scores": {
+     "punch": 0.603,
+     "size": 0.756,
+     "clean": 0.649
+    },
+    "score": 0.603
+   },
+   "rendered": {
+    "peakLufs": -7.815,
+    "peakTime": 0.17,
+    "rise": 0.06,
+    "contrast": 44.32,
+    "focus": 5.6,
+    "together": 1,
+    "overlap": 0.5,
+    "coverage": 0.925,
+    "low": 0.45,
+    "tail": 0.832,
+    "shared": 0.351,
+    "harshness": 0.536,
+    "scores": {
+     "punch": 0.737,
+     "size": 0.756,
+     "clean": 0.925
+    },
+    "score": 0.737
+   }
+  },
+  {
+   "id": "s7-clean",
+   "file": "stimuli/s7-clean.flac",
+   "session": 7,
+   "kind": "clean",
+   "kit": {
+    "sub": "bd_gas",
+    "body": "glitch_perc1",
+    "transient": "hat_tap",
+    "tail": "perc_swoosh"
+   },
+   "duration": 2.014,
+   "gainDb": -7.966,
+   "parts": [
+    {
+     "offset": 0.01,
+     "gain": -1.5
+    },
+    {
+     "offset": 0.1273,
+     "gain": 0
+    },
+    {
+     "offset": 0.2096,
+     "gain": 0.5
+    },
+    {
+     "offset": 0.1897,
+     "gain": -1
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.532,
+     "rendered": 0.529
+    },
+    "big": {
+     "predicted": 0.593,
+     "rendered": 0.602
+    },
+    "clean": {
+     "predicted": 0.723,
+     "rendered": 0.722
+    }
+   },
+   "predicted": {
+    "peakLufs": -9.4,
+    "peakTime": 0.18,
+    "rise": 0.18,
+    "contrast": 24.45,
+    "focus": 6.5,
+    "together": 0.667,
+    "overlap": 1,
+    "coverage": 0.95,
+    "low": 0.303,
+    "tail": 0.839,
+    "shared": 0.059,
+    "harshness": 0.612,
+    "scores": {
+     "punch": 0.532,
+     "size": 0.608,
+     "clean": 0.771
+    },
+    "score": 0.532
+   },
+   "rendered": {
+    "peakLufs": -9.306,
+    "peakTime": 0.17,
+    "rise": 0.18,
+    "contrast": 23.63,
+    "focus": 6.32,
+    "together": 0.667,
+    "overlap": 1,
+    "coverage": 0.95,
+    "low": 0.326,
+    "tail": 0.842,
+    "shared": 0.059,
+    "harshness": 0.57,
+    "scores": {
+     "punch": 0.601,
+     "size": 0.653,
+     "clean": 0.85
+    },
+    "score": 0.601
+   }
+  },
+  {
+   "id": "s8-rough",
+   "file": "stimuli/s8-rough.flac",
+   "session": 8,
+   "kind": "rough",
+   "kit": {
+    "sub": "elec_hollow_kick",
+    "body": "perc_door",
+    "transient": "elec_flip",
+    "tail": "ride_via"
+   },
+   "duration": 2.611,
+   "gainDb": -8.868,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.10202492987831353,
+     "gain": 0
+    },
+    {
+     "offset": 0.1479964648154548,
+     "gain": 0
+    },
+    {
+     "offset": 0.11158415334838637,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.594,
+     "rendered": 0.592
+    },
+    "big": {
+     "predicted": 0.654,
+     "rendered": 0.661
+    },
+    "clean": {
+     "predicted": 0.723,
+     "rendered": 0.722
+    }
+   },
+   "predicted": {
+    "peakLufs": -8.12,
+    "peakTime": 0.15,
+    "rise": 0.06,
+    "contrast": 51.88,
+    "focus": 8.36,
+    "together": 0.25,
+    "overlap": 1,
+    "coverage": 0.8,
+    "low": 0.318,
+    "tail": 1.36,
+    "shared": 0.115,
+    "harshness": 0.47,
+    "scores": {
+     "punch": 0.594,
+     "size": 0.669,
+     "clean": 0.755
+    },
+    "score": 0.594
+   },
+   "rendered": {
+    "peakLufs": -7.821,
+    "peakTime": 0.14,
+    "rise": 0.06,
+    "contrast": 47.52,
+    "focus": 7.97,
+    "together": 0.25,
+    "overlap": 1,
+    "coverage": 0.9,
+    "low": 0.279,
+    "tail": 1.351,
+    "shared": 0.115,
+    "harshness": 0.412,
+    "scores": {
+     "punch": 0.753,
+     "size": 0.753,
+     "clean": 0.925
+    },
+    "score": 0.753
+   }
+  },
+  {
+   "id": "s8-punch",
+   "file": "stimuli/s8-punch.flac",
+   "session": 8,
+   "kind": "punch",
+   "kit": {
+    "sub": "elec_hollow_kick",
+    "body": "perc_door",
+    "transient": "elec_flip",
+    "tail": "ride_via"
+   },
+   "duration": 2.6,
+   "gainDb": -9.487,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 2
+    },
+    {
+     "offset": 0.102,
+     "gain": 0
+    },
+    {
+     "offset": 0.1,
+     "gain": -1.5
+    },
+    {
+     "offset": 0.1,
+     "gain": 0
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.775,
+     "rendered": 0.755
+    },
+    "big": {
+     "predicted": 0.794,
+     "rendered": 0.775
+    },
+    "clean": {
+     "predicted": 0.819,
+     "rendered": 0.803
+    }
+   },
+   "predicted": {
+    "peakLufs": -6.4,
+    "peakTime": 0.13,
+    "rise": 0.04,
+    "contrast": 53.6,
+    "focus": 8.99,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 0.85,
+    "low": 0.38,
+    "tail": 1.19,
+    "shared": 0.25,
+    "harshness": 0.473,
+    "scores": {
+     "punch": 0.775,
+     "size": 0.799,
+     "clean": 0.83
+    },
+    "score": 0.775
+   },
+   "rendered": {
+    "peakLufs": -6.346,
+    "peakTime": 0.13,
+    "rise": 0.05,
+    "contrast": 45.37,
+    "focus": 8.96,
+    "together": 1,
+    "overlap": 1,
+    "coverage": 0.85,
+    "low": 0.372,
+    "tail": 1.19,
+    "shared": 0.25,
+    "harshness": 0.338,
+    "scores": {
+     "punch": 0.78,
+     "size": 0.78,
+     "clean": 0.94
+    },
+    "score": 0.78
+   }
+  },
+  {
+   "id": "s8-big",
+   "file": "stimuli/s8-big.flac",
+   "session": 8,
+   "kind": "big",
+   "kit": {
+    "sub": "elec_hollow_kick",
+    "body": "perc_door",
+    "transient": "elec_flip",
+    "tail": "ride_via"
+   },
+   "duration": 2.69,
+   "gainDb": -9.748,
+   "parts": [
+    {
+     "offset": 0.1,
+     "gain": 0.5
+    },
+    {
+     "offset": 0.102,
+     "gain": 0
+    },
+    {
+     "offset": 0.07,
+     "gain": 3
+    },
+    {
+     "offset": 0.16,
+     "gain": 3
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.65,
+     "rendered": 0.638
+    },
+    "big": {
+     "predicted": 0.849,
+     "rendered": 0.8
+    },
+    "clean": {
+     "predicted": 0.774,
+     "rendered": 0.76
+    }
+   },
+   "predicted": {
+    "peakLufs": -8.42,
+    "peakTime": 0.1,
+    "rise": 0.04,
+    "contrast": 51.58,
+    "focus": 5.46,
+    "together": 0.667,
+    "overlap": 0.75,
+    "coverage": 0.925,
+    "low": 0.439,
+    "tail": 2.05,
+    "shared": 0.1,
+    "harshness": 0.505,
+    "scores": {
+     "punch": 0.65,
+     "size": 0.899,
+     "clean": 0.805
+    },
+    "score": 0.65
+   },
+   "rendered": {
+    "peakLufs": -7.145,
+    "peakTime": 0.1,
+    "rise": 0.05,
+    "contrast": 46.67,
+    "focus": 6.64,
+    "together": 0.667,
+    "overlap": 0.75,
+    "coverage": 0.95,
+    "low": 0.38,
+    "tail": 1.67,
+    "shared": 0.1,
+    "harshness": 0.403,
+    "scores": {
+     "punch": 0.764,
+     "size": 0.874,
+     "clean": 0.94
+    },
+    "score": 0.764
+   }
+  },
+  {
+   "id": "s8-clean",
+   "file": "stimuli/s8-clean.flac",
+   "session": 8,
+   "kind": "clean",
+   "kit": {
+    "sub": "elec_hollow_kick",
+    "body": "perc_door",
+    "transient": "elec_flip",
+    "tail": "ride_via"
+   },
+   "duration": 2.65,
+   "gainDb": -9.155,
+   "parts": [
+    {
+     "offset": 0.04,
+     "gain": 1
+    },
+    {
+     "offset": 0.102,
+     "gain": 0
+    },
+    {
+     "offset": 0.1,
+     "gain": 0
+    },
+    {
+     "offset": 0.1,
+     "gain": 0.5
+    }
+   ],
+   "scores": {
+    "punch": {
+     "predicted": 0.719,
+     "rendered": 0.684
+    },
+    "big": {
+     "predicted": 0.801,
+     "rendered": 0.744
+    },
+    "clean": {
+     "predicted": 0.868,
+     "rendered": 0.837
+    }
+   },
+   "predicted": {
+    "peakLufs": -8.64,
+    "peakTime": 0.07,
+    "rise": 0.04,
+    "contrast": 51.36,
+    "focus": 4.68,
+    "together": 0.75,
+    "overlap": 1,
+    "coverage": 0.9,
+    "low": 0.347,
+    "tail": 1.58,
+    "shared": 0.025,
+    "harshness": 0.482,
+    "scores": {
+     "punch": 0.719,
+     "size": 0.821,
+     "clean": 0.905
+    },
+    "score": 0.719
+   },
+   "rendered": {
+    "peakLufs": -8.104,
+    "peakTime": 0.08,
+    "rise": 0.06,
+    "contrast": 46.79,
+    "focus": 5.44,
+    "together": 0.75,
+    "overlap": 1,
+    "coverage": 0.9,
+    "low": 0.316,
+    "tail": 1.45,
+    "shared": 0.025,
+    "harshness": 0.413,
+    "scores": {
+     "punch": 0.736,
+     "size": 0.784,
+     "clean": 0.925
+    },
+    "score": 0.736
+   }
+  }
+ ],
+ "trials": [
+  {
+   "id": "s1-punch",
+   "type": "main",
+   "goal": "punch",
+   "session": 1,
+   "pair": [
+    "s1-rough",
+    "s1-punch"
+   ],
+   "candidate": "s1-punch",
+   "gain": {
+    "predicted": 0.07,
+    "rendered": 0.102
+   },
+   "favoured": "s1-punch"
+  },
+  {
+   "id": "s1-big",
+   "type": "main",
+   "goal": "big",
+   "session": 1,
+   "pair": [
+    "s1-rough",
+    "s1-big"
+   ],
+   "candidate": "s1-big",
+   "gain": {
+    "predicted": 0.064,
+    "rendered": 0.083
+   },
+   "favoured": "s1-big"
+  },
+  {
+   "id": "s1-clean",
+   "type": "main",
+   "goal": "clean",
+   "session": 1,
+   "pair": [
+    "s1-rough",
+    "s1-clean"
+   ],
+   "candidate": "s1-clean",
+   "gain": {
+    "predicted": 0.189,
+    "rendered": 0.22
+   },
+   "favoured": "s1-clean"
+  },
+  {
+   "id": "s2-punch",
+   "type": "main",
+   "goal": "punch",
+   "session": 2,
+   "pair": [
+    "s2-rough",
+    "s2-punch"
+   ],
+   "candidate": "s2-punch",
+   "gain": {
+    "predicted": 0.005,
+    "rendered": 0.004
+   },
+   "favoured": "s2-punch"
+  },
+  {
+   "id": "s2-big",
+   "type": "main",
+   "goal": "big",
+   "session": 2,
+   "pair": [
+    "s2-rough",
+    "s2-big"
+   ],
+   "candidate": "s2-big",
+   "gain": {
+    "predicted": 0.263,
+    "rendered": 0.242
+   },
+   "favoured": "s2-big"
+  },
+  {
+   "id": "s2-clean",
+   "type": "main",
+   "goal": "clean",
+   "session": 2,
+   "pair": [
+    "s2-rough",
+    "s2-clean"
+   ],
+   "candidate": "s2-clean",
+   "gain": {
+    "predicted": 0.019,
+    "rendered": 0.006
+   },
+   "favoured": "s2-clean"
+  },
+  {
+   "id": "s3-punch",
+   "type": "main",
+   "goal": "punch",
+   "session": 3,
+   "pair": [
+    "s3-rough",
+    "s3-punch"
+   ],
+   "candidate": "s3-punch",
+   "gain": {
+    "predicted": 0.139,
+    "rendered": 0.118
+   },
+   "favoured": "s3-punch"
+  },
+  {
+   "id": "s3-big",
+   "type": "main",
+   "goal": "big",
+   "session": 3,
+   "pair": [
+    "s3-rough",
+    "s3-big"
+   ],
+   "candidate": "s3-big",
+   "gain": {
+    "predicted": 0.16,
+    "rendered": 0.109
+   },
+   "favoured": "s3-big"
+  },
+  {
+   "id": "s3-clean",
+   "type": "main",
+   "goal": "clean",
+   "session": 3,
+   "pair": [
+    "s3-rough",
+    "s3-clean"
+   ],
+   "candidate": "s3-clean",
+   "gain": {
+    "predicted": 0.126,
+    "rendered": 0.111
+   },
+   "favoured": "s3-clean"
+  },
+  {
+   "id": "s4-punch",
+   "type": "main",
+   "goal": "punch",
+   "session": 4,
+   "pair": [
+    "s4-rough",
+    "s4-punch"
+   ],
+   "candidate": "s4-punch",
+   "gain": {
+    "predicted": 0.075,
+    "rendered": 0.074
+   },
+   "favoured": "s4-punch"
+  },
+  {
+   "id": "s4-big",
+   "type": "main",
+   "goal": "big",
+   "session": 4,
+   "pair": [
+    "s4-rough",
+    "s4-big"
+   ],
+   "candidate": "s4-big",
+   "gain": {
+    "predicted": 0.187,
+    "rendered": 0.156
+   },
+   "favoured": "s4-big"
+  },
+  {
+   "id": "s4-clean",
+   "type": "main",
+   "goal": "clean",
+   "session": 4,
+   "pair": [
+    "s4-rough",
+    "s4-clean"
+   ],
+   "candidate": "s4-clean",
+   "gain": {
+    "predicted": 0.19,
+    "rendered": 0.207
+   },
+   "favoured": "s4-clean"
+  },
+  {
+   "id": "s5-punch",
+   "type": "main",
+   "goal": "punch",
+   "session": 5,
+   "pair": [
+    "s5-rough",
+    "s5-punch"
+   ],
+   "candidate": "s5-punch",
+   "gain": {
+    "predicted": 0.123,
+    "rendered": 0.121
+   },
+   "favoured": "s5-punch"
+  },
+  {
+   "id": "s5-big",
+   "type": "main",
+   "goal": "big",
+   "session": 5,
+   "pair": [
+    "s5-rough",
+    "s5-big"
+   ],
+   "candidate": "s5-big",
+   "gain": {
+    "predicted": 0.095,
+    "rendered": -0.009
+   },
+   "favoured": "s5-rough"
+  },
+  {
+   "id": "s5-clean",
+   "type": "main",
+   "goal": "clean",
+   "session": 5,
+   "pair": [
+    "s5-rough",
+    "s5-clean"
+   ],
+   "candidate": "s5-clean",
+   "gain": {
+    "predicted": 0.091,
+    "rendered": 0.092
+   },
+   "favoured": "s5-clean"
+  },
+  {
+   "id": "s6-punch",
+   "type": "main",
+   "goal": "punch",
+   "session": 6,
+   "pair": [
+    "s6-rough",
+    "s6-punch"
+   ],
+   "candidate": "s6-punch",
+   "gain": {
+    "predicted": 0.188,
+    "rendered": 0.168
+   },
+   "favoured": "s6-punch"
+  },
+  {
+   "id": "s6-big",
+   "type": "main",
+   "goal": "big",
+   "session": 6,
+   "pair": [
+    "s6-rough",
+    "s6-big"
+   ],
+   "candidate": "s6-big",
+   "gain": {
+    "predicted": 0.181,
+    "rendered": 0.134
+   },
+   "favoured": "s6-big"
+  },
+  {
+   "id": "s6-clean",
+   "type": "main",
+   "goal": "clean",
+   "session": 6,
+   "pair": [
+    "s6-rough",
+    "s6-clean"
+   ],
+   "candidate": "s6-clean",
+   "gain": {
+    "predicted": 0.259,
+    "rendered": 0.228
+   },
+   "favoured": "s6-clean"
+  },
+  {
+   "id": "s7-punch",
+   "type": "main",
+   "goal": "punch",
+   "session": 7,
+   "pair": [
+    "s7-rough",
+    "s7-punch"
+   ],
+   "candidate": "s7-punch",
+   "gain": {
+    "predicted": 0.102,
+    "rendered": 0.086
+   },
+   "favoured": "s7-punch"
+  },
+  {
+   "id": "s7-big",
+   "type": "main",
+   "goal": "big",
+   "session": 7,
+   "pair": [
+    "s7-rough",
+    "s7-big"
+   ],
+   "candidate": "s7-big",
+   "gain": {
+    "predicted": 0.129,
+    "rendered": 0.109
+   },
+   "favoured": "s7-big"
+  },
+  {
+   "id": "s7-clean",
+   "type": "main",
+   "goal": "clean",
+   "session": 7,
+   "pair": [
+    "s7-rough",
+    "s7-clean"
+   ],
+   "candidate": "s7-clean",
+   "gain": {
+    "predicted": 0.138,
+    "rendered": 0.138
+   },
+   "favoured": "s7-clean"
+  },
+  {
+   "id": "s8-punch",
+   "type": "main",
+   "goal": "punch",
+   "session": 8,
+   "pair": [
+    "s8-rough",
+    "s8-punch"
+   ],
+   "candidate": "s8-punch",
+   "gain": {
+    "predicted": 0.181,
+    "rendered": 0.163
+   },
+   "favoured": "s8-punch"
+  },
+  {
+   "id": "s8-big",
+   "type": "main",
+   "goal": "big",
+   "session": 8,
+   "pair": [
+    "s8-rough",
+    "s8-big"
+   ],
+   "candidate": "s8-big",
+   "gain": {
+    "predicted": 0.195,
+    "rendered": 0.139
+   },
+   "favoured": "s8-big"
+  },
+  {
+   "id": "s8-clean",
+   "type": "main",
+   "goal": "clean",
+   "session": 8,
+   "pair": [
+    "s8-rough",
+    "s8-clean"
+   ],
+   "candidate": "s8-clean",
+   "gain": {
+    "predicted": 0.145,
+    "rendered": 0.115
+   },
+   "favoured": "s8-clean"
+  },
+  {
+   "id": "s1-cross-punch-big",
+   "type": "cross",
+   "goal": "big",
+   "session": 1,
+   "pair": [
+    "s1-punch",
+    "s1-big"
+   ],
+   "candidate": "s1-big",
+   "gain": {
+    "rendered": 0.064
+   },
+   "favoured": "s1-big"
+  },
+  {
+   "id": "s2-cross-big-clean",
+   "type": "cross",
+   "goal": "clean",
+   "session": 2,
+   "pair": [
+    "s2-big",
+    "s2-clean"
+   ],
+   "candidate": "s2-clean",
+   "gain": {
+    "rendered": -0.007
+   },
+   "favoured": "s2-big"
+  },
+  {
+   "id": "s3-cross-clean-punch",
+   "type": "cross",
+   "goal": "punch",
+   "session": 3,
+   "pair": [
+    "s3-clean",
+    "s3-punch"
+   ],
+   "candidate": "s3-punch",
+   "gain": {
+    "rendered": 0.003
+   },
+   "favoured": "s3-punch"
+  },
+  {
+   "id": "s4-cross-punch-big",
+   "type": "cross",
+   "goal": "punch",
+   "session": 4,
+   "pair": [
+    "s4-punch",
+    "s4-big"
+   ],
+   "candidate": "s4-punch",
+   "gain": {
+    "rendered": 0.114
+   },
+   "favoured": "s4-punch"
+  },
+  {
+   "id": "s5-cross-big-clean",
+   "type": "cross",
+   "goal": "big",
+   "session": 5,
+   "pair": [
+    "s5-big",
+    "s5-clean"
+   ],
+   "candidate": "s5-big",
+   "gain": {
+    "rendered": 0.014
+   },
+   "favoured": "s5-big"
+  },
+  {
+   "id": "s6-cross-clean-punch",
+   "type": "cross",
+   "goal": "clean",
+   "session": 6,
+   "pair": [
+    "s6-clean",
+    "s6-punch"
+   ],
+   "candidate": "s6-clean",
+   "gain": {
+    "rendered": 0.011
+   },
+   "favoured": "s6-clean"
+  },
+  {
+   "id": "s7-cross-punch-big",
+   "type": "cross",
+   "goal": "big",
+   "session": 7,
+   "pair": [
+    "s7-punch",
+    "s7-big"
+   ],
+   "candidate": "s7-big",
+   "gain": {
+    "rendered": 0.042
+   },
+   "favoured": "s7-big"
+  },
+  {
+   "id": "s8-cross-big-clean",
+   "type": "cross",
+   "goal": "clean",
+   "session": 8,
+   "pair": [
+    "s8-big",
+    "s8-clean"
+   ],
+   "candidate": "s8-clean",
+   "gain": {
+    "rendered": 0.077
+   },
+   "favoured": "s8-clean"
+  },
+  {
+   "id": "check-clean",
+   "type": "check",
+   "goal": "clean",
+   "session": 3,
+   "pair": [
+    "s3-clean",
+    "check-smeared"
+   ],
+   "expected": "s3-clean"
+  },
+  {
+   "id": "check-big",
+   "type": "check",
+   "goal": "big",
+   "session": 6,
+   "pair": [
+    "s6-big",
+    "check-small"
+   ],
+   "expected": "s6-big"
+  }
+ ]
+}

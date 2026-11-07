@@ -1,0 +1,23 @@
+name: Listening test results
+description: Send the file the listening test (punchy, big, clean) saved for you.
+title: "Listening test results"
+labels: ["listening-test"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thank you for listening. Drag the file the test saved (playhead-listening-….json) into the box below. It holds
+        your answers, how often you played each sound and how long you took, and the two questions about your setup;
+        no name and no address. This issue is public.
+  - type: textarea
+    id: file
+    attributes:
+      label: Your results file
+      description: Drag the .json file here (or paste its contents).
+    validations:
+      required: true
+  - type: textarea
+    id: comments
+    attributes:
+      label: Anything else (optional)
+      placeholder: A pair that was hard to judge, a word you would use instead, problems with playback…

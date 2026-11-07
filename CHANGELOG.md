@@ -10,6 +10,11 @@
   within 1 ms of its place and copied sample for sample, where a plain stretch, rendered beside it, moves them by up to
   25 ms. In all six languages. In REAPER the new takes start at the same moment of the sound, and the item is
   lengthened (or shortened) to play them.
+- **A listening test of the arrangement goals** ([experiments/listening](experiments/listening/README.md), on the site
+  at `/listening/`): do the search's arrangements sound punchier, bigger or cleaner than the rough placement they start
+  from? 38 blind A/B answers in about 8 minutes, from the arrangement experiment's sessions, loudness matched, with
+  two checks and four repeats. The page sends nothing; listeners save a file and send it through a GitHub form. The
+  analysis treats listeners as the unit; simulations put the aim at 16 listeners.
 - **REAPER: the views of rhythm and form in the strip window** (package 0.2.0): bar raster, tempogram, repetition,
   modulation spectrogram and curve rhythms, drawn by the Lua port as the library draws them (checked at 38,300 points
   of 26 strips against `drawStrip`, and as numbers against `Playhead.view`). On the bar raster the cursors are drawn
