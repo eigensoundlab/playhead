@@ -70,7 +70,7 @@ brackets do not nest.
 | `lab.*`, `now.*`, `check.*`, `obj.*`, `profile.*`, `layer.*`, `mat.*` | the measurements and badges under the strips |
 | `off.*` | text drawn in a strip when it has nothing to show |
 | `cmp.*` | the "Your own look" composer |
-| `tracks.*` | the "Tracks in a folder" section: tracks, the folder and its views. "Track", "folder", "clip", "mix", "mute" and "solo" are the words of the language's DAWs |
+| `tracks.*` | the "Tracks in a folder" section: tracks, the folder and its views. Track, folder track, clip, mix, mute, solo, snap, beatgrid and the loudness terms are in the vocabulary's DAW, mixing and DJ groups |
 | `bench.*`, `metric.*` | the tool bench and its result table |
 | `status.*` | the status line while files load and analyse |
 | `aria.*` | names for screen readers |

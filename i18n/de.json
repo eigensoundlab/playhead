@@ -325,7 +325,7 @@
   "tracks.track": "Spur {n}",
   "tracks.file": "Datei auf Spur {n}",
   "tracks.gain": "Gain",
-  "tracks.rules": "So wird der Ordner kombiniert: Lautheit und Spektrogramm addieren sich als Leistung, und der Gain einer Spur verschiebt ihre Lautheit; Onsets und Ereignisse werden zusammengeführt, die Onset-Stärke addiert sich; die Härte ist die Lautheit des Ganzen plus die Härte der Spuren über ihrer eigenen Lautheit; die übrigen Kurven übernehmen den Wert der stärksten Spur. Abschnitte werden nicht kombiniert, und das Beat-Raster stammt von der Spur mit dem klarsten Puls. In 14 Test-Sessions trafen Lautheit und Spektrogramm den analysierten Mix genau, Aktivität und Härte ungefähr, Neuheit und Ereignisse schlecht (experiments/compose im Quellcode).",
+  "tracks.rules": "So wird der Ordner kombiniert: Lautheit und Spektrogramm addieren sich als Leistung, und der Gain einer Spur verschiebt ihre Lautheit; Onsets und Ereignisse werden zusammengeführt, die Onset-Stärke addiert sich; die Härte ist die Lautheit des Ganzen plus die Härte der Spuren über ihrer eigenen Lautheit; die übrigen Kurven übernehmen den Wert der stärksten Spur. Abschnitte werden nicht kombiniert, und das Beatgrid stammt von der Spur mit dem klarsten Puls. In 14 Test-Sessions trafen Lautheit und Spektrogramm den analysierten Mix genau, Aktivität und Härte ungefähr, Neuheit und Ereignisse schlecht (experiments/compose im Quellcode).",
   "bench.tool": "Werkzeug",
   "bench.render": "Rendern",
   "bench.need.file": "Zuerst eine Datei laden oder auswählen.",
