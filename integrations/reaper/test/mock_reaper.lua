@@ -180,6 +180,7 @@ function Mock.new(T, opts)
   function R.Main_OnCommand(c, f) check("Main_OnCommand", { "integer", "integer" }, c, f) end
   function R.get_action_context() check("get_action_context", {}); return false, env.script or "", 0, 55555, -1, -1, -1, "" end
   function R.SetToggleCommandState(s, c, v) check("SetToggleCommandState", { "integer", "integer", "integer" }, s, c, v); env.toggles[c] = v; return true end
+  function R.GetToggleCommandState(c) check("GetToggleCommandState", { "integer" }, c); return env.toggles[c] or (c == 40036 and 1 or -1) end
   function R.RefreshToolbar2(s, c) check("RefreshToolbar2", { "integer", "integer" }, s, c) end
   function R.GetProjectPathEx(p, buf) check("GetProjectPathEx", { "ReaProject", "?string" }, p, buf); return env.media end
   function R.GetProjectPath(buf) check("GetProjectPath", { "?string" }, buf); return env.media end
@@ -452,15 +453,17 @@ function Mock.new(T, opts)
   ----------------------------------------------------------------------------------------------------------------
   -- gfx
   ----------------------------------------------------------------------------------------------------------------
-  local G = { w = 0, h = 0, x = 0, y = 0, mouse_x = 0, mouse_y = 0, mouse_cap = 0, ext_retina = 0, dest = -1, clear = 0, texth = 12, a = 1 }
+  local G = { w = 0, h = 0, x = 0, y = 0, mouse_x = 0, mouse_y = 0, mouse_cap = 0, mouse_wheel = 0, mouse_hwheel = 0, ext_retina = 0, dest = -1, clear = 0, texth = 12, a = 1 }
   env.gfx_calls = {}
   local function gcount(k) env.gfx_calls[k] = (env.gfx_calls[k] or 0) + 1 end
   function G.init(name, w, h, dock, x, y)
     gcount("init")
     if type(name) ~= "string" then err("gfx.init: name should be a string") end
+    -- (an empty name resizes an open window; env.retina: the display's scale, which on Windows does not make the
+    -- window larger)
     G.w, G.h = math.floor(w or 0), math.floor(h or 0)
-    if G.ext_retina == 1 then G.ext_retina = 1 end
-    env.window = name
+    if G.ext_retina == 1 then G.ext_retina = env.retina or 1 end
+    if name ~= "" or not env.window then env.window = name end
     return 1
   end
   function G.quit() gcount("quit"); G.w, G.h = 0, 0; env.window = nil end
@@ -471,9 +474,10 @@ function Mock.new(T, opts)
   function G.line(x1, y1, x2, y2, aa) gcount("line"); for _, v in ipairs({ x1, y1, x2, y2 }) do if type(v) ~= "number" or v ~= v then err("gfx.line: bad argument") end end end
   function G.triangle(...) gcount("triangle"); if select("#", ...) < 6 then err("gfx.triangle: fewer than 6 coordinates") end end
   function G.circle(x, y, r, fill, aa) gcount("circle"); for _, v in ipairs({ x, y, r }) do if type(v) ~= "number" or v ~= v then err("gfx.circle: bad argument") end end end
-  function G.drawstr(s) gcount("drawstr"); if type(s) ~= "string" then err("gfx.drawstr: not a string: " .. tostring(s)) end; env.texts = env.texts or {}; env.texts[#env.texts + 1] = s end
+  function G.drawstr(s) gcount("drawstr"); if type(s) ~= "string" then err("gfx.drawstr: not a string: " .. tostring(s)) end; env.texts = env.texts or {}; env.texts[#env.texts + 1] = s
+    env.text_boxes = env.text_boxes or {}; env.text_boxes[#env.text_boxes + 1] = { s = s, x = G.x, y = G.y, h = G.texth, w = G.w, wh = G.h } end
   function G.measurestr(s) gcount("measurestr"); return #tostring(s) * 7, 12 end
-  function G.setfont(i, face, size) gcount("setfont"); if size and (type(size) ~= "number" or size <= 0) then err("gfx.setfont: bad size") end end
+  function G.setfont(i, face, size) gcount("setfont"); if size and (type(size) ~= "number" or size <= 0) then err("gfx.setfont: bad size") end; if size then G.texth = math.floor(size + 0.5) end end
   function G.setimgdim(i, w, h) gcount("setimgdim"); if type(w) ~= "number" or type(h) ~= "number" then err("gfx.setimgdim: bad size") end end
   function G.blit(src, scale, rot) gcount("blit"); if type(src) ~= "number" or type(scale) ~= "number" then err("gfx.blit: bad arguments") end end
   function G.dock(v, ...) gcount("dock"); return env.dock or 0, 100, 100, 900, 200 end

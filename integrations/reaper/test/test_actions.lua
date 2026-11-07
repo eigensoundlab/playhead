@@ -135,6 +135,24 @@ return function(T)
     return #(env.exec or {}) == exec_before and env.messages[1] and env.messages[1].text:find("already analysed") and console():find("sfx profile"), #(env.exec or {}) - exec_before .. " runs"
   end)
 
+  -- on a display scaled to 150 % (Windows does not make the window larger): the progress window is made larger,
+  -- and its note stays clear of the bottom edge
+  do
+    local copy = T.media .. "/robot copy for the progress window.wav"
+    local hi, ho = io.open(robot_file, "rb"), nil
+    local bytes = hi:read("a"); hi:close(); ho = io.open(copy, "wb"); ho:write(bytes); ho:close()
+    local P = env.add_item(tr2, { source = env.source({ file = copy, len = robot_len }), pos = 140, len = 1, name = "robot copy" })
+    env.select({ P })
+    env.retina, env.text_boxes = 1.5, {}
+    scenario("analyse: the progress window fits its text on a display scaled to 150 %", script("Analyse selected items"), nil, function()
+      local note
+      for _, b in ipairs(env.text_boxes) do if b.s:find("Close this window", 1, true) then note = b end end
+      local ok = note and note.wh >= 132 * 1.5 * 0.9 and note.y + note.h <= note.wh - 16 and note.x >= 16
+      return ok, note and string.format("window %d high, note at %d-%d", note.wh, note.y, note.y + note.h) or "no progress note drawn"
+    end)
+    env.retina = nil
+  end
+
   ------------------------------------------------------------------------------------------------------------------
   -- Markers
   ------------------------------------------------------------------------------------------------------------------
@@ -231,9 +249,9 @@ return function(T)
     return function(menu)
       local n = 0
       for field in (menu .. "|"):gmatch("([^|]*)|") do
-        if field ~= "" then
+        if field ~= "" and field:sub(1, 1) ~= ">" then       -- (a submenu's title is not numbered)
           n = n + 1
-          if field:gsub("^[#!]+", ""):gsub("^%s+", "") == label then return n end
+          if field:gsub("^[#!<]+", ""):gsub("^%s+", "") == label then return n end
         end
       end
       return 0
@@ -337,6 +355,49 @@ return function(T)
       return rlook == "raster" and rcursor and want and math.abs(rcursor - want) < 1e-6 and #rows >= 12 and #rows <= 15,
         string.format("cursor %.3f s (expected %.3f) in a raster of %d bars", rcursor or -1, want or -1, #rows)
     end)
+  -- zoom as in REAPER: the wheel zooms around the mouse, Shift and the wheel scrolls, the menu shows the whole item;
+  -- a click moves the edit cursor to the time under the mouse in the zoomed view
+  env.select({ B })
+  closing = false
+  local zc = {}
+  scenario("strip window: the wheel zooms around the mouse, Shift + wheel scrolls, clicks follow the zoomed view; the menu zooms out",
+    script("Strip window"), { seconds = 60, on_tick = function(i)
+      if i == 3 then env.menu_choice = pick(core.LOOKS.plain.name); G.mouse_cap = 2 end
+      if i == 4 then G.mouse_cap = 0; env.menu_choice = nil end
+      if i == 5 then G.mouse_x, G.mouse_y, G.mouse_wheel = 450, 22 + 80, 240 end
+      if i == 7 then G.mouse_x, G.mouse_cap = 0, 1 end
+      if i == 8 then G.mouse_cap = 0; zc[1] = env.cursor end
+      if i == 9 then G.mouse_x, G.mouse_cap, G.mouse_wheel = 450, 8, 120 end
+      if i == 10 then G.mouse_cap = 0 end
+      if i == 11 then G.mouse_x, G.mouse_cap = 0, 1 end
+      if i == 12 then G.mouse_cap = 0; zc[2] = env.cursor end
+      if i == 13 then env.menu_choice = pick("Show the whole item (zoom out)"); G.mouse_cap = 2 end
+      if i == 14 then G.mouse_cap = 0; env.menu_choice = nil end
+      if i == 15 then G.mouse_x, G.mouse_cap = 0, 1 end
+      if i == 16 then G.mouse_cap = 0; zc[3] = env.cursor end
+      if i >= 18 then closing = true end
+    end }, function()
+      local v1 = core.zoom_view({ 0, 1 }, 0.5, 1.25 ^ 2, 0.05 / 20)
+      local v2 = core.scroll_view(v1, -0.15)
+      local want = { 30 + v1[1] * 20, 30 + v2[1] * 20, 30 }
+      local ok = true
+      for k = 1, 3 do if not zc[k] or math.abs(zc[k] - want[k]) > 1e-6 then ok = false end end
+      return ok, string.format("cursor %.3f, %.3f, %.3f s (expected %.3f, %.3f, %.3f)", zc[1] or -1, zc[2] or -1, zc[3] or -1, want[1], want[2], want[3])
+    end)
+  -- the Colours submenu: a palette is chosen and kept
+  env.select({ B })
+  closing = false
+  scenario("strip window: a palette chosen in the Colours submenu is used and kept",
+    script("Strip window"), { seconds = 60, on_tick = function(i)
+      if i == 3 then env.menu_choice = pick("Colour-blind safe"); G.mouse_cap = 2 end
+      if i == 4 then G.mouse_cap = 0; env.menu_choice = nil end
+      if i >= 7 then closing = true end
+    end }, function()
+      local menu = env.menus[#env.menus] or ""
+      return env.ext["Playhead/palette"] == "safe" and menu:find("|>Colours|", 1, true) ~= nil and menu:find("|<Greyscale", 1, true) ~= nil,
+        tostring(env.ext["Playhead/palette"])
+    end)
+  env.ext["Playhead/palette"] = nil
   -- an item that has not been analysed: the window analyses it in the background and then draws it
   local copy = T.media .. "/robot copy.wav"
   do local h = io.open(copy, "wb"); h:write(T.read(robot_file)); h:close() end

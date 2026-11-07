@@ -555,10 +555,12 @@ end
 --- For the strip of an item W pixels wide: column(x) returns the file interval heard in pixel column x (fa > fb where
 --- the take plays backwards) and the file time at its middle, or nil where nothing is heard; to_x(f) returns the pixel
 --- positions of file time f.
-function M.item_columns(m, W)
-  local px = m.len / W
+--- a, b: the project time shown (zoomed in), by default the whole item.
+function M.item_columns(m, W, a, b)
+  a, b = a or m.pos, b or (m.pos + m.len)
+  local px = (b - a) / W
   local function column(x)
-    local Tc = m.pos + (x + 0.5) * px
+    local Tc = a + (x + 0.5) * px
     local fc = M.project_to_file(m, Tc)
     if fc == nil then return nil end
     local half = 0.5 * px * m.rate
@@ -567,11 +569,37 @@ function M.item_columns(m, W)
   end
   local function to_x(f)
     local xs = {}
-    for _, T in ipairs(M.file_to_project(m, f, 2000)) do xs[#xs + 1] = (T - m.pos) / m.len * W end
+    for _, T in ipairs(M.file_to_project(m, f, 2000)) do xs[#xs + 1] = (T - a) / (b - a) * W end
     return xs
   end
   return column, to_x
 end
+
+-- zooming a strip: a view is { a, b }, the part of the item shown as fractions of its length (0..1)
+--- Zooms in (factor > 1) or out around the point u (0..1 across the strip), keeping what is under it in place; the
+--- view never gets narrower than min_span or leaves 0..1.
+function M.zoom_view(v, u, factor, min_span)
+  local span = v[2] - v[1]
+  local new = clamp(span / factor, min(1, min_span or 0), 1)
+  local at = v[1] + clamp(u, 0, 1) * span
+  local a = at - clamp(u, 0, 1) * new
+  a = clamp(a, 0, 1 - new)
+  return { a, a + new }
+end
+--- Moves the view by d times its width (d > 0: later), within 0..1.
+function M.scroll_view(v, d)
+  local span = v[2] - v[1]
+  local a = clamp(v[1] + d * span, 0, 1 - span)
+  return { a, a + span }
+end
+--- Pages the view to show the fraction f (as REAPER's view follows playback: f at the left edge), or keeps it.
+function M.follow_view(v, f)
+  if f >= v[1] and f <= v[2] then return v end
+  local span = v[2] - v[1]
+  local a = clamp(f, 0, 1 - span)
+  return { a, a + span }
+end
+function M.is_zoomed(v) return v ~= nil and (v[1] > 1e-9 or v[2] < 1 - 1e-9) end
 
 ------------------------------------------------------------------------------------------------------------------------
 -- curves as automation
@@ -1360,6 +1388,69 @@ local function ramp_at(ramp, u)
   return mix(ramp[i + 1], ramp[i + 2], x - i)
 end
 M.ramp_at = ramp_at
+M.mix = mix
+
+-- colour palettes for a host's strip (the strip window's Colours menu). Each makes a theme from the host's colours
+-- { background, text, wave } (any may be nil). Every palette keeps the waveform's tint (waveRamp, by the curve that
+-- colours it), the peak outline and the lanes apart in hue or lightness, and runs its ramps from faint to strong
+-- against its background.
+local VIRIDIS = { { 68, 1, 84 }, { 71, 44, 122 }, { 59, 81, 139 }, { 44, 113, 142 }, { 33, 144, 141 }, { 39, 173, 129 },
+  { 92, 200, 99 }, { 170, 220, 50 }, { 253, 231, 37 } }
+M.PALETTE_ORDER = { "reaper", "playhead", "heat", "safe", "grey" }
+M.PALETTES = {
+  reaper = { name = "REAPER theme", desc = "REAPER's background, text and peak colour; tints run from neutral to a hot yellow" },
+  playhead = { name = "Playhead", desc = "The Playhead app's own colours" },
+  heat = { name = "Heat", desc = "Warm tints and a magma spectrogram; lanes in cool colours" },
+  safe = { name = "Colour-blind safe", desc = "Viridis tints and spectrogram, Okabe-Ito colours for lines" },
+  grey = { name = "Greyscale", desc = "Shades of grey only" },
+}
+function M.palette_theme(key, c)
+  c = c or {}
+  local base = M.theme_for(c.background, { text = c.text })
+  local bg, txt = base.background, base.text
+  local dark = luminance(bg) < 0.5
+  local function grey(u) return mix(bg, txt, u) end
+  local th = {}
+  for k, v in pairs(base) do th[k] = v end
+  key = M.PALETTES[key] and key or "reaper"
+  if key == "playhead" then
+    local own = dark and M.THEMES.dark or M.THEMES.light
+    for k, v in pairs(own) do th[k] = v end
+    th.outline = mix(own.background, own.text, 0.45)      -- as the Playhead app draws it (its text colour, half see-through)
+  elseif key == "reaper" then
+    -- the waveform and the peak outline in REAPER's peak colour; a tint (by harshness, say) from neutral to hot, so it
+    -- never meets the peak colour's hue
+    local own = c.wave and abs(luminance(c.wave) - luminance(bg)) > 0.2
+    th.wave = own and c.wave or base.wave
+    local hot = dark and { 255, 214, 102 } or { 178, 112, 0 }
+    th.waveRamp = { grey(0.3), mix(grey(0.6), hot, 0.3), hot }
+    th.outline = own and c.wave or grey(0.9)
+  elseif key == "heat" then
+    th.wave = grey(0.55)
+    th.waveRamp = dark and { { 84, 38, 112 }, { 182, 54, 98 }, { 240, 116, 48 }, { 252, 212, 92 } }
+      or { { 206, 182, 226 }, { 200, 76, 104 }, { 222, 104, 24 }, { 128, 40, 0 } }
+    th.line = dark and { 72, 200, 255 } or { 0, 116, 186 }
+    th.series = dark and { { 120, 226, 168 }, { 196, 166, 255 } } or { { 0, 140, 90 }, { 110, 70, 190 } }
+    th.outline = grey(0.5)
+  elseif key == "safe" then
+    th.wave = grey(0.55)
+    local r = {}
+    for i = 1, #VIRIDIS do r[i] = VIRIDIS[dark and i or (#VIRIDIS + 1 - i)] end
+    th.waveRamp, th.specRamp = r, VIRIDIS
+    th.line = { 230, 159, 0 }                              -- Okabe-Ito orange, sky blue, reddish purple
+    th.series = { { 86, 180, 233 }, { 204, 121, 167 } }
+    th.outline = grey(0.5)
+  elseif key == "grey" then
+    th.wave = grey(0.55)
+    th.waveRamp = { grey(0.2), grey(0.7) }
+    th.specRamp = dark and { { 0, 0, 0 }, { 255, 255, 255 } } or { { 255, 255, 255 }, { 0, 0, 0 } }
+    th.line, th.tick, th.rule = txt, txt, grey(0.6)
+    th.series = { grey(0.75), grey(0.45) }
+    th.outline = grey(1)
+  end
+  if th.waveRamp then th.waveLow, th.waveHigh = th.waveRamp[1], th.waveRamp[#th.waveRamp] end
+  return th
+end
 
 local B64 = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"
 local B64I = {}
@@ -1572,7 +1663,8 @@ function M.render_strip(doc, g, opts)
     local colour = (l.colour and is_curve(curves[l.colour])) and curves[l.colour] or nil
     local sc = sculpt and wave_cols() or nil
     local outline = spec_before(l)
-    if colour then items[#items + 1] = { label = M.curve_label(l.colour), ramp = { th.waveLow, th.waveHigh } } end
+    local tint = th.waveRamp or { th.waveLow, th.waveHigh }
+    if colour then items[#items + 1] = { label = M.curve_label(l.colour), ramp = tint } end
     local top, bot = {}, {}
     for x = 0, W - 1 do
       local c = cols[x]
@@ -1583,7 +1675,7 @@ function M.render_strip(doc, g, opts)
         if outline then top[x] = yTop; bot[x] = yBot
         else
           local u = colour and val_at(colour, c[1], c[2]) or nil
-          g.rect(x, yTop, 1, max(1, yBot - yTop), u == nil and th.wave or mix(th.waveLow, th.waveHigh, clamp(u, 0, 1)), 1)
+          g.rect(x, yTop, 1, max(1, yBot - yTop), u == nil and th.wave or ramp_at(tint, u), 1)
         end
       end
     end
@@ -1809,12 +1901,14 @@ end
 
 --- A view's axis (tempo, lag, rate, period, bar number) along the right edge of a band h high, as yTicks
 --- ({ row, text }) over rows rows.
+--- (In light or dark by the ramp's low end, which is what the labels mostly sit on, not by the background.)
 function M.axis_labels(g, ticks, rows, h, W, th)
   if h < 48 or W < 200 or not ticks then return end
+  local colour = luminance((th.specRamp or SPEC_RAMP)[1]) < 0.5 and M.rgb("#e4e8ea") or M.rgb("#13181b")
   local last = -1e9
   for _, t in ipairs(ticks) do
     local y = t.row / rows * h
-    if y > 6 and y < h - 6 and abs(y - last) >= 11 then g.text(W - 3, y, t.text, th.text, 0.65, 9, "right", "middle"); last = y end
+    if y > 6 and y < h - 6 and abs(y - last) >= 11 then g.text(W - 3, y, t.text, colour, 0.65, 9, "right", "middle"); last = y end
   end
 end
 

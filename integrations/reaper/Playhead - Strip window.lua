@@ -6,7 +6,9 @@
 --   A dockable window that draws the selected item as a Playhead strip: waveform, curves in lanes or over the
 --   waveform, events, onsets, beats, bar lines, sections and novelty marks, or a view of rhythm and form (bar raster,
 --   tempogram, repetition, modulation spectrogram, curve rhythms), in a ready-made look or your own look code, with
---   the edit and play cursors. Click to move the edit cursor; right-click for looks and options.
+--   the edit and play cursors. Click to move the edit cursor; right-click for looks and options. The mouse wheel
+--   zooms as in REAPER's arrange view (Ctrl, Shift or Alt with the wheel, or a horizontal wheel, scrolls; drag with
+--   the middle button to move the view).
 --   Packaged by "Playhead - Analyse selected items.lua".
 
 -- SPDX-License-Identifier: Apache-2.0
@@ -33,6 +35,7 @@ local IMG = 1                                              -- offscreen image ho
 
 local st = {
   look = R.get("look", "auto"),
+  palette = R.get("palette", "reaper"),
   auto = core.parse_bool(R.get("strip_auto", "yes"), true),
   sig = nil, item = nil, info = nil, doc = nil, message = "Select an audio item.", count = 0,
   job = nil, job_spec = nil, failed = {},
@@ -41,8 +44,13 @@ local st = {
   theme = nil, theme_key = nil, colours = nil,
   next_theme = 0, next_selection = 0, next_cache = 0, next_status = 0,
   edit = nil, play = nil, left = false, right = false, legend = "",
-  raster = nil                                             -- the rows of the bar raster drawn ({ {start, stop}, ... }), if one is
+  raster = nil,                                            -- the rows of the bar raster drawn ({ {start, stop}, ... }), if one is
+  view = { 0, 1 },                                         -- the part of the item shown, as fractions of its length
+  pan = nil                                                -- a middle-button drag: { x, view }
 }
+
+local ZOOM_STEP = 1.25                                     -- per notch of the wheel
+local MIN_SPAN = 0.05                                      -- seconds: the narrowest view
 
 local function scale() return math.max(1, gfx.ext_retina or 1) end
 local function header_h() return math.floor(22 * scale()) end
@@ -120,6 +128,7 @@ local function check_selection()
   st.count = reaper.CountSelectedMediaItems(0)
   if sig == st.sig then return end
   st.sig = sig
+  if item ~= st.item then st.view = { 0, 1 } end           -- another item: shown whole (moving or trimming keeps the zoom)
   st.item = item
   st.render, st.screen = true, true
   if not item then st.info, st.doc, st.message = nil, nil, "Select an audio item." return end
@@ -150,12 +159,10 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 local function check_theme()
   local c = R.theme_colours()
-  local key = core.json_encode(c)
+  local key = core.json_encode(c) .. st.palette
   if key == st.theme_key then return end
   st.theme_key, st.colours = key, c
-  local over = { text = c.text }
-  if c.wave and math.abs(core.luminance(c.wave) - core.luminance(c.background)) > 0.2 then over.wave = c.wave end
-  st.theme = core.theme_for(c.background, over)
+  st.theme = core.palette_theme(st.palette, c)
   st.render, st.screen = true, true
 end
 
@@ -196,7 +203,8 @@ local function render_strip()
       gfx.update()
       gfx.dest = IMG
     end
-    local column, to_x = core.item_columns(st.info.map, W)
+    local m = st.info.map
+    local column, to_x = core.item_columns(m, W, m.pos + st.view[1] * m.len, m.pos + st.view[2] * m.len)
     local ok_r, r = pcall(core.render_strip, st.doc, R.gfx_sink(0, 0, scale()),
       { width = W, height = H, look = st.look, theme = st.theme, column = column, to_x = to_x, fill = false })
     if ok_r then st.legend, st.raster = r.legend, r.raster and r.raster.rows or nil
@@ -208,7 +216,13 @@ local function render_strip()
   st.render = false
 end
 
--- where a cursor at project time T is drawn: a vertical line { x, y0, y1, key }, or nil outside the item (or, on the
+-- the project time shown: a, b
+local function view_times()
+  local m = st.info.map
+  return m.pos + st.view[1] * m.len, m.pos + st.view[2] * m.len
+end
+
+-- where a cursor at project time T is drawn: a vertical line { x, y0, y1, key }, or nil outside the view (or, on the
 -- bar raster, outside the bars drawn)
 local function cursor_mark(T)
   if not st.info or not T then return nil end
@@ -222,7 +236,9 @@ local function cursor_mark(T)
     local y0, y1 = top + math.floor(y + 0.5), top + math.floor(y + rh + 0.5)
     return { x = x, y0 = y0, y1 = y1, key = x .. "/" .. y0 }
   end
-  local x = math.floor((T - m.pos) / m.len * W + 0.5)
+  local a, b = view_times()
+  if T < a or T > b then return nil end
+  local x = math.floor((T - a) / (b - a) * W + 0.5)
   return { x = x, y0 = top, y1 = top + H, key = tostring(x) }
 end
 local function mark_key(c) return c and c.key or "" end
@@ -243,6 +259,12 @@ local function draw_screen()
     local pc = st.colours and st.colours.play_cursor or th.text
     if st.edit then R.set_colour(ec, 1); gfx.line(st.edit.x, st.edit.y0, st.edit.x, st.edit.y1, 0) end
     if st.play then R.set_colour(pc, 0.9); gfx.line(st.play.x, st.play.y0, st.play.x, st.play.y1, 0) end
+    if core.is_zoomed(st.view) then                        -- zoomed: where the view is in the item, along the bottom
+      local bh = math.max(2, math.floor(3 * s))
+      R.set_colour(th.text, 0.12); gfx.rect(x0, top + H - bh, W, bh, 1)
+      R.set_colour(th.text, 0.55)
+      gfx.rect(x0 + math.floor(st.view[1] * W), top + H - bh, math.max(2, math.floor((st.view[2] - st.view[1]) * W)), bh, 1)
+    end
     draw_text(8 * s, top + H + 2 * s, st.legend or "", th.text, 0.75, 11, gfx.w - 16 * s)
   else
     local msg = st.message or ""
@@ -289,6 +311,13 @@ local function show_menu()
   entries[#entries + 1] = { separator = true }
   entries[#entries + 1] = { label = "Custom look code...", checked = core.LOOKS[st.look] == nil, value = { action = "custom" } }
   entries[#entries + 1] = { separator = true }
+  entries[#entries + 1] = { label = "Show the whole item (zoom out)", disabled = not core.is_zoomed(st.view), value = { action = "unzoom" } }
+  local colours = {}
+  for _, key in ipairs(core.PALETTE_ORDER) do
+    colours[#colours + 1] = { label = core.PALETTES[key].name, checked = st.palette == key, value = { palette = key } }
+  end
+  entries[#entries + 1] = { label = "Colours", submenu = colours }
+  entries[#entries + 1] = { separator = true }
   entries[#entries + 1] = { label = st.doc and "Analyse this item again" or "Analyse this item", disabled = st.info == nil or st.job ~= nil, value = { action = "again" } }
   entries[#entries + 1] = { label = "Analyse items automatically when selected", checked = st.auto, value = { action = "auto" } }
   if st.cli_error then entries[#entries + 1] = { label = "Look for the Playhead command line again", value = { action = "cli" } } end
@@ -301,7 +330,9 @@ local function show_menu()
   if not e then return end
   local v = e.value
   if v.look then st.look = v.look; R.set("look", v.look); st.render = true
+  elseif v.palette then st.palette = v.palette; R.set("palette", v.palette); st.theme_key = nil; check_theme()
   elseif v.action == "custom" then custom_look()
+  elseif v.action == "unzoom" then st.view = { 0, 1 }; st.render = true
   elseif v.action == "again" and st.info then
     local cli = ensure_cli()
     if cli then
@@ -343,12 +374,31 @@ local function handle_mouse()
         if not T or math.abs(t - cur) < math.abs(T - cur) then T = t end
       end
     else
-      T = m.pos + math.max(0, math.min(1, (gfx.mouse_x - x0) / W)) * m.len
+      local a, b = view_times()
+      T = a + math.max(0, math.min(1, (gfx.mouse_x - x0) / W)) * (b - a)
     end
     if T then reaper.SetEditCurPos(T, false, not st.left) end     -- seek playback on the press, not while dragging
   end
   if not left then st.drag = false end
   st.left = left
+  -- the wheel, as in REAPER's arrange view: zoom around the mouse; with Ctrl, Shift or Alt (or a horizontal wheel), scroll
+  local wheel, hwheel = gfx.mouse_wheel or 0, gfx.mouse_hwheel or 0
+  gfx.mouse_wheel, gfx.mouse_hwheel = 0, 0
+  if st.info and inside and (wheel ~= 0 or hwheel ~= 0) then
+    local v = st.view
+    if wheel ~= 0 and cap & (4 | 8 | 16) ~= 0 then v = core.scroll_view(v, -0.15 * wheel / 120)
+    elseif wheel ~= 0 then v = core.zoom_view(v, (gfx.mouse_x - x0) / W, ZOOM_STEP ^ (wheel / 120), MIN_SPAN / st.info.map.len) end
+    if hwheel ~= 0 then v = core.scroll_view(v, 0.15 * hwheel / 120) end
+    if v[1] ~= st.view[1] or v[2] ~= st.view[2] then st.view, st.render = v, true end
+  end
+  -- the middle button drags the view
+  local middle = cap & 64 == 64
+  if middle and not st.pan and inside and st.info then st.pan = { x = gfx.mouse_x, view = st.view } end
+  if middle and st.pan then
+    local v = core.scroll_view(st.pan.view, -(gfx.mouse_x - st.pan.x) / W)
+    if v[1] ~= st.view[1] then st.view, st.render = v, true end
+  end
+  if not middle then st.pan = nil end
   local right = cap & 2 == 2
   if right and not st.right then show_menu() end
   st.right = right
@@ -369,6 +419,17 @@ local function loop()
   end
   if st.job and now >= st.next_status then st.next_status = now + 0.25; st.screen = true end
   handle_mouse()
+  -- zoomed in while playing: the view follows the play cursor (paging), when REAPER's own view does
+  -- (View: Toggle auto-view-scroll during playback)
+  if st.info and core.is_zoomed(st.view) and math.floor(reaper.GetPlayState()) & 1 == 1 and not st.pan
+    and (not reaper.GetToggleCommandState or reaper.GetToggleCommandState(40036) ~= 0) then
+    local m = st.info.map
+    local f = (reaper.GetPlayPosition() - m.pos) / m.len
+    if f >= 0 and f <= 1 then
+      local v = core.follow_view(st.view, f)
+      if v[1] ~= st.view[1] then st.view, st.render = v, true end
+    end
+  end
   if st.render and st.theme then render_strip(); st.screen = true end
   local ec = cursor_mark(reaper.GetCursorPosition())
   local pc = (math.floor(reaper.GetPlayState()) & 1 == 1) and cursor_mark(reaper.GetPlayPosition()) or nil

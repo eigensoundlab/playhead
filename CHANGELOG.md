@@ -20,6 +20,29 @@
   of 26 strips against `drawStrip`, and as numbers against `Playhead.view`). On the bar raster the cursors are drawn
   in the row of their bar, and a click moves the edit cursor to that point of that bar. A view the analysis does not
   have leaves the waveform in its place, as in the library.
+- **REAPER strip window: zoom and colours.**
+  - The mouse wheel zooms around the mouse, as in REAPER's arrange view. Ctrl, Shift or Alt with the wheel, or a
+    horizontal wheel, scrolls; the middle button drags the view.
+  - While zoomed in, a bar along the bottom shows where the view is in the item. The view follows playback when
+    REAPER's own view does. *Show the whole item* in the menu zooms out.
+  - A *Colours* menu offers five palettes: REAPER theme, Playhead, Heat, Colour-blind safe (viridis and Okabe-Ito) and
+    Greyscale. Each keeps the waveform's tint apart from the peak outline and the lines, on dark and light backgrounds.
+    In the REAPER theme the outline keeps REAPER's peak colour and tints run from neutral to a hot yellow. Before, a
+    harshness tint in blues met a blue peak colour.
+- **`waveRamp`** (theme): a waveform's tint through several colours instead of the two ends `waveLow` → `waveHigh`.
+
+### Changed
+- **The lab's strips:**
+  - Spectrograms and views (tempogram, repetition, modulation, curve rhythms, bar raster) use the library's magma
+    ramp, as REAPER does. Its black low end gives faint detail room, such as a tempo's harmonics or a weak repeat.
+    Before, the panel's ramp started at mid-blue, or ran through blues only in the light panel.
+  - A waveform's tint runs through the panel's six spectral colours.
+- **The axis of a view** (BPM, lag, rate, period) is drawn light or dark by the ramp's low end, not by the page, so it
+  stays readable on a light page or REAPER theme.
+
+### Fixed
+- **REAPER: the analysing window** is sized for scaled displays (Windows at 125 or 150 %), and its note keeps a margin
+  from the bottom edge.
 
 ## 0.3.0 (2026-11-07)
 

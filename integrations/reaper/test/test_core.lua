@@ -377,6 +377,45 @@ return function(T)
     end
     check("views: bar raster, tempogram (and folded), lag view, modulation and scalogram as numbers equal Playhead.view's",
       #vn_bad == 0 and vn_n == 16, vn_n .. " views; " .. (vn_bad[1] or "all equal"))
+    -- zooming a strip (as the strip window does): around a point, scrolling, paging after the play cursor
+    do
+      local v = M.zoom_view({ 0, 1 }, 0.25, 2, 0.01)
+      local v2 = M.zoom_view(v, 0, 1e6, 0.01)                -- no narrower than the minimum
+      local v3 = M.scroll_view(v, 10)                        -- no further than the end
+      local v4 = M.follow_view({ 0.1, 0.3 }, 0.35)          -- paged: the play cursor at the left edge
+      local v5 = M.zoom_view(v, 0.5, 0.01, 0.01)             -- zoomed out fully
+      local m = M.take_map({ pos = 10, len = 8, offs = 2, rate = 2, src_len = 40 })
+      local column = M.item_columns(m, 100, 12, 14)         -- 2 s of the item shown over 100 pixels
+      local fa, fb, fm = column(49)
+      local same = math.abs(fm - M.project_to_file(m, 12 + 49.5 / 100 * 2)) < 1e-9 and math.abs((fb - fa) - 2 / 100 * 2) < 1e-9
+      check("strip zoom: around the mouse, within the item, no narrower than a minimum; paging; zoomed columns",
+        near(v[1], 0.125, 1e-12) and near(v[2], 0.625, 1e-12) and near(v2[2] - v2[1], 0.01, 1e-12) and near(v3[2], 1, 1e-12) and near(v3[2] - v3[1], 0.5, 1e-12)
+          and near(v4[1], 0.35, 1e-12) and near(v4[2], 0.55, 1e-12) and v5[1] == 0 and v5[2] == 1 and same and M.is_zoomed(v) and not M.is_zoomed(v5),
+        string.format("%.3f-%.3f", v[1], v[2]))
+    end
+    -- colour palettes: on dark and light backgrounds, the waveform's tint stays apart from the peak outline drawn over
+    -- it (the sculpted look) and from the lines; a REAPER peak colour close to the tint's blue does not matter
+    do
+      local function dist(a, b) return math.sqrt((a[1] - b[1]) ^ 2 + (a[2] - b[2]) ^ 2 + (a[3] - b[3]) ^ 2) end
+      local worst, at = 1e9, ""
+      for _, bg in ipairs({ { 51, 51, 51 }, { 236, 236, 236 } }) do
+        for _, key in ipairs(M.PALETTE_ORDER) do
+          local th = M.palette_theme(key, { background = bg, wave = { 120, 182, 230 } })
+          local tint = th.waveRamp or { th.waveLow, th.waveHigh }
+          for k = 0, 10 do
+            local c = M.ramp_at(tint, k / 10)
+            for _, other in ipairs({ th.outline or th.wave, th.line }) do
+              local d = dist(c, other)
+              if d < worst then worst, at = d, key .. " on " .. bg[1] end
+            end
+          end
+        end
+      end
+      local g, ops = recorder()
+      local r = M.render_strip(robot, g, { look = "sculpted", width = 160, height = 60, theme = M.palette_theme("safe", { background = { 51, 51, 51 } }), fill = false })
+      check("palettes: the tint stays apart from the outline and the lines in every palette, on dark and light backgrounds",
+        worst >= 45 and #ops.rects > 100 and #M.PALETTE_ORDER == 5, string.format("closest %.0f (%s)", worst, at))
+    end
     -- the window says when a slow view is being worked out (a scalogram of a long curve), once
     do
       local c = {}

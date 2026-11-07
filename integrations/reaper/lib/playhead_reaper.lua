@@ -194,15 +194,23 @@ function R.menu_text(s) return (tostring(s):gsub("|", "/"):gsub("^[!#<>]+", ""))
 
 --- A flat menu from entries { label, checked, disabled, value } and { separator = true }. Returns the string for
 --- gfx.showmenu and the entries by the number showmenu returns (separators are not counted, greyed items are).
+--- An entry may be a submenu: { label, submenu = { entries } } (its title is not numbered).
 function R.build_menu(entries)
   local parts, by_number = {}, {}
-  for _, e in ipairs(entries) do
-    if e.separator then parts[#parts + 1] = ""
-    else
-      parts[#parts + 1] = (e.disabled and "#" or "") .. (e.checked and "!" or "") .. R.menu_text(e.label)
-      by_number[#by_number + 1] = e
+  local function add(list, last_in_sub)
+    for i, e in ipairs(list) do
+      local close = last_in_sub and i == #list and "<" or ""
+      if e.separator then parts[#parts + 1] = close
+      elseif e.submenu then
+        parts[#parts + 1] = close .. ">" .. R.menu_text(e.label)
+        add(e.submenu, true)
+      else
+        parts[#parts + 1] = close .. (e.disabled and "#" or "") .. (e.checked and "!" or "") .. R.menu_text(e.label)
+        by_number[#by_number + 1] = e
+      end
     end
   end
+  add(entries, false)
   return table.concat(parts, "|"), by_number
 end
 
@@ -661,26 +669,32 @@ function R.run_queue(specs, opts)
   if #specs == 0 then if opts.on_done then opts.on_done(results, false) end return end
   local mx, my = 300, 300
   if reaper.GetMousePosition then mx, my = reaper.GetMousePosition() end
+  local W0, H0 = 460, 132                                  -- logical size; text and margins scale with the display
   gfx.ext_retina = 1
-  gfx.init(opts.title or "Playhead", 440, 110, 0, math.max(0, mx - 220), math.max(0, my - 55))
+  gfx.init(opts.title or "Playhead", W0, H0, 0, math.max(0, mx - W0 / 2), math.max(0, my - H0 / 2))
+  local s0 = math.max(1, gfx.ext_retina or 1)
+  -- where the window was not made larger for a scaled display (Windows at 125 or 150 %), make it so
+  if s0 > 1 and gfx.h > 0 and gfx.h < H0 * s0 * 0.9 then gfx.init("", math.floor(W0 * s0 + 0.5), math.floor(H0 * s0 + 0.5)) end
   gfx.clear = -1
   local colours = R.theme_colours()
   local th = core.theme_for(colours.background, { text = colours.text })
   local last_draw = 0
   local function draw(spec, elapsed)
     local s = math.max(1, gfx.ext_retina or 1)
+    local pad = math.floor(16 * s)
     set_colour(th.background); gfx.rect(0, 0, gfx.w, gfx.h, 1)
-    gfx.setfont(1, "Arial", 15 * s)
+    gfx.setfont(1, "Arial", math.floor(15 * s + 0.5))
     set_colour(th.text)
-    gfx.x, gfx.y = 14 * s, 12 * s
+    gfx.x, gfx.y = pad, pad
     gfx.drawstr(fmt("%s (%d of %d)", spec.label or "Working", index, #specs))
     local frac = math.min(0.97, elapsed / math.max(0.5, spec.estimate or 2))
-    local bx, by, bw, bh = 14 * s, 42 * s, gfx.w - 28 * s, 10 * s
+    local bx, by, bw, bh = pad, pad + gfx.texth + math.floor(10 * s), gfx.w - 2 * pad, math.floor(10 * s)
     set_colour(th.rule, 0.35); gfx.rect(bx, by, bw, bh, 1)
     set_colour(th.line); gfx.rect(bx, by, math.floor(bw * frac), bh, 1)
-    gfx.setfont(1, "Arial", 13 * s)
+    gfx.setfont(1, "Arial", math.floor(13 * s + 0.5))
     set_colour(th.text, 0.8)
-    gfx.x, gfx.y = 14 * s, 64 * s
+    -- the note under the bar, never closer than the margin to the bottom edge
+    gfx.x, gfx.y = pad, math.min(by + bh + math.floor(12 * s), gfx.h - pad - gfx.texth)
     gfx.drawstr(fmt("%.1f s (usually about %.0f s). Close this window to stop waiting.", elapsed, math.max(1, spec.estimate or 2)))
     gfx.update()
   end
