@@ -229,6 +229,64 @@ return function(T)
   end
 
   ------------------------------------------------------------------------------------------------------------------
+  -- editing tools: arranging layers, splitting at sounds, tempo maps
+  ------------------------------------------------------------------------------------------------------------------
+  do
+    local RL = robot.source.duration
+    local a = M.item_part(M.take_map({ pos = 10, len = 1, offs = 0.1, rate = 1, src_len = RL }))
+    local b = M.item_part(M.take_map({ pos = 3, len = 2, offs = 1, rate = 1, src_len = 5, sections = { { offs = 2, len = 5 } } }))
+    local c = M.item_part(M.take_map({ pos = 5, len = 2, offs = -0.5, rate = 1, src_len = RL }))
+    local _, why_rev = M.item_part(M.take_map({ pos = 0, len = 1, offs = 0, rate = 1, src_len = RL, sections = { { offs = 0, len = RL, rev = true } } }))
+    local _, why_rate = M.item_part(M.take_map({ pos = 0, len = 1, offs = 0, rate = 1.25, src_len = RL }))
+    local _, why_loop = M.item_part(M.take_map({ pos = 0, len = 3, offs = 0, rate = 1, src_len = RL, loop = true }))
+    local short_loop = M.item_part(M.take_map({ pos = 0, len = 1, offs = 0, rate = 1, src_len = RL, loop = true }))
+    check("arrange: an item as a part (where its file's start would play, the file times heard); backwards, other rates and loops refused",
+      near(a.offset, 9.9) and near(a.start, 0.1) and near(a.stop, 1.1) and near(b.offset, 0) and near(b.start, 3) and near(b.stop, 5)
+        and near(c.offset, 5.5) and near(c.start, 0) and near(c.stop, RL) and why_rev:find("backwards") and why_rate:find("rate 1.25", 1, true)
+        and why_loop:find("loops") and short_loop ~= nil, string.format("%.3f %.3f %.3f | %s", a.offset, a.start, a.stop, tostring(why_rate)))
+    local parts = { { offset = 120, gain = 0 }, { offset = 119.95, gain = -2 } }
+    local shift = M.arrange_axis(parts, 0.3)
+    local mv = M.arrange_moves(parts, { parts = { { offset = 0.35, gain = 0 }, { offset = 0.312, gain = -3.5 } } })
+    local txt = M.arrange_changes({ changes = { { part = 1, offset = 0.012, gain = -1.5 } } }, { "sub", "body" })
+    check("arrange: parts moved onto one axis and back; a candidate's moves and its changes as text",
+      near(shift, 119.65) and near(parts[1].offset, 0.35) and near(parts[2].offset, 0.3) and near(mv[1].dt, 0) and near(mv[2].dt, 0.012)
+        and near(mv[2].db, -1.5) and txt == "body +12 ms -1.5 dB" and M.arrange_changes({ changes = {} }, {}) == "as it is", txt)
+
+    local m = M.take_map({ pos = 10, len = 1, offs = 0.1, rate = 1, src_len = RL })
+    local p = M.split_plan(robot, m, { kind = "events", pre = 0.005, min_gap = 0.05 })
+    local p2 = M.split_plan(robot, m, { kind = "events", pre = 0.005, min_gap = 0.1 })
+    local p3 = M.split_plan(robot, M.take_map({ pos = 0, len = RL, offs = 0, rate = 1, src_len = RL }), { kind = "onsets", pre = 0.005, min_gap = 0.05 })
+    local _, why_split = M.split_plan(robot, M.take_map({ pos = 0, len = 1, offs = 0, rate = 1, src_len = RL, sections = { { offs = 0, len = RL, rev = true } } }), {})
+    local e2, e3 = robot.events[2], robot.events[3]
+    check("split: a cut before each event heard; pieces named by their first event, ending where their events have decayed",
+      #p.cuts == 2 and near(p.cuts[1], 10 + e2.start - 0.1 - 0.005) and near(p.cuts[2], 10 + e3.start - 0.1 - 0.005) and #p.pieces == 3
+        and p.pieces[1].sounds == 0 and p.pieces[2].name == e2.word and near(p.pieces[2].sound_end, 10 + e2.decayEnd - 0.1)
+        and p.pieces[3].name == e3.word and near(p.pieces[3].sound_end, 10 + e3.decayEnd - 0.1) and near(p.pieces[3].stop, 11),
+      string.format("%d cuts, %d pieces", #p.cuts, #p.pieces))
+    check("split: cuts closer than the shortest piece are left out (their sounds join the piece before); onsets; backwards refused",
+      #p2.cuts == 1 and p2.pieces[2].sounds == 2 and near(p2.pieces[2].sound_end, 10 + e3.decayEnd - 0.1) and #p3.cuts == #robot.onsets - 1
+        and p3.pieces[1].sounds == 1 and p3.pieces[1].sound_end == nil and why_split:find("backwards"), #p3.cuts .. " onset cuts")
+
+    local whole = M.take_map({ pos = 100, len = arc.source.duration, offs = 0, rate = 1, src_len = arc.source.duration })
+    local bars = M.tempo_plan(arc, whole, "bars")
+    local beats = M.tempo_plan(arc, whole, "beats")
+    local fast = M.tempo_plan(arc, M.take_map({ pos = 30, len = 20, offs = 5, rate = 1.25, src_len = arc.source.duration }), "bars")
+    local _, why_tempo = M.tempo_plan(robot, M.take_map({ pos = 0, len = 1, offs = 0, rate = 1, src_len = RL }), "bars")
+    local lands = true
+    for i = 1, #bars.markers - 1 do
+      local k = bars.markers[i]
+      if not near(k.pos + bars.beats_per_bar * 60 / k.bpm, bars.markers[i + 1].pos, 1e-9) then lands = false end
+    end
+    local last = bars.markers[#bars.markers]
+    if not near(last.pos + bars.beats_per_bar * 60 / last.bpm, 100 + arc.rhythm.downbeats[#arc.rhythm.downbeats], 1e-9) then lands = false end
+    check("tempo map: a marker per bar from the first downbeat, each tempo putting the next bar on its downbeat; per beat; a faster take; needs beats",
+      #bars.markers == #arc.rhythm.downbeats - 1 and near(bars.markers[1].pos, 100 + arc.rhythm.downbeats[1]) and bars.beats_per_bar == 4 and lands
+        and math.abs(bars.mean_bpm - arc.rhythm.tempo) < 1 and #beats.markers > #bars.markers * 3 and math.abs(beats.mean_bpm - arc.rhythm.tempo) < 2
+        and math.abs(fast.mean_bpm - 1.25 * arc.rhythm.tempo) < 1.5 and fast.start >= 30 and why_tempo:find("music profile"),
+      string.format("%d bars at %.2f BPM (%d/4), %d beats at %.2f, %.2f faster", #bars.markers, bars.mean_bpm, bars.beats_per_bar, #beats.markers, beats.mean_bpm, fast.mean_bpm))
+  end
+
+  ------------------------------------------------------------------------------------------------------------------
   -- looks and the strip renderer, against Playhead.drawStrip
   ------------------------------------------------------------------------------------------------------------------
   do

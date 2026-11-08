@@ -6,7 +6,9 @@
 ReaScripts that bring [Playhead](https://github.com/eigensoundlab/playhead)'s analysis and tools into REAPER: the
 curves (loudness, activity, harshness, tension, onset strength, impulsiveness and the other descriptors), events,
 onsets, beats, bar lines and sections of an item, as markers, as automation that can drive any effect, as processed
-takes from Playhead's analysis-driven tools, and as a strip view of the item in any Playhead look. The parts that do
+takes from Playhead's analysis-driven tools, and as a strip view of the item in any Playhead look; and editing tools
+built on the analysis: arranging the layers of a sound, splitting a recording into its sounds, and a tempo map that
+follows a recording's bars. The parts that do
 not need REAPER (document reading, time mapping, the strip renderer, command lines) are a plain Lua library with its
 own tests, so the package is also a base for your own analysis-driven scripts.
 
@@ -44,7 +46,7 @@ Use one of these ways, not two: each adds its own set of actions.
    for your system.
 2. In REAPER, open **Actions > Show action list**, then **New action > Load ReaScript...**, choose
    `Playhead - Install.lua` in the unpacked folder, and **Run** it.
-3. It copies everything into REAPER's resource folder (`Scripts/Playhead`, `Effects/Playhead`), adds the six actions
+3. It copies everything into REAPER's resource folder (`Scripts/Playhead`, `Effects/Playhead`), adds the nine actions
    and **Playhead - Uninstall** to the action list, and checks the command line.
 
 To update, run the installer from a newer download; settings and analyses are kept. To remove Playhead, run
@@ -55,7 +57,7 @@ whether to delete the stored analyses and settings too.
 1. **Extensions > ReaPack > Import repositories...**, paste `https://eigensoundlab.github.io/playhead/reaper/index.xml`.
 2. **Extensions > ReaPack > Browse packages**, find **Playhead for REAPER**, install it, and **Apply**.
 
-The package holds the six actions, the library and the effect, pinned to one commit with checksums. ReaPack offers
+The package holds the nine actions, the library and the effect, pinned to one commit with checksums. ReaPack offers
 each new version as an update. The command line is not part of it: put the executable for your system in
 `<resource>/Scripts/Playhead/`, or choose it in **Playhead - Settings**. ReaPack removes the package by itself
 (right-click it in Browse packages).
@@ -120,6 +122,33 @@ to the project's media folder, in `Playhead/`; each run keeps its own files. The
 how much) is printed to the console. The active take is what is processed, so a processed take can be processed
 again. **Stretch keeping the attacks** changes the length: its takes start at the same moment of the sound, and the
 item is lengthened (or shortened) by the same factor to play them; the other takes keep their timing.
+
+**Playhead - Arrange selected layers.** For a sound built from layers on items of their own (a sub, a body, a
+transient and a tail, say): Playhead searches small moves and gain changes of the layers for a **punchier**, **bigger**
+or **cleaner** whole and offers the best six, each with its score and its changes (`click +12 ms -1.5 dB`). Picking
+one moves the items and plays the sound; pick another to compare, *Play again*, then *Keep this one* (one undo step)
+or *Back to how it was*. The search (`playhead arrange`) works from the layers' analyses alone, about 500
+arrangements in a fraction of a second, so nothing is rendered; [experiments/arrange](../../experiments/arrange/README.md)
+checks that the mixes rank as the search predicts. Asks for the goal, how far a layer may move (default 250 ms) and
+how far its gain may go down and up (6 and 3 dB). A locked item (Item properties: Lock) stays; without one, the
+loudest layer stays. Each item counts with the part of its file it plays and its item and take volume. Items that play
+backwards, at another rate or loop their source are left out with a note.
+
+**Playhead - Split items at sounds.** Splits each selected item into its sounds: a cut a few milliseconds before each
+event (or each onset), so no attack is cut, and never two cuts closer than the shortest piece (default 60 ms; the
+sound joins the piece before). Each piece can be named after its sound (`door 03 tonal hit`), ended where its sound
+has decayed (plus a faded tail, default 60 ms) and given a region of the same name: with the region render matrix
+(or *Render: regions*, `$region` in the file name) a recording of many hits becomes one file per hit. Pieces before
+the first sound (an item that starts during an earlier one) are left as they are. Onsets come closer together than
+events and split without shortening (they have no decay).
+
+**Playhead - Tempo map from item.** Makes REAPER's tempo follow a recording that was not played to a click: a tempo
+marker at each bar (or each beat) Playhead's beat tracking finds in the first selected item, each with the tempo
+that puts the next bar exactly on its downbeat, the first with the time signature (beats per bar as found, over 4).
+The grid, snapping, MIDI and tempo-synced effects then line up with the recording. Before adding, it says how many
+markers and the tempo range, and offers to remove tempo markers already in the item's range. The item is set to time
+base *Time* so it stays where it is; items on a *Beats* time base move with the new tempo (Undo takes all of it
+back). Needs the music profile (sounds over 10 s, or profile `music` in Settings) and a steady beat.
 
 **Playhead - Strip window.** A dockable window that draws the selected item as a Playhead strip in a chosen look:
 the waveform (plain, tinted by a curve or sculpted by loudness), the spectrogram, curves as lanes or over the
@@ -237,9 +266,10 @@ Starting points for analysis-driven mastering, mixing and sound design; each tak
    strength: ducking that follows what the analysis hears rather than a sidechain level.
 
 For your own scripts, `lib/playhead_core.lua` has the document model (`curve_at`, `curve_names`, `marker_plan`), the
-time mapping of a take (`take_map`, `project_to_file`, `file_to_project`), point reduction, the strip renderer and
-look codes, and `lib/playhead_reaper.lua` has the REAPER side (finding the command line, the cache,
-`with_documents`, runs that do not block, Playhead Control and its envelopes); the example above shows the pattern.
+time mapping of a take (`take_map`, `project_to_file`, `file_to_project`), the plans of the editing tools
+(`item_part`, `split_plan`, `tempo_plan`), point reduction, the strip renderer and look codes, and
+`lib/playhead_reaper.lua` has the REAPER side (finding the command line, the cache, `with_documents`, runs that do not
+block, remembered dialogs with `form`, Playhead Control and its envelopes); the example above shows the pattern.
 
 ## Limits
 

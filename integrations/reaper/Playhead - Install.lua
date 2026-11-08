@@ -3,7 +3,7 @@
 -- Copyright 2026 Daniel Sandner
 --
 -- Installs Playhead for REAPER from the folder this script is in (an unpacked download, or a Playhead checkout):
--- copies the six actions, their library and README into REAPER's resource folder (Scripts/Playhead), the Playhead
+-- copies the actions, their library and README into REAPER's resource folder (Scripts/Playhead), the Playhead
 -- Control effect into Effects/Playhead and, when it is in the same folder, the Playhead executable; then adds the
 -- actions (and "Playhead - Uninstall") to the action list. Run it again to update: settings and analyses are kept.
 --

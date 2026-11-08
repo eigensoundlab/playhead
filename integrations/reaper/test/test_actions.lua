@@ -25,7 +25,8 @@ return function(T)
   env.ext["Playhead/exe"] = T.cli
   env.ext["Playhead/node"] = T.node
   local function script(name) return T.pkg .. "/Playhead - " .. name .. ".lua" end
-  local SCRIPTS = { "Analyse selected items", "Add markers for selected items", "Write curves as automation", "Process selected items", "Strip window", "Settings" }
+  local SCRIPTS = { "Analyse selected items", "Add markers for selected items", "Write curves as automation", "Process selected items",
+    "Arrange selected layers", "Split items at sounds", "Tempo map from item", "Strip window", "Settings" }
 
   -- every file loads (syntax) and carries its licence and ReaPack header
   do
@@ -308,6 +309,107 @@ return function(T)
   env.menu_choice = nil
 
   ------------------------------------------------------------------------------------------------------------------
+  -- Arrange selected layers
+  ------------------------------------------------------------------------------------------------------------------
+  -- menu answers in turn: a label, or the start of one ending in "*"; 0 (closed) when the list runs out
+  local function menu_sequence(list)
+    local i = 0
+    return function(menu)
+      i = i + 1
+      local want = list[i]
+      if not want then return 0 end
+      local n = 0
+      for field in (menu .. "|"):gmatch("([^|]*)|") do
+        if field ~= "" and field:sub(1, 1) ~= ">" then
+          n = n + 1
+          local label = field:gsub("^[#!<]+", ""):gsub("^%s+", "")
+          if label == want or (want:sub(-1) == "*" and label:sub(1, #want - 1) == want:sub(1, -2)) then return n end
+        end
+      end
+      return 0
+    end
+  end
+  local L1 = env.add_item(tr1, { source = rsrc, pos = 200, len = robot_len, offs = 0, name = "robot body" })
+  local L2 = env.add_item(tr2, { source = rsrc, pos = 200.04, len = 1.0, offs = 0.1, vol = 0.5, name = "robot click" })
+  env.select({ L1, L2, B, C })
+  env.menu_choice = menu_sequence({ "2.*", "Play again", "1.*", "Keep this one" })
+  local undo_before = #env.undo_points
+  scenario("arrange: candidates from the command line, each applied and played as picked; the kept one in one undo step; the loudest layer stays; other rates and backwards items left out",
+    script("Arrange selected layers"), nil, function()
+      local db = 20 * math.log(L2.vol / 0.5, 10)
+      local moved = math.abs(L2.pos - 200.04) > 1e-6 or math.abs(db) > 0.01
+      local msg = env.messages[1] and env.messages[1].text or ""
+      local ok = L1.pos == 200 and L1.vol == 1 and moved and math.abs(L2.pos - 200.04) <= 0.25 + 1e-6 and db >= -6 - 1e-6 and db <= 3 + 1e-6
+        and #env.undo_points == undo_before + 1 and env.undo_points[#env.undo_points] == "Playhead: arrange layers (punch)" and #env.menus >= 4
+        and msg:find("cue arc is left out: it plays at rate 1.25", 1, true) and msg:find("robot reversed is left out: it plays backwards", 1, true)
+        and console():find("kept 1 of", 1, true) and env.cursor ~= nil
+      return ok, string.format("click at %.4f s, %+.2f dB; %d menus; %s", L2.pos, db, #env.menus, console():match("Playhead arrange[^\n]*") or msg:sub(1, 80))
+    end)
+  L2.pos, L2.vol = 200.04, 0.5
+  local kept_pos, kept_vol = L2.pos, L2.vol
+  env.select({ L1, L2 })
+  env.menu_choice = menu_sequence({ "1.*", "Back to how it was" })
+  undo_before = #env.undo_points
+  env.input_answers = { function(v) v[5] = "no"; return v end }
+  scenario("arrange: going back leaves the layers as they were, with no undo step", script("Arrange selected layers"), nil, function()
+    return L2.pos == kept_pos and L2.vol == kept_vol and #env.undo_points == undo_before and #env.messages == 0, string.format("%.4f s", L2.pos)
+  end)
+  env.input_answers, env.menu_choice = {}, nil
+
+  ------------------------------------------------------------------------------------------------------------------
+  -- Split items at sounds
+  ------------------------------------------------------------------------------------------------------------------
+  local S2 = env.add_item(tr2, { source = rsrc, pos = 300, len = 1.0, offs = 0.1, name = "robot hit (steel).wav" })
+  local n_items, n_regions = #env.items, 0
+  for _, x in ipairs(env.markers) do if x.isrgn then n_regions = n_regions + 1 end end
+  env.select({ S2, C })
+  env.input_answers = { function(v) v[3] = "50"; v[7] = "yes"; return v end }
+  scenario("split: a cut before each event, the pieces named after their sounds, the last shortened to its decay and faded, a region each; backwards items explained",
+    script("Split items at sounds"), nil, function()
+      local pieces = {}
+      for _, it in ipairs(env.items) do if it.pos >= 300 - 1e-9 and it.pos < 301 and it.track == tr2 then pieces[#pieces + 1] = it end end
+      table.sort(pieces, function(a, b) return a.pos < b.pos end)
+      local regs = {}
+      for _, x in ipairs(env.markers) do if x.isrgn and x.pos >= 300 then regs[#regs + 1] = x end end
+      table.sort(regs, function(a, b) return a.pos < b.pos end)
+      local e2, e3 = robot_doc.events[2], robot_doc.events[3]
+      local p2, p3 = pieces[2], pieces[3]
+      local ok = #env.items == n_items + 2 and #pieces == 3 and p2 and math.abs(p2.pos - (300 + e2.start - 0.1 - 0.005)) < 1e-9
+        and p2.takes[1].name == "robot hit (steel) 01 " .. e2.word and p3.takes[1].name == "robot hit (steel) 02 " .. e3.word
+        and math.abs(p3.pos + p3.len - (300 + e3.decayEnd - 0.1 + 0.06)) < 1e-9 and math.abs(p3.fadeout - 0.06) < 1e-9 and pieces[1].takes[1].name == "robot hit (steel).wav"
+        and #regs == 2 and regs[2].name == p3.takes[1].name and math.abs(regs[2].rgnend - (p3.pos + p3.len)) < 1e-9
+        and last_message():find("robot reversed: it plays backwards", 1, true)
+      return ok, string.format("%d pieces, %d regions: %s", #pieces, #regs, p3 and p3.takes[1].name or "?")
+    end)
+  env.input_answers = {}
+
+  ------------------------------------------------------------------------------------------------------------------
+  -- Tempo map from item
+  ------------------------------------------------------------------------------------------------------------------
+  env.tempo[1] = { time = 0, bpm = 120, num = 4, den = 4, linear = false }
+  env.tempo[2] = { time = 35, bpm = 100, num = 0, den = 0, linear = false }
+  local planT = core.tempo_plan(arc_doc, map_of(B, 64), "bars")
+  env.select({ B })
+  scenario("tempo map: markers at the bars of the music item (played 1.25 times faster), the first with 4/4; the item set to time base Time; markers in its range replaced",
+    script("Tempo map from item"), nil, function()
+      local at0, old, new = false, false, {}
+      for _, k in ipairs(env.tempo) do
+        if k.time == 0 and k.bpm == 120 then at0 = true elseif k.bpm == 100 then old = true else new[#new + 1] = k end
+      end
+      local lands = #new == #planT.markers
+      for i, k in ipairs(new) do if not planT.markers[i] or math.abs(k.time - planT.markers[i].pos) > 1e-9 or math.abs(k.bpm - planT.markers[i].bpm) > 1e-9 then lands = false end end
+      local ok = at0 and not old and lands and new[1].num == 4 and new[1].den == 4 and new[2] and new[2].num == 0 and B.timebase == 0
+        and math.abs(planT.mean_bpm - 1.25 * arc_doc.rhythm.tempo) < 1.5 and env.undo_points[#env.undo_points] == "Playhead: tempo map from cue arc"
+        and env.messages[1] and env.messages[1].text:find("set to time base Time", 1, true)
+      return ok, string.format("%d markers (plan %d), %.2f BPM on average", #new, #planT.markers, planT.mean_bpm)
+    end)
+  local tempo_before = #env.tempo
+  env.select({ A })
+  scenario("tempo map: a sound effect has no beat; nothing is added and the music profile is explained", script("Tempo map from item"), nil, function()
+    return #env.tempo == tempo_before and last_message():find("music profile", 1, true), last_message():sub(1, 90)
+  end)
+
+  ------------------------------------------------------------------------------------------------------------------
   -- Settings
   ------------------------------------------------------------------------------------------------------------------
   env.input_answers = { function(v) v[3] = "loud"; return v end, function(v) v[3] = "auto"; return v end }
@@ -477,7 +579,7 @@ return function(T)
     local sd, ed = resource .. "/Scripts/Playhead", resource .. "/Effects/Playhead"
     env.actions, env.action_commits = {}, 0
     env.message_answers = { 1 }
-    scenario("install: copies the package (and the executable) into the resource folder and adds 7 actions in one commit",
+    scenario("install: copies the package (and the executable) into the resource folder and adds its actions and the uninstaller in one commit",
       dl .. "/Playhead - Install.lua", nil, function()
         local all = T.exists(ed .. "/" .. P.effect) and T.exists(sd .. "/playhead") and T.exists(sd .. "/README.md")
         for _, f in ipairs(P.actions) do all = all and T.exists(sd .. "/" .. f) and env.actions[sd .. "/" .. f] ~= nil end
@@ -485,14 +587,14 @@ return function(T)
         local n = 0
         for _ in pairs(env.actions) do n = n + 1 end
         local msg = last_message()
-        return all and n == 7 and env.actions[sd .. "/Playhead - Uninstall.lua"] and env.action_commits == 1 and msg:find("is installed", 1, true)
+        return all and n == #P.actions + 1 and env.actions[sd .. "/Playhead - Uninstall.lua"] and env.action_commits == 1 and msg:find("is installed", 1, true)
           and msg:find("Playhead - Strip window", 1, true), n .. " actions; " .. msg:sub(1, 60)
       end)
     env.message_answers = { 1 }
     scenario("install: running it again updates in place, with no second set of actions", dl .. "/Playhead - Install.lua", nil, function()
       local n = 0
       for _ in pairs(env.actions) do n = n + 1 end
-      return n == 7 and last_message():find("is installed", 1, true), n .. " actions"
+      return n == #P.actions + 1 and last_message():find("is installed", 1, true), n .. " actions"
     end)
     env.message_answers = { 2 }
     scenario("install: Cancel changes nothing", dl .. "/Playhead - Install.lua", nil, function()

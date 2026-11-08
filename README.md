@@ -148,10 +148,12 @@ a short [listening test](https://eigensoundlab.github.io/playhead/listening/) ([
 
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
 
-**REAPER.** [integrations/reaper](integrations/reaper/README.md) is a ReaPack package of six actions around the command
+**REAPER.** [integrations/reaper](integrations/reaper/README.md) is a ReaPack package of nine actions around the command
 line: analyse the selected items, add their events, sections and bars as markers and regions, write curves as
 automation through a small JSFX (Playhead Control) that any effect parameter can follow, run the tools as new takes,
-and a dockable strip window. Its README has recipes for mixing, mastering and sound-design experiments.
+a dockable strip window, and editing tools: arrange the layers of a sound for punch, size or clarity, split a
+recording into its sounds (named, trimmed, with regions for rendering), and a tempo map from a recording's bars. Its
+README has recipes for mixing, mastering and sound-design experiments.
 
 **Languages.** The lab is in English, Czech, German, Polish, Russian and Spanish (the menu in the top bar, or
 `?lang=cs`). The terms follow a shared [sound vocabulary](https://github.com/eigensoundlab/sound-vocabulary), so

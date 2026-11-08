@@ -7,7 +7,8 @@
 --   Brings Playhead's analysis into REAPER: loudness, activity, harshness, tension, onsets, events, beats and
 --   sections of the selected items, as take markers and regions, as automation curves (through the Playhead
 --   Control effect, for parameter links and MIDI CC), as processed takes from Playhead's analysis-driven tools,
---   and as a strip window that draws the item in a chosen look.
+--   and as a strip window that draws the item in a chosen look. Editing tools built on it: arranging the layers
+--   of a sound, splitting a recording into its sounds, and a tempo map from a recording's beats.
 --
 --   Needs the Playhead command line (the executable from the Playhead releases on GitHub, or
 --   tools/playhead-cli.js from a Playhead checkout with Node.js). See README.md.
@@ -18,6 +19,9 @@
 --   [main] Playhead - Add markers for selected items.lua
 --   [main] Playhead - Write curves as automation.lua
 --   [main] Playhead - Process selected items.lua
+--   [main] Playhead - Arrange selected layers.lua
+--   [main] Playhead - Split items at sounds.lua
+--   [main] Playhead - Tempo map from item.lua
 --   [main] Playhead - Strip window.lua
 --   [main] Playhead - Settings.lua
 --   [nomain] lib/playhead_core.lua
@@ -32,6 +36,10 @@
 --   The tool "Stretch keeping the attacks" in Process selected items (with Playhead 0.3.0 or later); the item
 --   is lengthened or shortened to play the stretched takes.
 --   The analysing window fits its text on scaled displays.
+--   New actions: Arrange selected layers (moves and gains of a layered sound's items for a punchier, bigger or
+--   cleaner whole, auditioned one by one), Split items at sounds (a cut before each event or onset, pieces named,
+--   shortened and given regions for rendering) and Tempo map from item (tempo markers at a recording's bars or
+--   beats).
 
 -- SPDX-License-Identifier: Apache-2.0
 -- Copyright 2026 Daniel Sandner

@@ -740,6 +740,150 @@ function M.marker_plan(doc, m, kinds)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
+-- arranging layers (playhead arrange)
+------------------------------------------------------------------------------------------------------------------------
+-- does the item play its source more than once?
+local function loops(m) return m.loop and m.src_len and m.offs + m.len * m.rate > m.src_len + 1e-6 end
+
+--- What an item plays of its file, as a part for `playhead arrange`: { offset (the project time at which the file's
+--- time 0 would play), start, stop (the file times heard) }, or nil and why not. Items that play backwards, at
+--- another rate or loop their source cannot be placed from the file's analysis.
+function M.item_part(m)
+  if m.reversed then return nil, "it plays backwards" end
+  if abs(m.rate - 1) > 1e-6 then return nil, fmt("it plays at rate %s; arranging needs items at their own speed", M.num(m.rate, 3)) end
+  if loops(m) then return nil, "it loops its source" end
+  local s0, s1 = max(m.offs, 0), m.offs + m.len
+  if m.src_len then s1 = min(s1, m.src_len) end
+  if s1 - s0 <= 1e-6 then return nil, "it plays none of its file" end
+  return { offset = m.pos - M.source_to_file(m, m.offs), start = M.source_to_file(m, s0), stop = M.source_to_file(m, s1) }
+end
+
+--- Puts the parts on one axis for the search, which keeps offsets at 0 or later: shifted so that the earliest offset
+--- is `lead` seconds. Returns the shift (project time = axis time + shift).
+function M.arrange_axis(parts, lead)
+  local lo = huge
+  for _, p in ipairs(parts) do lo = min(lo, p.offset) end
+  local shift = lo - (lead or 0)
+  for _, p in ipairs(parts) do p.offset = p.offset - shift end
+  return shift
+end
+
+--- A candidate's moves against the parts sent: per part { dt (s), db }.
+function M.arrange_moves(sent, cand)
+  local out = {}
+  for k, p in ipairs(sent) do
+    local c = cand and cand.parts and cand.parts[k]
+    out[k] = { dt = c and ((tonumber(c.offset) or p.offset) - p.offset) or 0, db = c and ((tonumber(c.gain) or p.gain) - p.gain) or 0 }
+  end
+  return out
+end
+
+--- A candidate's changes as text: "kick +12 ms, tail -2.0 dB" (names by part), or "as it is".
+function M.arrange_changes(cand, names)
+  local ch = {}
+  for _, c in ipairs(cand.changes or {}) do
+    local bits = {}
+    local dt, db = tonumber(c.offset) or 0, tonumber(c.gain) or 0
+    if abs(dt) >= 0.0005 then bits[#bits + 1] = fmt("%+d ms", round(dt * 1000)) end
+    if abs(db) >= 0.05 then bits[#bits + 1] = fmt("%+.1f dB", db) end
+    if #bits > 0 then ch[#ch + 1] = tostring(names[(tonumber(c.part) or 0) + 1] or ("layer " .. ((tonumber(c.part) or 0) + 1))) .. " " .. concat(bits, " ") end
+  end
+  return #ch > 0 and concat(ch, ", ") or "as it is"
+end
+
+------------------------------------------------------------------------------------------------------------------------
+-- splitting at events
+------------------------------------------------------------------------------------------------------------------------
+--- Where to split an item into its sounds: cuts (project times inside the item, `pre` seconds before each sound and
+--- at least `min_gap` apart) and the pieces between them { start, stop, name, sounds, sound_end }. A piece's name
+--- is the word of its first event ("tonal hit"); sound_end is where its events have decayed (events only).
+--- opts: kind "events" | "onsets", pre (s), min_gap (s). Returns the plan, or nil and why not.
+function M.split_plan(doc, m, opts)
+  opts = opts or {}
+  if m.reversed then return nil, "it plays backwards" end
+  local pre, gap = opts.pre or 0.005, opts.min_gap or 0.05
+  local starts = {}
+  if opts.kind == "onsets" then
+    if type(doc.onsets) ~= "table" then return nil, "no onsets in this analysis" end
+    for _, t in ipairs(doc.onsets) do for _, T in ipairs(M.file_to_project(m, t, 10000)) do starts[#starts + 1] = { t = T, name = "onset" } end end
+  else
+    if type(doc.events) ~= "table" then return nil, "no events in this analysis (the fast profile leaves them out)" end
+    for _, e in ipairs(doc.events) do
+      local t = tonumber(e.start)
+      if t then
+        local stop = tonumber(e.decayEnd) or tonumber(e["end"]) or t
+        for _, T in ipairs(M.file_to_project(m, t, 10000)) do
+          starts[#starts + 1] = { t = T, name = trim(tostring(e.word or "event")), stop = min(m.pos + m.len, T + max(0, stop - t) / m.rate) }
+        end
+      end
+    end
+  end
+  sort(starts, function(a, b) return a.t < b.t end)
+  local cuts, last, stop = {}, m.pos, m.pos + m.len
+  for _, s in ipairs(starts) do
+    local c = s.t - pre
+    if c >= last + gap - 1e-9 and c <= stop - gap + 1e-9 then cuts[#cuts + 1] = c; last = c end
+  end
+  local bounds = { m.pos }
+  for _, c in ipairs(cuts) do bounds[#bounds + 1] = c end
+  bounds[#bounds + 1] = stop
+  local pieces = {}
+  for k = 1, #bounds - 1 do pieces[k] = { start = bounds[k], stop = bounds[k + 1], sounds = 0 } end
+  local k = 1
+  for _, s in ipairs(starts) do
+    while k < #pieces and s.t >= pieces[k].stop - 1e-9 do k = k + 1 end
+    local p = pieces[k]
+    p.sounds = p.sounds + 1
+    if not p.name then p.name = s.name end
+    if s.stop then p.sound_end = max(p.sound_end or 0, s.stop) end
+  end
+  return { cuts = cuts, pieces = pieces, sounds = #starts }
+end
+
+------------------------------------------------------------------------------------------------------------------------
+-- tempo maps
+------------------------------------------------------------------------------------------------------------------------
+--- Tempo markers that make the project's grid follow an item's beats: at each downbeat (per = "bars") or each beat
+--- (per = "beats") from the first downbeat on, each with the tempo that puts the next marker's beat on its time.
+--- Returns { markers = { {pos, bpm} }, beats_per_bar, start, stop, mean_bpm }, or nil and why not.
+function M.tempo_plan(doc, m, per)
+  if m.reversed then return nil, "it plays backwards" end
+  if loops(m) then return nil, "it loops its source" end
+  local r = doc.rhythm
+  if type(r) ~= "table" then return nil, "no beats: they are found by the music profile (sounds over 10 s, or profile music in Playhead - Settings)" end
+  if not r.reliable then return nil, "no steady beat was found" end
+  local function project(list)
+    local out = {}
+    for _, t in ipairs(type(list) == "table" and list or {}) do local T = M.file_to_project(m, tonumber(t) or -1, 1)[1]; if T then out[#out + 1] = T end end
+    sort(out)
+    return out
+  end
+  local beats, downs = project(r.beats), project(r.downbeats)
+  if #downs < 2 then return nil, "fewer than two bars are heard in the item" end
+  -- beats per bar: the most common count of beats from one downbeat to the next
+  local counts, bpb, best = {}, 4, 0
+  local j = 1
+  for i = 1, #downs - 1 do
+    while j <= #beats and beats[j] < downs[i] - 1e-3 do j = j + 1 end
+    local n, q = 0, j
+    while q <= #beats and beats[q] < downs[i + 1] - 1e-3 do n = n + 1; q = q + 1 end
+    if n > 0 then counts[n] = (counts[n] or 0) + 1 end
+  end
+  for n, c in pairs(counts) do if c > best or (c == best and n == 4) then bpb, best = n, c end end
+  local marks = {}
+  if per == "beats" then
+    local list = {}
+    for _, b in ipairs(beats) do if b >= downs[1] - 1e-3 then list[#list + 1] = b end end
+    for i = 1, #list - 1 do marks[#marks + 1] = { pos = list[i], bpm = 60 / (list[i + 1] - list[i]) } end
+  else
+    for i = 1, #downs - 1 do marks[#marks + 1] = { pos = downs[i], bpm = bpb * 60 / (downs[i + 1] - downs[i]) } end
+  end
+  local total = 0
+  for _, k in ipairs(marks) do total = total + k.bpm end
+  return { markers = marks, beats_per_bar = bpb, start = marks[1] and marks[1].pos, stop = downs[#downs], mean_bpm = #marks > 0 and total / #marks or nil }
+end
+
+------------------------------------------------------------------------------------------------------------------------
 -- views of rhythm and form (as Playhead.view): the bar raster, the tempogram, the lag view, the modulation
 -- spectrogram and the curve scalogram, as numbers. A view: { kind, rows, cols, values, yTicks, and colAt(t)
 -- (time-based views) or timeRows (the raster) }; values[r * cols + c + 1] is row r (0 at the top), column c, 0..1,
@@ -2366,7 +2510,8 @@ M.SETTINGS_SECTION = "Playhead"
 -- files from the index; see tools/reapack-index.js)
 M.PACKAGE = {
   actions = { "Playhead - Analyse selected items.lua", "Playhead - Add markers for selected items.lua", "Playhead - Write curves as automation.lua",
-    "Playhead - Process selected items.lua", "Playhead - Strip window.lua", "Playhead - Settings.lua" },
+    "Playhead - Process selected items.lua", "Playhead - Arrange selected layers.lua", "Playhead - Split items at sounds.lua",
+    "Playhead - Tempo map from item.lua", "Playhead - Strip window.lua", "Playhead - Settings.lua" },
   lib = { "playhead_core.lua", "playhead_reaper.lua" },
   effect = "Playhead Control.jsfx",
   tools = { "Playhead - Install.lua", "Playhead - Uninstall.lua" },

@@ -220,6 +220,45 @@ function R.dialog(title, fields, extrawidth)
   end
 end
 
+--- A dialog whose answers are checked and remembered (under `store`). fields: { key, caption, default, kind =
+--- "bool" | "number" | "choice", choices = { ... }, min, max }. Shown again, with a note, while an answer does not
+--- fit. Returns the answers by key, or nil when cancelled.
+function R.form(store, title, fields, extrawidth)
+  local saved = R.get_json(store, {})
+  local shown = {}
+  for i, f in ipairs(fields) do
+    local v = saved[f.key]
+    if v == nil then v = f.default end
+    local hint = f.kind == "bool" and " (yes/no)" or f.kind == "choice" and (" (" .. table.concat(f.choices, "/") .. ")") or ""
+    shown[i] = { caption = f.caption .. hint, default = f.kind == "bool" and core.yesno(v) or core.num(v, 4) }
+  end
+  while true do
+    local v = R.dialog(title, shown, extrawidth or 60)
+    if not v then return nil end
+    local out, bad = {}, {}
+    for i, f in ipairs(fields) do
+      local s = core.trim(v[i])
+      shown[i].default = s
+      local x
+      if f.kind == "bool" then x = core.parse_bool(s)
+      elseif f.kind == "number" then
+        x = tonumber(s)
+        if x and ((f.min and x < f.min) or (f.max and x > f.max)) then x = nil end
+      else
+        for _, c in ipairs(f.choices) do if s:lower() == c:lower() then x = c end end
+      end
+      if x == nil then
+        local want = f.kind == "bool" and "yes or no" or f.kind == "choice" and table.concat(f.choices, ", ") or
+          ((f.min and f.max) and fmt("a number from %s to %s", core.num(f.min), core.num(f.max)) or "a number")
+        bad[#bad + 1] = f.caption .. ": " .. want
+      end
+      out[f.key] = x
+    end
+    if #bad == 0 then R.set_json(store, out); return out end
+    R.message("Please check:\n  " .. table.concat(bad, "\n  "), title)
+  end
+end
+
 --- A popup menu (gfx.showmenu) at the mouse. When no gfx window is open, a tiny one is opened for it. Returns the
 --- chosen item's number (1-based, counting only selectable items) or 0.
 function R.menu(items)

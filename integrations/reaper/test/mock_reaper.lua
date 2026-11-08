@@ -67,7 +67,7 @@ function Mock.new(T, opts)
   end
   function env.add_item(track, t)
     local item = { kind = "MediaItem", track = track, pos = t.pos or 0, len = t.len or 1, loop = t.loop and 1 or 0, takes = {}, cur = 0,
-      selected = t.selected ~= false, guid = guid(), vol = 1 }
+      selected = t.selected ~= false, guid = guid(), vol = t.vol or 1, lock = t.lock or 0, fadeout = 0, timebase = -1 }
     if t.source then
       item.takes[1] = { kind = "MediaItem_Take", item = item, src = t.source, offs = t.offs or 0, rate = t.rate or 1, name = t.name or "",
         midi = t.midi or false, markers = {}, vals = { D_VOL = 1, D_PAN = 0, D_PANLAW = -1, D_PITCH = 0, B_PPITCH = 0, I_CHANMODE = 0 }, stretch = t.stretch or 0 }
@@ -104,7 +104,8 @@ function Mock.new(T, opts)
   -- the API
   ----------------------------------------------------------------------------------------------------------------
   local R = {}
-  local ITEM_KEYS = { D_POSITION = "pos", D_LENGTH = "len", B_LOOPSRC = "loop", I_CURTAKE = "cur", D_VOL = "vol" }
+  local ITEM_KEYS = { D_POSITION = "pos", D_LENGTH = "len", B_LOOPSRC = "loop", I_CURTAKE = "cur", D_VOL = "vol", C_LOCK = "lock",
+    D_FADEOUTLEN = "fadeout", C_BEATATTACHMODE = "timebase" }
   local TAKE_KEYS = { D_STARTOFFS = true, D_PLAYRATE = true, D_VOL = true, D_PAN = true, D_PANLAW = true, D_PITCH = true, B_PPITCH = true, I_CHANMODE = true }
 
   function R.APIExists(name) check("APIExists", { "string" }, name); return R[name] ~= nil end
@@ -291,7 +292,7 @@ function Mock.new(T, opts)
     check("SplitMediaItem", { "MediaItem", "number" }, item, pos)
     if pos <= item.pos or pos >= item.pos + item.len then return nil end
     local right = env.add_item(item.track, { pos = pos, len = item.pos + item.len - pos })
-    right.vol, right.loop, right.selected, right.cur = item.vol, item.loop, item.selected, item.cur
+    right.vol, right.loop, right.selected, right.cur, right.lock, right.timebase = item.vol, item.loop, item.selected, item.cur, item.lock, item.timebase
     for i, t in ipairs(item.takes) do
       right.takes[i] = { kind = "MediaItem_Take", item = right, src = t.src, offs = t.offs + (pos - item.pos) * t.rate, rate = t.rate, name = t.name,
         midi = t.midi, markers = {}, vals = t.vals, stretch = t.stretch }
@@ -347,6 +348,35 @@ function Mock.new(T, opts)
   function R.DeleteProjectMarker(p, id, isrgn)
     check("DeleteProjectMarker", { "ReaProject", "integer", "boolean" }, p, id, isrgn)
     for i, m in ipairs(env.markers) do if m.id == id and m.isrgn == isrgn then table.remove(env.markers, i) return true end end
+    return false
+  end
+
+  -- the tempo map: env.tempo = { { time, bpm, num, den, linear } }, kept in order of time
+  env.tempo = {}
+  function R.CountTempoTimeSigMarkers(p) check("CountTempoTimeSigMarkers", { "ReaProject" }, p); return #env.tempo end
+  function R.GetTempoTimeSigMarker(p, i)
+    check("GetTempoTimeSigMarker", { "ReaProject", "integer" }, p, i)
+    local m = env.tempo[i + 1]
+    if not m then return false, -1, -1, -1, 0, 0, 0, false end
+    return true, m.time, -1, -1, m.bpm, m.num, m.den, m.linear
+  end
+  function R.SetTempoTimeSigMarker(p, i, t, measure, beat, bpm, num, den, linear)
+    check("SetTempoTimeSigMarker", { "ReaProject", "integer", "number", "integer", "number", "number", "integer", "integer", "boolean" }, p, i, t, measure, beat, bpm, num, den, linear)
+    if measure ~= -1 or beat ~= -1 then err("SetTempoTimeSigMarker: the mock places markers by time only") end
+    if not (bpm > 0) then err("SetTempoTimeSigMarker: tempo " .. tostring(bpm)) return false end
+    local m = { time = t, bpm = bpm, num = num, den = den, linear = linear }
+    if i < 0 then env.tempo[#env.tempo + 1] = m else env.tempo[i + 1] = m end
+    table.sort(env.tempo, function(a, b) return a.time < b.time end)
+    return true
+  end
+  function R.DeleteTempoTimeSigMarker(p, i)
+    check("DeleteTempoTimeSigMarker", { "ReaProject", "integer" }, p, i)
+    return table.remove(env.tempo, i + 1) ~= nil
+  end
+  function R.format_timestr(t, buf) check("format_timestr", { "number", "string" }, t, buf); return string.format("%d:%06.3f", math.floor(t / 60), t % 60) end
+  function R.DeleteTrackMediaItem(tr, item)
+    check("DeleteTrackMediaItem", { "MediaTrack", "MediaItem" }, tr, item)
+    for i, it in ipairs(env.items) do if it == item then table.remove(env.items, i) return true end end
     return false
   end
 

@@ -50,6 +50,14 @@
     stored analyses and the settings.
   - A **ReaPack** repository at `https://eigensoundlab.github.io/playhead/reaper/index.xml`, written by the site build
     (`tools/reapack-index.js`), with every file pinned to the commit built and its checksum.
+- **REAPER: editing tools** (three new actions):
+  - **Arrange selected layers**: for a sound built from layers on items of their own, `playhead arrange` searches
+    small moves and gain changes for a punchier, bigger or cleaner whole and offers the best six. Each is applied and
+    played as you pick it; keep one (one undo step) or go back. Locked items stay.
+  - **Split items at sounds**: a cut a few milliseconds before each event or onset; the pieces named after their
+    sounds, ended where they have decayed (with a faded tail) and given regions, for rendering one file per sound.
+  - **Tempo map from item**: tempo markers at a recording's bars (or beats), each putting the next bar on its
+    downbeat, the first with the time signature; the item is set to time base Time so it stays.
 - **REAPER: [a guide to Playhead's curves as envelopes](integrations/reaper/ENVELOPES.md):** writing them, seeing
   and editing them, linking parameters, MIDI CC, recipes and what to check when nothing moves.
 
