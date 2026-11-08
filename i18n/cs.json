@@ -830,5 +830,6 @@
  "lib.item.low": "basy",
  "lib.item.mid": "středy",
  "lib.item.high": "výšky",
- "foot.av": "Audiovizuální Playhead"
+ "foot.av": "Audiovizuální Playhead",
+ "lib.curve.pitch": "výška tónu"
 }

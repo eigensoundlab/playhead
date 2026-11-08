@@ -502,6 +502,27 @@ function pitchOf(track) {
   }
   return out;
 }
+// A pitch line without the drums: where the strongest partial is for a moment a drum's or a click's (more than 4
+// semitones from the line on both sides, for 0.15 s at most), the line is bridged between the notes on either side;
+// where a line starts with one (a note entering with a kick), it starts on the note.
+function despike(c, rate) {
+  const out = c.slice(), maxRun = Math.max(1, Math.round(0.15 * rate)), far = (v, w) => Math.abs(v - w) > 4;
+  for (let i = 0; i < out.length - 1; i++) {
+    const a = i > 0 ? out[i - 1] : null;
+    if (out[i] == null || (a != null && !far(out[i], a))) continue;
+    // the longest such run (up to 0.15 s) after which the line goes on, on the same note or the next one; at a line's
+    // start, the note after it must hold for a moment (two values within a semitone and a half)
+    let done = false;
+    for (let j = Math.min(out.length - 1, i + maxRun); j > i && !done; j--) {
+      const b = out[j], run = out.slice(i, j);
+      if (b == null || run.some(v => v == null || (a != null && !far(v, a)) || !far(v, b))) continue;
+      if (a == null && !(j + 1 < out.length && out[j + 1] != null && Math.abs(out[j + 1] - b) <= 1.5)) continue;
+      for (let k = i; k < j; k++) out[k] = a == null ? b : a + (b - a) * (k - i + 1) / (j - i + 1);
+      i = j - 1; done = true;
+    }
+  }
+  return out;
+}
 // Glides: runs of the strongest partial moving one way (half a semitone a second or more) for 150 ms or more and a
 // semitone or more. The pitch drop of a drum (a glide under 0.35 s starting within 40 ms of an attack) is not a glide. A pass-by: a glide down of 0.3 to 12 semitones whose level peaks in its middle part and is 2.5 dB
 // lower at both ends, the Doppler signature of a source going past; its speed from the shift, v = c (r - 1) / (r + 1)
@@ -515,15 +536,24 @@ function glidesOf(track, p, attacks) {
     if (c >= 5 && isFinite(p[m])) { const d = c * sxx - sx * sx; if (d > 0) slope[m] = (c * sxy - sx * sy) / d; }
   }
   const glides = [];
-  let m = 0;
+  let m = 0, chain = null;
   while (m < n) {
     if (!(Math.abs(slope[m]) >= 0.5)) { m++; continue; }
     const sg = Math.sign(slope[m]); let e = m, gap = 0;
-    while (e + 1 < n && gap <= Math.round(0.06 / dt)) { if (Math.sign(slope[e + 1]) === sg && Math.abs(slope[e + 1]) >= 0.25) { gap = 0; } else gap++; e++; }
+    // a glide is continuous: it ends where the partial jumps by more than 1.5 semitones from one frame to the next
+    // (another sound taking over, as when a note ends and a chord or a drum is left)
+    const jump = j => isFinite(p[j]) && isFinite(p[j + 1]) && Math.abs(p[j + 1] - p[j]) > 1.5;
+    while (e + 1 < n && gap <= Math.round(0.06 / dt) && !jump(e)) { if (Math.sign(slope[e + 1]) === sg && Math.abs(slope[e + 1]) >= 0.25) { gap = 0; } else gap++; e++; }
+    const cut = e + 1 < n && jump(e);
     e -= gap;
+    // a run that goes on the same way right after one cut at a jump is the same sound (a kick's drop, read across a
+    // jump of the partial tracker): the drum test below starts from where the first run began
+    const s0 = chain && chain.sg === sg && (m - chain.end) * dt <= 0.03 ? chain.start : m;
+    chain = cut ? { start: s0, end: e + gap, sg } : null;
+    while (m < e && jump(m)) m++;
     const dur = (e - m + 1) * dt, from = p[m], to = p[e];
     // (the spectrum frames see 46 ms ahead, so a drum's glide starts up to that much before its attack)
-    const drum = dur < 0.35 && (attacks || []).some(a => a.t - m * dt > -0.04 && a.t - m * dt < 0.1);
+    const drum = (e - s0 + 1) * dt < 0.35 && (attacks || []).some(a => a.t - s0 * dt > -0.04 && a.t - s0 * dt < 0.1);
     if (dur >= 0.15 && !drum && isFinite(from) && isFinite(to) && Math.abs(to - from) >= 1) {
       const g = { start: rnd(m * dt, 3), end: rnd((e + 1) * dt, 3), from: rnd(440 * Math.pow(2, (from - 69) / 12), 1), to: rnd(440 * Math.pow(2, (to - 69) / 12), 1), semitones: rnd(to - from, 2), passBy: false };
       // the pass-by test: level at its highest in the middle 60 %, 2.5 dB lower at both ends
@@ -543,25 +573,38 @@ function glidesOf(track, p, attacks) {
   return { glides, slope };
 }
 // Vibrato and rotor rates (the micro-Doppler of the strongest partial): in each stretch of 0.4 s or more with a
-// partial, the audio is demodulated at the partial's median frequency (shifted to 0 Hz and low-passed at about 90 Hz),
+// partial, the audio is demodulated at the partial's median frequency (shifted to 0 Hz and low-passed by moving averages of whole periods, 5.5 ms or more),
 // so its instantaneous frequency is read every 2 ms, finer than any spectrum frame; with its 0.25 s mean taken out, the
 // autocorrelation's first peak from 3 to 80 Hz gives the rate, and its spread the depth (cents, peak to peak as for a
 // sine). Kept for held notes (within 2 semitones) where the autocorrelation dips below 0 and then peaks at 0.4 or
-// more, at a rate under a third of the partial's frequency, 10 to 400 cents deep.
+// more, at a rate under a third of the partial's frequency, 15 to 400 cents deep.
 function vibratoOf(x, sr, track, p) {
   const n = p.length, dt = track.dt, out = [], R = 500, dec = Math.max(1, Math.round(sr / R)), rr = sr / dec;
+  // the held notes: stretches of the partial within 2 semitones, so a note held between two glides (a motor spinning
+  // up, running, spinning down) is found as well as one on its own
+  const held = [];
   for (let m = 0; m < n;) {
     if (!isFinite(p[m])) { m++; continue; }
     let e = m; while (e + 1 < n && isFinite(p[e + 1])) e++;
-    const pv = Array.from(p.subarray(m, e + 1)).sort((a, b) => a - b), range = pv.length ? pv[Math.floor(0.9 * (pv.length - 1))] - pv[Math.floor(0.1 * (pv.length - 1))] : 99;
-    if ((e - m + 1) * dt >= 0.4 && range < 2) {                // a held note (within 2 semitones), not a glide or a drum
+    for (let s0 = m; s0 <= e;) {
+      let lo = p[s0], hi = p[s0], k = s0;
+      while (k + 1 <= e && Math.max(hi, p[k + 1]) - Math.min(lo, p[k + 1]) < 2) { k++; lo = Math.min(lo, p[k]); hi = Math.max(hi, p[k]); }
+      held.push([s0, k]); s0 = k + 1;
+    }
+    m = e + 1;
+  }
+  for (const [m, e] of held) {
+    if ((e - m + 1) * dt >= 0.4) {                             // a held note (within 2 semitones), not a glide or a drum
       const hz = Array.from(track.hz.subarray(m, e + 1)).filter(f => f > 0).sort((a, b) => a - b), f0 = hz[hz.length >> 1];
       const a0 = Math.round(m * dt * sr), a1 = Math.min(x.length, Math.round((e + 1) * dt * sr));
-      // shifted to 0 Hz, then two moving averages of about 5.5 ms (a low-pass near 90 Hz), every dec samples
+      // shifted to 0 Hz, then two moving averages of whole periods of the note, 5.5 ms or more, every dec samples: a
+      // low-pass near 90 Hz or lower whose zeros fall on every multiple of the note's frequency, where its harmonics
+      // (and its mirror image) land once shifted, so a harmonic-rich motor's partials do not ripple the measured
+      // frequency, and other notes (a chord under a melody) are kept out
       const L = a1 - a0, re = new Float64Array(L), im = new Float64Array(L), w = 2 * Math.PI * f0 / sr;
       for (let i = 0; i < L; i++) { re[i] = x[a0 + i] * Math.cos(w * i); im[i] = -x[a0 + i] * Math.sin(w * i); }
       const box = (a, k) => { const o = new Float64Array(a.length); let s = 0; for (let i = 0; i < a.length; i++) { s += a[i]; if (i >= k) s -= a[i - k]; o[i] = s / Math.min(i + 1, k); } return o; };
-      const K = Math.max(1, Math.round(0.0055 * sr)), R2 = box(box(re, K), K), I2 = box(box(im, K), K);
+      const K = Math.max(1, Math.round(Math.ceil(0.0055 * f0) * sr / f0)), R2 = box(box(re, K), K), I2 = box(box(im, K), K);
       const inst = [];
       for (let i = 2 * K + dec; i < L; i += dec) {
         const j = i - dec, d = Math.atan2(I2[i] * R2[j] - R2[i] * I2[j], R2[i] * R2[j] + I2[i] * I2[j]);
@@ -578,13 +621,12 @@ function vibratoOf(x, sr, track, p) {
         let best = -1, bv = 0, dipped = false;
         for (let l = 1; l <= lagMax; l++) { const v = ac(l); if (v < 0) dipped = true; if (l >= lagMin && dipped && v >= 0.4 && v >= ac(l - 1) && v >= ac(l + 1)) { bv = v; best = l; break; } }
         const depth = 2 * Math.SQRT2 * Math.sqrt(c0 / dtr.length);
-        if (best > 0 && depth >= 10 && depth <= 400 && rr / best < f0 / 3) {
+        if (best > 0 && depth >= 15 && depth <= 400 && rr / best < f0 / 3) {
           const a = ac(best - 1), b = bv, c = ac(best + 1), den = a - 2 * b + c, lag = best + (den < 0 ? 0.5 * (a - c) / den : 0);
           out.push({ start: rnd(m * dt, 3), end: rnd((e + 1) * dt, 3), hz: rnd(f0, 1), rate: rnd(rr / lag, 2), depth: rnd(depth, 0) });
         }
       }
     }
-    m = e + 1;
   }
   return out;
 }
@@ -771,6 +813,8 @@ async function build(F, buf, opts, t0, prog) {
     doc.glides = GL.glides;
     doc.vibrato = vibratoOf(mono, buf.sampleRate, track, pitchTrack);
     doc.curves.pitchSlope = resample(GL.slope.map(v => (isFinite(v) ? Math.max(-24, Math.min(24, v)) : NaN)), F, cols, null);
+    // the strongest partial's pitch as a MIDI note number (69 = A 440 Hz, fractions are cents), null where none is clear
+    doc.curves.pitch = despike(resample(pitchTrack, F, cols, null), cols / F.dur);
     doc.curves.distortion = resample(distortionOf(mono, buf.sampleRate, F.H, F.nF, g), F, cols, g);
     const s = D.summary;
     doc.descriptors = plain({
@@ -910,7 +954,7 @@ const COMBINE_RULES = {
   lufs: "power sum", loudness: "from the summed LUFS", harshness: "loudness + weighted excess", arousal: "max",
   activity: "max", tension: "max", harmonicTension: "weighted mean", surprise: "max", onsetStrength: "sum", structureNovelty: "max", localPulse: "max",
   n1Kurtosis: "loudest", n2RepetitionHz: "loudest", n4Velocity: "loudest", n5Cpp: "loudest", n5Coherence: "loudest", n6Arrow: "loudest",
-  n7Surprisal: "max", n8Recurrence: "weighted mean", timbreHarshness: "weighted mean", onsetLow: "sum", onsetMid: "sum", onsetHigh: "sum", pulseClarity: "max", patternSurprise: "max", swing: "max", distortion: "max", buildup: "max"
+  n7Surprisal: "max", n8Recurrence: "weighted mean", timbreHarshness: "weighted mean", onsetLow: "sum", onsetMid: "sum", onsetHigh: "sum", pulseClarity: "max", patternSurprise: "max", swing: "max", distortion: "max", buildup: "max", pitch: "weighted mean"
 };
 // how far a part's gain moves its 0..1 curves (fixed scales: loudness is (LUFS + 60) / 60, harshness is loudness plus a
 // factor, arousal half loudness)
@@ -1392,7 +1436,7 @@ const CURVE_LABELS = {
   n1Kurtosis: "impulsiveness", n2RepetitionHz: "repetition rate", n4Velocity: "spectral motion", n5Cpp: "periodicity", n5Coherence: "phase coherence",
   n6Arrow: "time arrow", n7Surprisal: "surprisal", n8Recurrence: "recurrence", timbreHarshness: "timbre harshness",
   onsetLow: "low onsets (kick)", onsetMid: "mid onsets (snare)", onsetHigh: "high onsets (hats)", pulseClarity: "pulse clarity",
-  patternSurprise: "pattern surprise", swing: "swing", distortion: "distortion", pitchSlope: "pitch motion", buildup: "build-up"
+  patternSurprise: "pattern surprise", swing: "swing", distortion: "distortion", pitchSlope: "pitch motion", buildup: "build-up", pitch: "pitch"
 };
 const TICK_KINDS = ["events", "onsets", "beats", "downbeats", "novelty"], FORMS = ["lanes", "overlay"], SHAPES = ["base", "mirror", "horizon", "line"];
 const LOOKS = {
@@ -1541,6 +1585,7 @@ function autoRange(name, arr) {
   if (/^n\d/.test(name)) r = [v[Math.floor(0.05 * (v.length - 1))], v[Math.floor(0.95 * (v.length - 1))]];
   else if (name === "structureNovelty" || name === "localPulse") r = [0, Math.max(0.05, v[Math.floor(0.99 * (v.length - 1))])];
   else if (name === "pitchSlope") r = [-12, 12];                         // semitones a second; 0.5 is steady
+  else if (name === "pitch") r = [36, 96];                               // MIDI notes C2 to C7
   else if (name === "lufs") r = [-60, 0];
   else return [0, 1];
   if (r[1] - r[0] < 1e-9) r = [r[0] - 1, r[0] + 1];

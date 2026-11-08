@@ -50,6 +50,24 @@ checks the metrical spectrogram on it) and for the audiovisual comparison
 the break are found, and the build from 30.96 to 38.70 s (built 30.97 to 38.71 s). `render(sr, { clip: false })`
 renders the stab clean, to test a distortion cue against the same part undistorted.
 
+## The melodic piece and the sound-design reel (`melodic.js`, `sounddesign.js`)
+
+Two more sounds with every part known, for the [Audiovisual Playhead](../av/README.md) and `test/cues-tests.js`:
+
+- **`melodic.js`**: 45 s at 90 BPM, four phrases (A, A', B, A); a lead with 5.5 Hz vibrato (70 cents) on its long
+  notes, legato slides in the B phrase (four of 0.2 s, two of 0.1 s, one of 1 s) and a fall of an octave at the end,
+  over soft chords, a light kick on 1 and 3, a rim on 2 and 4 and a shaker. `truth`: notes, glides, vibrato, phrases,
+  hits. Analysed: the `pitch` curve within 50 cents on 94 % of the note time, 31 of the 38 note starts as mid hits (the
+  others are slid into), 4 of the 6 slides of 0.2 s and more, all 17 vibratos at 5.52 Hz (63 cents), the 3 phrase
+  starts within a beat (and 8 other boundaries).
+- **`sounddesign.js`**: 32 s. A shot (a 3 ms crack, a boom falling from 110 to 42 Hz, a two-click bolt, a reverberant
+  tail), a burst of three, a motor spinning up, running with a 24 Hz rotor and spinning down, a vehicle passing at
+  25 m/s, a distorted alarm, a metal hit, a wooden knock and an explosion with a long tail. `truth`: shots (crack,
+  boom, bolt, tail end), motor phases, pass-by, distortion, impacts, explosion, hits. Analysed: every shot and boom to
+  within a millisecond, the bolt clicks as high hits, the tails of the shot, the burst and the explosion, the spin-up
+  and spin-down as glides, the rotor at 24.2 Hz, the pass-by 49 ms off at 21.6 m/s, distortion 0.60 in the alarm and
+  0.03 elsewhere.
+
 ## What is measured
 
 - **Onsets**: the share of hits found within 50 ms; the error of the analysis's onsets (11.6 ms frames) and of the new
@@ -96,7 +114,7 @@ renders the stab clean, to test a distortion cue against the same part undistort
 | riser | – | – | 4 to 16 | **1.00** | – | – | – |
 | swell | – | – | 4 to 13 | **0.75** | – | – | – |
 | timbres | – | – | 3 to 8.9 (false) | – | **1** | – | – |
-| pass-by | – | – | none | – | – | **3.88 s, 19.6 m/s** (4 s, 25 m/s) | **6.1 Hz, 97 c** (6 Hz, 80 c); **29.5 Hz, 49 c** (28 Hz, 30 c) |
+| pass-by | – | – | none | – | – | **3.88 s, 19.6 m/s** (4 s, 25 m/s) | **5.99 Hz, 96 c** (6 Hz, 80 c); **28 Hz, 26 c** (28 Hz, 30 c) |
 
 Rhythm signature, similarity to `straight`: straight-140 **0.988**, fills 0.998, waltz 0.924, sixteenths 0.909,
 swing-2 0.859, snare-laid-back 0.784.
@@ -144,8 +162,10 @@ ones over the tail of an open hat), where the attacks labelled high found 75 of 
   included.
 - **The pass-by** is placed 0.12 s from its closest moment, at 19.6 m/s where it went at 25: the speed comes from the
   pitch at both ends of the glide, which is never the full shift (the source is heard only from about 75 m), so it is a
-  lower bound. **Vibrato** at 6 Hz and a **28 Hz rotor** are found at their rates (within 0.1 and 1.5 Hz), their depths
-  read high (97 and 49 cents for 80 and 30).
+  lower bound. **Vibrato** at 6 Hz and a **28 Hz rotor** are found at their rates (5.99 and 28 Hz); the vibrato's depth reads
+  high (96 cents for 80), the rotor's close (26 for 30). The note is demodulated over whole periods of itself, so its
+  harmonics fall on the filter's zeros: averaging over a fixed 5.5 ms instead let a harmonic-rich tone's partials
+  ripple the measured frequency (the rotor read 29.5 Hz, 49 cents).
 - **The rhythm signature** finds the same groove 30 BPM faster alike (0.988) and a fill-only change nearly the same
   (0.998), but it separates weakly: a waltz (0.92) and 16ths (0.91) are not much further away, and a snare 25 ms late
   moves it more (0.78) than a change of meter. It is a shape of the attacks' autocorrelation, so microtiming shows in

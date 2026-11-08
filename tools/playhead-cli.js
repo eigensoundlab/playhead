@@ -11,6 +11,10 @@
 //                         [--fps N --start-tc 01:00:00:00 (edl)] [--profile ...]   (file: audio or a .playhead.json)
 //   playhead frames <file> [--fps 60] [--curves a,b,...] [--scale fixed|file|raw] [--format csv|json|blender]
 //                         the curves once per video frame, for engines, VJ and 3D tools
+//   playhead cues <file> [--preset name | --rules rules.json] [--rate 30] [--out cues.json] [--profile ...]
+//                         a cue sheet: the cues the rules make from the analysis (visuals, game events, effects), with
+//                         their times known in advance, and the mappings sampled at --rate; rules.json is
+//                         { rules: [...], mappings: [...] } as Playhead.cues takes them (docs/GAMES.md)
 //   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]
 //   playhead arrange --parts parts.json [--goal punch|big|clean] [--range s] [--gains lo,hi] [--count N] [--seed N]
 //                         layers: parts.json is [{ doc: "a.playhead.json", offset, gain, start, end, lock }]; prints the
@@ -24,7 +28,7 @@
 // reads it half-written.
 "use strict";
 const fs = require("fs"), path = require("path");
-const Playhead = global.__PLAYHEAD_BUNDLED__ || (require("../src/analysis.js"), require("../src/descriptors.js"), require("../src/effects.js"), require("../src/playhead.js"));
+const Playhead = global.__PLAYHEAD_BUNDLED__ || (() => { require("../src/analysis.js"); require("../src/descriptors.js"); require("../src/effects.js"); const P = require("../src/playhead.js"); require("../src/cues.js"); return P; })();
 const IO = global.__PLAYHEAD_IO__ || require("./audio-io.js");
 
 const HELP = `Playhead ${Playhead.version}: overview curves, events, sections and descriptors for sound files.
@@ -35,6 +39,8 @@ const HELP = `Playhead ${Playhead.version}: overview curves, events, sections an
   playhead markers <file> [--format tsv|csv|json|audacity|edl|srt] [--kinds sections,events,downbeats,onsets,changes]
                    [--fps 25 --start-tc 01:00:00:00]      (edl: DaVinci Resolve timeline markers)
   playhead frames <file> [--fps 60] [--curves loudness,onsetStrength,...] [--scale fixed|file|raw] [--format csv|json|blender]
+  playhead cues <file> [--preset playhead|usual|anticipation|furnace|melodic|weapon|impact|device | --rules rules.json]
+                   [--rate 30] [--out cues.json]     (a cue sheet for engines: see docs/GAMES.md)
   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]
   playhead arrange --parts parts.json [--goal punch|big|clean] [--range s] [--gains lo,hi] [--count N] [--seed N]
   playhead tools
@@ -231,6 +237,24 @@ async function main() {
     if (fmt === "csv") { process.stdout.write(framesCsv(fr)); return; }
     if (fmt === "blender") { process.stdout.write(framesBlender(fr, o.name || path.basename(f).replace(/(\.playhead)?\.[^.]+$/, ""))); return; }
     fail("unknown frames format " + fmt + " (csv, json, blender)");
+  }
+  if (cmd === "cues") {
+    const f = o._[0]; if (!f) fail("cues needs a file (audio, or a .playhead.json document)");
+    const doc = await documentOf(f, o, "auto"), C = Playhead.cues;
+    let rules, mappings;
+    if (o.rules) {
+      let r; try { r = JSON.parse(fs.readFileSync(o.rules, "utf8")); } catch (e) { fail("cannot read the rules in " + o.rules + ": " + e.message); }
+      rules = Array.isArray(r) ? r : r.rules || []; mappings = Array.isArray(r) ? [] : r.mappings || [];
+    } else {
+      const name = o.preset || (doc.profile === "music" ? "playhead" : "weapon"), p = C.presets[name];
+      if (!p) fail("unknown preset " + name + " (" + Object.keys(C.presets).join(", ") + ")");
+      rules = p.rules; mappings = p.mappings;
+    }
+    const rate = o.rate ? Number(o.rate) : 30;
+    if (!(rate > 0 && rate <= 1000)) fail("--rate must be a number from 1 to 1000");
+    const text = JSON.stringify(C.sheet(C.source(doc), rules, mappings, { rate }), null, o.pretty ? 1 : 0);
+    if (o.out) writeText(o.out, text + "\n"); else console.log(text);
+    return;
   }
   if (cmd === "process") {
     const f = o._[0]; if (!f) fail("process needs a file"); if (!o.tool) fail("process needs --tool (see: playhead tools)");

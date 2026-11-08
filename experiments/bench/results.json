@@ -980,7 +980,7 @@
    },
    "pulseClarity": 0.29,
    "builds": [],
-   "glides": 1,
+   "glides": 0,
    "signature": true
   },
   {
@@ -1199,15 +1199,15 @@
    },
    "vibrato": [
     {
-     "rate": 6.1,
+     "rate": 5.99,
      "trueRate": 6,
-     "depth": 97,
+     "depth": 96,
      "trueDepth": 80
     },
     {
-     "rate": 29.53,
+     "rate": 28,
      "trueRate": 28,
-     "depth": 49,
+     "depth": 26,
      "trueDepth": 30
     }
    ],

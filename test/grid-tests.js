@@ -45,9 +45,10 @@ module.exports = async function (check) {
   check("motion: distortion tells a clipped tone from smooth, bright and rough ones at equal loudness",
     `AUC ${M.timbres.distortion.auc}; ${JSON.stringify(M.timbres.distortion.means)}`, M.timbres.distortion.auc >= 0.95);
   const pb = M["pass-by"].passBy, vib = M["pass-by"].vibrato;
-  check("motion: a pass-by (Doppler glide, loudest in the middle) with its moment and a speed; vibrato and a rotor rate",
-    pb ? `closest at ${pb.closest} s (true 4), ${pb.speed} m/s (true 25, a lower bound); vibrato ${vib.map(v => v && v.rate).join(" and ")} Hz (true 6 and 28)` : "no pass-by",
-    !!pb && Math.abs(pb.closestErr) < 0.3 && pb.speed > 12 && pb.speed < 30 && vib.every(v => v && Math.abs(v.rate - v.trueRate) / v.trueRate < 0.1) && M.straight.glides === 0);
+  const grooves = ["straight", "snare-laid-back", "hats-pushed", "loose", "swing-2", "waltz", "fills", "swing-change", "straight-140", "sixteenths"];
+  check("motion: a pass-by (Doppler glide, loudest in the middle) with its moment and a speed; vibrato and a rotor rate; no glide in a drum groove (a kick's pitch drop is not one)",
+    (pb ? `closest at ${pb.closest} s (true 4), ${pb.speed} m/s (true 25, a lower bound); vibrato ${vib.map(v => v && v.rate).join(" and ")} Hz (true 6 and 28)` : "no pass-by") + `; glides in the grooves ${grooves.map(k => M[k].glides).join(" ")}`,
+    !!pb && Math.abs(pb.closestErr) < 0.3 && pb.speed > 12 && pb.speed < 30 && vib.every(v => v && Math.abs(v.rate - v.trueRate) / v.trueRate < 0.1) && grooves.every(k => M[k].glides === 0));
   const sim = k => P.rhythmSimilarity(D.straight, D[k]);
   check("motion: the rhythm signature finds the same beat alike at another tempo, other rhythms less so",
     `110 against 140 BPM ${sim("straight-140")}; waltz ${sim("waltz")}, 16ths ${sim("sixteenths")}`,
@@ -72,16 +73,18 @@ module.exports = async function (check) {
     !!rs && !!ra && rs.cols === 16 && rs.rows === doc.rhythm.bars.length && kickCell[0] > kickCell[2] && hatCell[2] > hatCell[0] && hatCell[2] > hatCell[1]
       && JSON.stringify(doc.rhythm.spectral).length < 400 * doc.rhythm.bars.length && P.lookFits(doc, "metrical") && P.lookFits(doc, "spectralGroove") && !P.lookFits(D.riser, "metrical") === !D.riser.rhythm.spectral);
 
-  // the audiovisual comparison (experiments/av): what the usual signals and Playhead find in the arrangement
-  const AV = require("../experiments/av/site/drivers.js"), std = AV.standardDrivers(S.y, S.sr), rows = Object.fromEntries(AV.compare(S.truth, std, doc).map(r => [r.what, r]));
-  const k = rows.Kicks, sn = rows.Snares, dr = rows.Drop, pv = rows["Pass-by"], fb = rows["Fill and break"];
-  const drive = AV.playheadDriver(doc).drive(S.truth.passBy.closest), sdrive = AV.standardDrive(std, 10, 0);
-  const ht = rows.Hats, bl = rows["Build (not louder)"], sb = rows["Section boundaries"];
+  // the audiovisual comparison (experiments/av): what the usual signals and Playhead find in the arrangement, and a
+  // scene's inputs from the Playhead rules (Playhead.cues) at the pass-by
+  const AV = require("../experiments/av/site/drivers.js"), Cu = require("../src/cues.js"), std = AV.standardDrivers(S.y, S.sr);
+  const rows = Object.fromEntries(AV.compare("rhythm", S.truth, std, doc).map(r => [r.what.split(" (")[0], r.raw]));
+  const k = rows.Kicks, sn = rows.Snares, ht = rows.Hats, dr = rows.Drop, pv = rows["Pass-by"], fb = rows["Fill and break"], bl = rows.Build, sb = rows["Section boundaries"];
+  const pre = Cu.presets.playhead, psrc = Cu.source(doc), pdrive = AV.drive(AV.playheadBase(doc), Cu.compile(psrc, pre.rules), pre.mappings, psrc, S.truth.passBy.closest, 0);
+  const usrc = AV.usualSource(std), udrive = AV.drive(AV.usualBase(std), Cu.compile(usrc, pre.rules), pre.mappings, usrc, 10, 0);
   check("av: the build is put on the form (from its section start to the drop), every section boundary found, the fill and no other; more hats than the usual treble beats",
-    `build ${bl.ph && bl.ph.start}-${bl.ph && bl.ph.end} (built ${S.truth.build.map(v => v.toFixed(2)).join("-")}); boundaries ${sb.ph.found}/${sb.ph.of}; fills ${fb.ph.fills.join(" ")}; hats ${ht.ph.found}/${ht.ph.of} (usual ${ht.std.found})`,
-    !!bl.ph && bl.ph.overlap > 0.95 && sb.ph.found === sb.ph.of && fb.ph.fills.length === 1 && fb.ph.fill && ht.ph.found > ht.std.found && ht.ph.found >= 0.85 * ht.ph.of);
-  check("av: Playhead's drive finds every kick and snare on time, the drop, the fill and break, and the pass-by, which the usual signals cannot",
-    `kicks ${k.ph.found}/${k.ph.of} at ${k.ph.latencyMs} ms (usual ${k.std.found}/${k.std.of}, +${k.std.latencyMs} ms); snares ${sn.ph.found}/${sn.ph.of} (usual ${sn.std.found}); drop ${dr.ph.found ? Math.round(1000 * dr.ph.err) + " ms off" : "missed"} (usual ${dr.std.found ? "found" : "none"}); pass-by ${pv.ph ? Math.round(1000 * pv.ph.err) + " ms off" : "missed"}`,
-    k.ph.found === k.ph.of && Math.abs(k.ph.latencyMs) <= 2 && sn.ph.found >= 0.95 * sn.ph.of && sn.ph.found > sn.std.found && dr.ph.found && Math.abs(dr.ph.err) < 0.2
-      && fb.ph.fill && fb.ph.brk && pv.ph && Math.abs(pv.ph.err) < 0.2 && drive.passOn === 1 && Math.abs(drive.passX) < 0.1 && sdrive.phase === -1 && sdrive.bands.length === 8);
+    `build overlap ${bl.overlap.toFixed(2)}; boundaries ${sb.found}/${sb.of}; fills ${fb.fills.join(" ")}; hats ${ht.ph.found}/${ht.ph.of} (usual ${ht.std.found})`,
+    bl.overlap > 0.95 && sb.found === sb.of && fb.fills.length === 1 && fb.fill && ht.ph.found > ht.std.found && ht.ph.found >= 0.85 * ht.ph.of);
+  check("av: Playhead finds every kick and snare on time, the drop, the fill and break, and the pass-by, which the usual signals cannot; the scene's light crosses at the pass-by",
+    `kicks ${k.ph.found}/${k.ph.of} at ${k.ph.latencyMs} ms (usual ${k.std.found}/${k.std.of}, +${k.std.latencyMs} ms); snares ${sn.ph.found}/${sn.ph.of} (usual ${sn.std.found}); drop ${dr.ph == null ? "missed" : Math.round(1000 * dr.ph) + " ms off"} (usual ${dr.std ? "found" : "none"}); pass-by ${pv.ph == null ? "missed" : Math.round(1000 * pv.ph) + " ms off"}; light ${pdrive.passOn.toFixed(2)} at ${pdrive.passX.toFixed(2)}`,
+    k.ph.found === k.ph.of && Math.abs(k.ph.latencyMs) <= 2 && sn.ph.found >= 0.95 * sn.ph.of && sn.ph.found > sn.std.found && dr.ph != null && Math.abs(dr.ph) < 0.2
+      && fb.fill && fb.brk && pv.ph != null && Math.abs(pv.ph) < 0.2 && pdrive.passOn > 0.5 && Math.abs(pdrive.passX) < 0.1 && udrive.phase === -1 && udrive.bands.length === 8 && udrive.passOn === 0);
 };

@@ -110,6 +110,7 @@ Playhead.drawStrip(canvas.getContext("2d"), doc);      // the strip, in a page o
 playhead analyze sound.wav > sound.playhead.json       # one executable per platform, no Node needed
 playhead markers song.wav --kinds sections,downbeats   # tab-separated regions and markers for editors
 playhead process shot.wav --tool layers --param gains=-12
+playhead cues rifle.wav --preset weapon > rifle.cues.json   # cues for a game engine (docs/GAMES.md)
 ```
 
 **Looks.** What goes on the strip is a list of layers (a plain or coloured waveform or a spectrogram behind, a line, up
@@ -133,9 +134,14 @@ band and bar, whether its attacks keep to the bar, the beat, 8ths or 16ths: whic
 level, and when that changes). `Playhead.view` gives them to other hosts as numbers.
 
 **Audiovisual Playhead.** [experiments/av](experiments/av/README.md) draws one scene twice from the same sound, with
-WebGPU or WebGL 2: once from the usual audio-reactive signals (level, analyser bands, band beats), once from Playhead's
-analysis (attacks, the bar, the spectrum on the grid, sections, builds and drops, distortion, pass-bys), each with a
-timeline of what it detected.
+WebGPU or WebGL 2, by the same rules: once on the usual audio-reactive signals (level, analyser bands, band beats),
+worked out live, once on Playhead's analysis (hits per band, the bar, the spectrum on the grid, sections, builds and
+drops, slides and vibrato, a sound's boom and its after-effect, distortion, pass-bys), known in advance, each with a
+timeline of what it detected. Three demos (a dance arrangement, a melodic piece, a sound-design reel) and three scenes
+(rings, a ribbon, a forge). The rules are edited on the page (on a high hit throw sparks, darken for the two bars
+before a drop, raise smoke while a shot rings out) and export as a **cue sheet** for game engines:
+`Playhead.cues` and `playhead cues` make the same from any document ([docs/GAMES.md](docs/GAMES.md): Unity, other
+engines, sound-effect cues).
 
 **Tracks in a folder.** Documents combine: `Playhead.combine([{ doc, offset, gain }, ...])` returns a document for the
 sum of several sounds without the audio or a new analysis, so a folder track, a group of layered effects or a set of
@@ -382,6 +388,7 @@ src/descriptors.js    cross-field descriptors N1–N9
 src/probes.js         synthetic test signals with ground truth, descriptor tour
 src/effects.js        analysis-driven tools, WAV encoder
 src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process(), combine(), align(), arrange(), localize()
+src/cues.js           rules into cues and cue sheets (Playhead.cues): visuals, game events, sound-effect cues
 src/i18n.js           translations at run time; src/i18n-data.js is built from i18n/<lang>.json
 src/app.js            user interface
 i18n/                 the English texts (en.json), the translations and the translators' guide
@@ -402,12 +409,14 @@ experiments/corpus/   results on the 73-file corpus behind the README and the pa
 experiments/paper/    figure data, figure script and a sound for the paper (tools/paper-data.js, figures.py)
 experiments/listening/  the listening test of the arrangement goals: stimuli, test page (on the site at /listening/), analysis
 experiments/visuals/  Playhead's curves against the usual audio-reactive signals as drivers of visuals; viewer at /visuals/
+experiments/av/       the Audiovisual Playhead: one scene twice, usual signals against Playhead's, a rule editor; at /av/
 tools/audio-io.js     WAV reader/writer; other formats through ffmpeg
 tools/build.js        builds _site/, a single-file version and dist/ (library bundles, command-line bundle)
-tools/playhead-cli.js command line: analyze, markers, frames, process, arrange, tools
+tools/playhead-cli.js command line: analyze, markers, frames, cues, process, arrange, tools
 tools/build-cli.js    one executable for the current platform (Node single executable application)
 examples/             a host page and an analysis worker using the library bundle
 docs/INTEGRATION.md   API, document schema and recipes for other applications
+docs/GAMES.md         games and audio-driven visuals: rules, cue sheets, Unity and other engines, sound-effect cues
 tools/serve.js        local static server
 tools/i18n.js         translations: extract the English, build, check, compare with the sound vocabulary
 integrations/reaper/  REAPER actions, the Playhead Control JSFX and their tests (ReaPack package)

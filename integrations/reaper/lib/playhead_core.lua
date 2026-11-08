@@ -270,7 +270,7 @@ end
 M.CURVE_ORDER = { "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "lufs",
   "onsetStrength", "structureNovelty", "localPulse", "n1Kurtosis", "n2RepetitionHz", "n4Velocity", "n5Cpp",
   "n5Coherence", "n6Arrow", "n7Surprisal", "n8Recurrence", "timbreHarshness", "onsetLow", "onsetMid", "onsetHigh",
-  "pulseClarity", "patternSurprise", "swing", "distortion", "pitchSlope", "buildup" }
+  "pulseClarity", "patternSurprise", "swing", "distortion", "pitchSlope", "buildup", "pitch" }
 M.CURVE_LABELS = {
   loudness = "loudness", activity = "activity", arousal = "arousal", harshness = "harshness", tension = "tension",
   harmonicTension = "harmonic tension", surprise = "novelty (spectral surprise)", lufs = "loudness (LUFS)",
@@ -279,7 +279,7 @@ M.CURVE_LABELS = {
   n5Coherence = "phase coherence", n6Arrow = "time arrow", n7Surprisal = "surprisal", n8Recurrence = "recurrence",
   timbreHarshness = "timbre harshness", onsetLow = "low onsets (kick)", onsetMid = "mid onsets (snare)",
   onsetHigh = "high onsets (hats)", pulseClarity = "pulse clarity", patternSurprise = "pattern surprise", swing = "swing",
-  distortion = "distortion", pitchSlope = "pitch motion", buildup = "build-up"
+  distortion = "distortion", pitchSlope = "pitch motion", buildup = "build-up", pitch = "pitch"
 }
 -- the number each curve is known by in Playhead Control.jsfx (its hidden "source" sliders); 0 = another curve
 M.CURVE_CODES = {}
@@ -375,12 +375,13 @@ local function pct(v, p) return v[floor(p * (#v - 1)) + 1] end
 
 --- The value range a curve is shown on: [0, 1] for the curves on fixed library-wide scales; the 5th-95th
 --- percentile for the descriptor curves n1-n8 (as the strip); the 99th percentile for structural change and local
---- pulse; -60..0 LUFS for lufs; -12..12 semitones a second for pitchSlope.
+--- pulse; -60..0 LUFS for lufs; -12..12 semitones a second for pitchSlope; MIDI notes 36..96 for pitch.
 function M.curve_scale(doc, name)
   local c = doc.curves[name]
   if not is_curve(c) then return 0, 1 end
   if name == "lufs" then return -60, 0 end
   if name == "pitchSlope" then return -12, 12 end
+  if name == "pitch" then return 36, 96 end
   local v = sorted_values(c)
   if #v == 0 then return 0, 1 end
   local lo, hi
@@ -977,6 +978,7 @@ local function view_range(name, arr)
   if name:find("^n%d") then lo, hi = pct(v, 0.05), pct(v, 0.95)
   elseif name == "structureNovelty" or name == "localPulse" then lo, hi = 0, max(0.05, pct(v, 0.99))
   elseif name == "pitchSlope" then lo, hi = -12, 12
+  elseif name == "pitch" then lo, hi = 36, 96
   elseif name == "lufs" then lo, hi = -60, 0
   else return 0, 1 end
   if hi - lo < 1e-9 then lo, hi = lo - 1, lo + 1 end
@@ -1982,6 +1984,7 @@ function M.render_strip(doc, g, opts)
   local function auto_range(name, arr)
     if name == "lufs" then return -60, 0 end
     if name == "pitchSlope" then return -12, 12 end
+    if name == "pitch" then return 36, 96 end
     local v = sorted_values(arr)
     if #v == 0 then return 0, 1 end
     local lo, hi

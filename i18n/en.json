@@ -613,6 +613,7 @@
  "lib.curve.distortion": "distortion",
  "lib.curve.pitchSlope": "pitch motion",
  "lib.curve.buildup": "build-up",
+ "lib.curve.pitch": "pitch",
  "lib.look.auto.name": "Automatic",
  "lib.look.auto.desc": "Sound effects: harshness as colour, activity as the line, events. Music: activity as colour, tension as the line, sections, downbeats.",
  "lib.look.plain.name": "Waveform only",

@@ -4,13 +4,38 @@
 
 ### Added
 - **Audiovisual Playhead** ([experiments/av](experiments/av/README.md), on the site at `/av/`): one scene drawn twice
-  from the same sound, with WebGPU or WebGL 2. The left side reacts the usual way (level, WebAudio analyser octaves,
-  MilkDrop-style band beats, centroid colour, worked out frame by frame without looking ahead), the right side from
-  Playhead (attacks to the sample, the spectrum on the grid, the bar, sections, builds and drops, fills and breaks,
-  distortion, pass-bys). A timeline of what each side detected under each, and for the demo arrangement what each side
-  found: every kick, 80 of 81 snares and 168 of 190 hats at 0 to 1 ms against 79 kicks, 29 snares and 133 hats at +8
-  to +9 ms, the build exactly, the drop 14 ms off and the pass-by 23 ms off where the usual signals have none. Linked
-  from the app's footer. Open your own file to compare.
+  from the same sound by the same rules, with WebGPU or WebGL 2. The left side runs them on the usual signals (level,
+  WebAudio analyser octaves, MilkDrop-style band beats, energy trend, level jumps, the loudest bin), worked out frame by
+  frame without looking ahead; the right side on Playhead's analysis, known in advance. A timeline of what each side
+  detected and did under each; for three demos with known parts (a dance arrangement, a melodic piece, a sound-design
+  reel) what each side found. On the arrangement every kick, 80 of 81 snares and 168 of 190 hats at 0 to 1 ms against
+  79 kicks, 29 snares and 133 hats at +8 to +9 ms, the build exactly, the drop 14 ms off and the pass-by 23 ms off
+  where the usual signals have none; on the melody 31 of 38 note starts (usual 1), 17 of 17 vibratos at their rate;
+  on the reel every shot and boom to a millisecond (usual +17 ms on the booms), the shots' after-effects, the motor's
+  spin-up, spin-down and rotor. Where it does not win: the alarm's distortion is a tie, a clipped part inside a mix is
+  weakly seen by both. Three scenes (rings, a ribbon for melody, a forge for sound effects and games). Both sides start
+  alike (bias-corrected averages, the automatic gain from a reference level). Linked from the app's footer; open your
+  own file to compare.
+- **Cues** (`Playhead.cues`, `src/cues.js`, and the rule editor on the Audiovisual page): rules that turn events into
+  cues: on an event (each band's hits, beats, bars, sections new or repeated, builds and drops, fills, breaks, a
+  sound's start, its peak and its after-effect, glides up and down, pass-bys, vibrato), an action, by an amount, for a
+  length (seconds, beats, bars, or the event's own), in a shape (pulse, hold, ramp, swell, fade), at the event or
+  before or after it; mappings make an action follow a signal. Presets for rhythm, anticipation (cues that land on a
+  drop), a game scene (the furnace), melody, and sound effects (weapon, impacts and explosions, devices and vehicles).
+  A cue sheet (JSON, `playhead-cues` v1) lists the cues with their times for engines; the page exports it, and
+  `playhead cues <file> [--preset name | --rules rules.json]` makes it from any sound or document.
+- **[docs/GAMES.md](docs/GAMES.md)**: Playhead in games and audio-driven visuals: the pipeline (analyse at import,
+  cue sheets, play against the sound's clock), the rule format, Unity code (a cue sheet reader and player, a weapon
+  driven by its sound's cues), notes for Unreal, Godot, the web, FMOD and Wwise, and sound-effect cues: start, boom,
+  after-effect, mechanical detail, spin-up, rotor, pass-by, reverb, and rules that drive sound (sweeteners, ducking,
+  reverb sends, debris).
+- **`pitch` curve** (sfx and music profiles): the strongest partial's pitch as a MIDI note number, null where no
+  partial is clear; where a drum or a click is the strongest partial for a moment (0.15 s at most), the line is
+  bridged between the notes, so a melody's line does not dive at each kick. Drawn on C2 to C7. In the lab, REAPER
+  (Playhead Control) and the curve menus.
+- **Two bench demos** with every part known: `experiments/bench/melodic.js` (phrases, legato slides, vibrato) and
+  `experiments/bench/sounddesign.js` (shots with boom, bolt and tail, a motor with a rotor, a pass-by, a distorted
+  alarm, impacts, an explosion). `test/cues-tests.js` checks the cues and the analysis on them.
 - **Hits per band** (`hits`, sfx and music profiles): each band's own onsets, `{ low, mid, high: [[t, strength]] }`,
   to the sample: the kick, snare and hat layers for visuals and triggers. A hat struck with a kick is a high hit as
   well as a low one, and quiet 16th hats over an open hat's tail are found (the high band from the signal above 2 kHz
@@ -161,6 +186,13 @@
   stays readable on a light page or REAPER theme.
 
 ### Fixed
+- **Vibrato and rotor rates** of harmonic-rich sounds: the note is demodulated over whole periods of itself, so its
+  harmonics no longer ripple the measured frequency (the bench rotor reads 28 Hz, 26 cents for 28 Hz, 30 cents: it
+  read 29.5 Hz, 49 cents), and a note held between two glides (a motor running between its spin-up and spin-down) is
+  found. Depths under 15 cents (a metal hit's ringing) are no longer vibrato.
+- **Glides** end where the partial jumps by more than 1.5 semitones from one frame to the next, so a note's end and the
+  chord or drum left after it are no longer read as a slide of tens of semitones; a kick's pitch drop read across such
+  a jump is still a drum's.
 - **REAPER tests on Windows** (`python integrations\reaper\test\run_tests.py`): the core tests run there, with a real
   batch job through `cmd.exe` in place of the POSIX shell checks; the action tests, which need a POSIX shell, are
   skipped with a note unless asked for.

@@ -19,6 +19,7 @@ recipes.
 | `timbreHarshness` | how harsh the sound's colour is at any level (sharpness, roughness, fluctuation without loudness) |
 | `distortion` | clipping and saturation: 0 clean, about 0.7 hard-clipped |
 | `pitchSlope` | the strongest partial's motion (glides, sirens, Doppler), written from -12 to 12 semitones a second |
+| `pitch` | the strongest partial's pitch (a melody's contour, an engine's speed), written as MIDI notes from 36 to 96 (C2 to C7) |
 | `onsetStrength` | where the hits and attacks are; `onsetLow`, `onsetMid`, `onsetHigh` the same for kick, snare and hats |
 | `structureNovelty`, `localPulse`, `pulseClarity` | (music) where a section changes; how clear and strong the beat is; how clearly a beat is felt |
 | `buildup` | (music) how far into a build the music is: a ramp from the build's start to its drop, 0 elsewhere |

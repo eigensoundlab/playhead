@@ -13,7 +13,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const read = p => fs.readFileSync(path.join(root, p), "utf8");
 const SOURCES = ["src/analysis.js", "src/descriptors.js", "src/probes.js", "src/effects.js", "src/playhead.js", "src/i18n-data.js", "src/i18n.js", "src/app.js"];
-const CORE = ["src/analysis.js", "src/descriptors.js", "src/effects.js", "src/playhead.js"];
+const CORE = ["src/analysis.js", "src/descriptors.js", "src/effects.js", "src/playhead.js", "src/cues.js"];
 const VERSION = require("../package.json").version;
 
 function parts() {
@@ -80,7 +80,7 @@ function coreUMD() {
 }
 function coreESM() {
   return BANNER + "const module = undefined, require = undefined;\n" + coreBody()
-    + "export default Playhead;\nexport const { version, schema, schemaVersion, profiles, analyze, process, tools, toMarkers, curveAt, drawStrip } = Playhead;\n";
+    + "export default Playhead;\nexport const { version, schema, schemaVersion, profiles, analyze, process, tools, toMarkers, curveAt, drawStrip, cues } = Playhead;\n";
 }
 // command line as one CommonJS file (Node built-ins only), the input of the single-executable build
 function cliBundle() {
@@ -131,7 +131,7 @@ else if (args[0] === "--fragment") {
   copyDir(path.join(root, "experiments", "listening", "site"), path.join(site, "listening"));     // the listening test
   copyDir(path.join(root, "experiments", "visuals", "site"), path.join(site, "visuals"));         // the visuals viewer
   copyDir(path.join(root, "experiments", "av", "site"), path.join(site, "av"));                   // the audiovisual Playhead
-  fs.copyFileSync(path.join(root, "experiments", "bench", "arrangement.js"), path.join(site, "av", "arrangement.js"));
+  for (const f of ["arrangement.js", "melodic.js", "sounddesign.js"]) fs.copyFileSync(path.join(root, "experiments", "bench", f), path.join(site, "av", f));
   // the ReaPack index of Playhead for REAPER, its files pinned to this commit (https://.../playhead/reaper/index.xml)
   if (!require("./reapack-index.js").forSite(path.join(site, "reaper", "index.xml"))) console.log("(no git: the ReaPack index was not written)");
   console.log("built", site, "and dist/ (playhead-core.js, playhead-core.mjs, playhead-cli.cjs)");
