@@ -39,6 +39,21 @@
 - **`playhead arrange --parts parts.json`** on the command line: the search for arrangements from a list of parts
   (documents or audio files, with offset, gain, start, end and lock), printing the best arrangements as JSON. Options
   `--goal`, `--range`, `--gains`, `--count` and `--seed`.
+- **Frames for visuals, engines and 3D tools**: `Playhead.frames(doc, { fps, curves, scale })` and
+  `playhead frames <file> --fps 60 [--curves ...] [--format csv|json|blender]`: the curves once per video frame, each
+  value the curve's mean over its frame, on 0..1 as the strip draws it (or `--scale file`: from each curve's 5th to
+  95th percentile in the file), with onset, beat and downbeat frames. The CSV
+  goes into TouchDesigner, Unreal DataTables or spreadsheets; the Blender script keys the curves as custom properties
+  of an Empty, for drivers.
+- **`experiments/visuals`**: Playhead's curves against the usual audio-reactive drivers (an RMS follower, MilkDrop-style
+  FFT bands, centroid, an onset trigger, and the same computed offline) on six sounds built with known accents,
+  sections, builds and timbres. Playhead's loudness, tension and arousal separate sections far better (η² 0.93 to
+  0.97 against 0.54 to 0.67) and never pass 2.5 flashes a second where the usual drivers reach 4 to 8; its onset
+  strength hits accents best or as well, with no latency. Builds at constant loudness and harshness at equal loudness
+  are not read yet; the README says what is missing. A viewer at `/visuals/` drives two visuals side by side.
+- **Markers for editors**: `playhead markers` writes Audacity labels (`--format audacity`), DaVinci Resolve timeline
+  markers (`--format edl`, with `--fps` and `--start-tc`) and subtitles for any video editor (`--format srt`), and reads
+  a `.playhead.json` document as well as audio, so nothing is analysed twice.
 - **`experiments/arrange` with 16 sessions**: 8 kits of varied material (robot, glass and metal, tabla, guitar,
   cinematic bass, vinyl, electronic, choir) beside the 8 drum kits. Predicted and rendered measures agree as before
   (r 0.95 to 0.99); where the varied kits gain little, the README says why.

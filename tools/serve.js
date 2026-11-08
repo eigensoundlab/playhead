@@ -15,7 +15,8 @@ const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; ch
 http.createServer((req, res) => {
   const url = decodeURIComponent((req.url || "/").split("?")[0]);
   // the listening test lives at /listening/ on the site (tools/build.js copies it there)
-  const rel = url === "/" ? "index.html" : url.startsWith("/listening/") ? path.join("experiments", "listening", "site", url.slice(11) || "index.html") : url;
+  const rel = url === "/" ? "index.html" : url.startsWith("/listening/") ? path.join("experiments", "listening", "site", url.slice(11) || "index.html")
+    : url.startsWith("/visuals/") ? path.join("experiments", "visuals", "site", url.slice(9) || "index.html") : url;
   let file = path.normalize(path.join(root, rel));
   if (!file.startsWith(root)) { res.writeHead(403); res.end(); return; }
   fs.readFile(file, (err, data) => {

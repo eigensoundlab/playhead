@@ -146,6 +146,13 @@ other, for punchy, big (cinematic) or clean layering, with `Playhead.measurePart
 [experiments/arrange](experiments/arrange/README.md); whether they *sound* punchier, bigger or cleaner is the question of
 a short [listening test](https://eigensoundlab.github.io/playhead/listening/) ([experiments/listening](experiments/listening/README.md)).
 
+For visuals, games and video, `playhead frames` gives the curves once per video frame (CSV, JSON or a Blender script)
+and `playhead markers` writes Audacity labels, DaVinci Resolve markers and subtitles. Whether Playhead's curves drive
+visuals better than the usual level, FFT bands and onset triggers is measured in
+[experiments/visuals](experiments/visuals/README.md), with a [viewer](https://eigensoundlab.github.io/playhead/visuals/)
+that drives two visuals side by side: they follow sections and accents better and never flicker, but do not yet read
+builds at constant loudness or harshness at equal loudness.
+
 Profiles trade detail for speed: `fast` (curves only, 0.13 s for a 2 s sound), `sfx` (plus events, tags, layers, checks and descriptors, 0.4 s), `music` (plus beats and sections, 1.7 s for 30 s). The guide has recipes for a browser sound tool, an asset manager with a Python server, REAPER and Unity, and `examples/embed.html` is a working host page.
 
 **REAPER.** [integrations/reaper](integrations/reaper/README.md) is a ReaPack package of nine actions around the command
@@ -385,9 +392,10 @@ experiments/esc50/    ESC-50 experiment: librosa baseline, evaluation, negative 
 experiments/corpus/   results on the 73-file corpus behind the README and the paper (self-checks, calibration, tools vs EQ, triggers)
 experiments/paper/    figure data, figure script and a sound for the paper (tools/paper-data.js, figures.py)
 experiments/listening/  the listening test of the arrangement goals: stimuli, test page (on the site at /listening/), analysis
+experiments/visuals/  Playhead's curves against the usual audio-reactive signals as drivers of visuals; viewer at /visuals/
 tools/audio-io.js     WAV reader/writer; other formats through ffmpeg
 tools/build.js        builds _site/, a single-file version and dist/ (library bundles, command-line bundle)
-tools/playhead-cli.js command line: analyze, markers, process, tools
+tools/playhead-cli.js command line: analyze, markers, frames, process, arrange, tools
 tools/build-cli.js    one executable for the current platform (Node single executable application)
 examples/             a host page and an analysis worker using the library bundle
 docs/INTEGRATION.md   API, document schema and recipes for other applications
@@ -424,7 +432,8 @@ The Asset Store submission guidelines (§1.2.b) currently exclude packages carry
 - Code: Apache License 2.0, see [LICENSE](LICENSE) and [NOTICE](NOTICE).
 - Paper and its figures: CC BY 4.0, see [paper/LICENSE.md](paper/LICENSE.md).
 - Generated test signals: CC0 1.0.
-- The listening test's stimuli (`experiments/listening/site/stimuli/`), mixed from CC0 Sonic Pi samples: CC0 1.0.
+- The listening test's stimuli (`experiments/listening/site/stimuli/`) and the visuals experiment's sounds
+  (`experiments/visuals/site/audio/`), made from CC0 Sonic Pi samples and synthesis: CC0 1.0.
 - `experiments/paper/robot-hit-steel.wav`, a sound by the author used for one of the paper's figures: CC BY 4.0.
 - Audio you process with Playhead is yours; the tool claims no rights in its output.
 

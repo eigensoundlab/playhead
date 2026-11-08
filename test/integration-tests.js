@@ -179,5 +179,34 @@ module.exports = async function (check) {
     let rb = null; try { rb = IO.readWav(path.join(outDir, wavs[0])); } catch (e) { }
     check("cli: --out and --out-dir files are written whole (temporary file, then rename)", `${wavs.join(", ") || "no output"}; ${left.length} temporary files left`,
       a.status === 0 && p.status === 0 && !!aj && aj.profile === "fast" && wavs.length === 1 && !!rb && rb.length === glass.length && left.length === 0 && /wrote .*glass_level\.wav/.test(p.stderr)); }
+  // frames: a frame is the curve's mean over it; fixed scaling as the strip draws; onsets on their frame
+  { const f5 = Playhead.frames(m, { fps: 5, curves: ["loudness"] }), f30 = Playhead.frames(m, { fps: 30, curves: ["lufs", "loudness"] }), raw = Playhead.frames(m, { fps: 30, curves: ["lufs"], scale: "raw" });
+    const L = m.curves.loudness, mean4 = (L[40] + L[41] + L[42] + L[43]) / 4;
+    const k = 900, lufsOk = Math.abs(f30.curves.lufs[k] - Math.max(0, Math.min(1, (raw.curves.lufs[k] + 60) / 60))) < 2e-4;
+    const inRange = Object.values(f30.curves).every(a => a.length === f30.frames && a.every(v => v >= 0 && v <= 1));
+    check("frames: per video frame, each the curve's mean over the frame, scaled as the strip draws, onsets on their frames",
+      `${f30.frames} frames at 30 fps; frame 10 at 5 fps ${f5.curves.loudness[10]} (mean ${mean4.toFixed(4)})`,
+      f30.frames === Math.ceil(m.source.duration * 30) && Math.abs(f5.curves.loudness[10] - mean4) < 1e-4 && lufsOk && inRange
+        && f30.onsets.length > 0 && f30.onsets[0] === Math.floor(m.onsets[0] * 30) && f30.downbeats.length === m.rhythm.downbeats.length); }
+  // editor formats from a document file (no second analysis): Audacity labels, Resolve EDL markers, SRT, frames as CSV
+  // and as a Blender script
+  { const docFile = path.join(tmp, "arc.playhead.json"), cliJs = path.join(root, "tools/playhead-cli.js");
+    fs.writeFileSync(docFile, JSON.stringify(m));
+    const run = (...a) => spawnSync(process.execPath, [cliJs, ...a], { encoding: "utf8", maxBuffer: 1 << 26 });
+    const want = Playhead.toMarkers(m, { kinds: ["sections", "downbeats"] });
+    const aud = run("markers", docFile, "--format", "audacity", "--kinds", "sections,downbeats").stdout.trim().split("\n");
+    const edl = run("markers", docFile, "--format", "edl", "--kinds", "sections", "--fps", "25").stdout;
+    const srt = run("markers", docFile, "--format", "srt", "--kinds", "sections").stdout.trim().split("\n\n");
+    const csv = run("frames", docFile, "--fps", "24", "--curves", "loudness,harshness").stdout.trim().split("\n");
+    const bl = run("frames", docFile, "--fps", "24", "--curves", "loudness", "--format", "blender").stdout;
+    const bad = run("frames", docFile, "--curves", "nothing");
+    const b = m.sections[1], bStart = 3600 * 25 + Math.round(b.start * 25), tc = f => [Math.floor(f / 90000), Math.floor(f / 1500) % 60, Math.floor(f / 25) % 60, f % 25].map(x => String(x).padStart(2, "0")).join(":");
+    check("cli: markers as Audacity labels, Resolve EDL and SRT, frames as CSV and a Blender script, all from a document",
+      `${aud.length} labels, ${(edl.match(/\|M:/g) || []).length} EDL markers, ${srt.length} subtitles, ${csv.length - 1} CSV frames`,
+      aud.length === want.length && aud.every(l => l.split("\t").length === 3) && aud[0].split("\t")[2] === want[0].name
+        && (edl.match(/\|M:/g) || []).length === m.sections.length && edl.includes(tc(bStart) + " " + tc(bStart + 1)) && edl.includes("|D:" + Math.round((b.end - b.start) * 25))
+        && srt.length === m.sections.length && /^1\n00:00:00,000 --> /.test(srt[0])
+        && csv[0] === "frame,time,loudness,harshness,onset,beat,downbeat" && csv.length - 1 === Math.ceil(m.source.duration * 24)
+        && bl.includes("import bpy") && bl.includes("FPS = 24") && /DATA = \{"loudness":\[/.test(bl) && bad.status === 2 && /not in this analysis: nothing/.test(bad.stderr)); }
   fs.rmSync(tmp, { recursive: true, force: true });
 };

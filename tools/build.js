@@ -129,6 +129,7 @@ else if (args[0] === "--fragment") {
   writeDist(path.join(site, "dist"));
   copyDir(path.join(root, "examples"), path.join(site, "examples"));
   copyDir(path.join(root, "experiments", "listening", "site"), path.join(site, "listening"));     // the listening test
+  copyDir(path.join(root, "experiments", "visuals", "site"), path.join(site, "visuals"));         // the visuals viewer
   // the ReaPack index of Playhead for REAPER, its files pinned to this commit (https://.../playhead/reaper/index.xml)
   if (!require("./reapack-index.js").forSite(path.join(site, "reaper", "index.xml"))) console.log("(no git: the ReaPack index was not written)");
   console.log("built", site, "and dist/ (playhead-core.js, playhead-core.mjs, playhead-cli.cjs)");

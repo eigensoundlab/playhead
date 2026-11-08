@@ -674,6 +674,43 @@ function toMarkers(doc, opts) {
   return out.sort((a, b) => a.start - b.start);
 }
 
+/* ---------------- frames: curves per video frame, for engines and visuals ---------------- */
+// The curves sampled once per frame, for a game engine, a VJ or 3D tool or a video editor:
+//   { fps, frames, duration, scale, curves: { name: [value per frame] }, onsets, beats, downbeats: [frame], events:
+//     [{ frame, end, word }] }
+// A frame's value is the curve's mean over that frame, so nothing is lost or aliased at any frame rate. scale "fixed"
+// (default) maps every curve to 0..1 as the strip draws it: LUFS from -60 to 0, the descriptor curves n1-n8 on their
+// 5th to 95th percentile in the file, structureNovelty and localPulse from 0 to their 99th percentile, the others as
+// they are; "file" maps every curve from its 5th to its 95th percentile in the file (the whole range used, as a VJ tool's
+// gain would; levels are no longer comparable between files); "raw" keeps the values. Silence is 0 (LUFS -60 when raw).
+// opts: fps (default 60), curves (names; default all), scale.
+function frames(doc, opts) {
+  opts = opts || {};
+  const fps = opts.fps > 0 ? opts.fps : 60, c = (doc && doc.curves) || {}, dur = doc.source.duration, n = Math.max(1, Math.ceil(dur * fps - 1e-9));
+  const scale = opts.scale === "raw" || opts.scale === "file" ? opts.scale : "fixed";
+  const names = (opts.curves && opts.curves.length ? opts.curves : Object.keys(c)).filter(k => Array.isArray(c[k]) && k !== "scale");
+  const out = { fps, frames: n, duration: dur, scale, curves: {} };
+  for (const k of names) {
+    const arr = c[k], empty = scale === "raw" && k === "lufs" ? -60 : 0;
+    let [lo, hi] = k === "lufs" ? [-60, 0] : autoRange(k, arr);
+    if (scale === "file") {
+      const v = arr.filter(x => x != null).sort((a, b) => a - b);
+      if (v.length) { lo = v[Math.floor(0.05 * (v.length - 1))]; hi = v[Math.floor(0.95 * (v.length - 1))]; if (hi - lo < 1e-9) hi = lo + 1e-9; }
+    }
+    out.curves[k] = Array.from({ length: n }, (_, i) => {
+      const v = curveValue(arr, c.rate, i / fps, (i + 1) / fps);
+      if (v == null) return empty;
+      return scale === "raw" ? rnd(v, 4) : rnd(Math.max(0, Math.min(1, (v - lo) / (hi - lo))), 4);
+    });
+  }
+  const at = list => Array.from(new Set((list || []).map(t => Math.floor(t * fps + 1e-9)).filter(f => f >= 0 && f < n)));
+  out.onsets = at(doc.onsets);
+  out.beats = at(doc.rhythm && doc.rhythm.beats);
+  out.downbeats = at(doc.rhythm && doc.rhythm.downbeats);
+  out.events = (doc.events || []).map(e => ({ frame: Math.floor(e.start * fps + 1e-9), end: Math.floor((e.decayEnd || e.end || e.start) * fps + 1e-9), word: e.word || "" }));
+  return out;
+}
+
 /* ---------------- strip renderer: layers and looks ---------------- */
 // A strip is a list of layers drawn on one time axis, earlier layers behind later ones:
 //   { type: "wave", colour }          the waveform; colour names a 0..1 curve that tints each column along the theme's
@@ -1399,7 +1436,7 @@ function drawStrip(ctx, doc, opts) {
   return { code: lookCode(asked), layers: asked, legend: describeLook(asked, doc), items };
 }
 
-const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, curveAt, align, combine, combineRules: COMBINE_RULES, measureParts, arrange, goals: GOALS, drawStrip, view, viewKinds: VIEW_KINDS, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
+const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, frames, curveAt, align, combine, combineRules: COMBINE_RULES, measureParts, arrange, goals: GOALS, drawStrip, view, viewKinds: VIEW_KINDS, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.Playhead = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

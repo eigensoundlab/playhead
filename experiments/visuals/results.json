@@ -1,0 +1,2971 @@
+{
+ "generator": "experiments/visuals/run.js, Playhead 0.3.0",
+ "fps": 60,
+ "stimuli": {
+  "groove": {
+   "duration": 32,
+   "accents": 42,
+   "sections": [
+    0,
+    8,
+    16,
+    28,
+    32
+   ],
+   "build": null,
+   "measures": {
+    "rms": {
+     "range": {
+      "spread": 0.903,
+      "entropy": 0.906,
+      "dead": 0.079,
+      "saturated": 0.009
+     },
+     "hf": 0.008,
+     "flashes": {
+      "max": 2,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.857,
+      "recall": 0.857,
+      "f1": 0.857,
+      "latency": 0.016,
+      "peaks": 42
+     },
+     "eta2": 0.57,
+     "level": 0.72
+    },
+    "bass": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.602,
+      "dead": 0.585,
+      "saturated": 0.071
+     },
+     "hf": 0.034,
+     "flashes": {
+      "max": 6,
+      "over": 0.072
+     },
+     "accents": {
+      "precision": 0.72,
+      "recall": 0.857,
+      "f1": 0.783,
+      "latency": 0.033,
+      "peaks": 50
+     },
+     "eta2": 0.241,
+     "level": 0.935
+    },
+    "bass_att": {
+     "range": {
+      "spread": 0.633,
+      "entropy": 0.777,
+      "dead": 0.38,
+      "saturated": 0
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 2,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 38
+     },
+     "eta2": 0.537,
+     "level": 0.686
+    },
+    "mid": {
+     "range": {
+      "spread": 0.935,
+      "entropy": 0.833,
+      "dead": 0.308,
+      "saturated": 0.045
+     },
+     "hf": 0.069,
+     "flashes": {
+      "max": 10,
+      "over": 0.488
+     },
+     "accents": {
+      "precision": 0.368,
+      "recall": 1,
+      "f1": 0.538,
+      "latency": 0.016,
+      "peaks": 114
+     },
+     "eta2": 0.354,
+     "level": 0.708
+    },
+    "treb": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.647,
+      "dead": 0.479,
+      "saturated": 0.08
+     },
+     "hf": 0.086,
+     "flashes": {
+      "max": 4,
+      "over": 0.6
+     },
+     "accents": {
+      "precision": 0.446,
+      "recall": 0.976,
+      "f1": 0.612,
+      "latency": 0.016,
+      "peaks": 92
+     },
+     "eta2": 0.225,
+     "level": 0.603
+    },
+    "centroid": {
+     "range": {
+      "spread": 0.865,
+      "entropy": 0.858,
+      "dead": 0.166,
+      "saturated": 0
+     },
+     "hf": 0.009,
+     "flashes": {
+      "max": 3,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.254,
+      "recall": 0.357,
+      "f1": 0.297,
+      "latency": 0.012,
+      "peaks": 59
+     },
+     "eta2": 0.235,
+     "level": 0.012
+    },
+    "hits": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.863,
+      "dead": 0.149,
+      "saturated": 0.042
+     },
+     "hf": 0.137,
+     "flashes": {
+      "max": 4,
+      "over": 0.24
+     },
+     "accents": {
+      "precision": 0.519,
+      "recall": 1,
+      "f1": 0.683,
+      "latency": 0,
+      "peaks": 81
+     },
+     "eta2": 0.201,
+     "level": 0.27
+    },
+    "rms_offline": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.765,
+      "dead": 0.104,
+      "saturated": 0.086
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 2,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.207,
+      "recall": 0.143,
+      "f1": 0.169,
+      "latency": 0.045,
+      "peaks": 29
+     },
+     "eta2": 0.67,
+     "level": 1
+    },
+    "hits_offline": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.86,
+      "dead": 0.161,
+      "saturated": 0.041
+     },
+     "hf": 0.135,
+     "flashes": {
+      "max": 4,
+      "over": 0.24
+     },
+     "accents": {
+      "precision": 0.519,
+      "recall": 0.976,
+      "f1": 0.678,
+      "latency": -0.017,
+      "peaks": 79
+     },
+     "eta2": 0.2,
+     "level": 0.206
+    },
+    "ph_loudness": {
+     "range": {
+      "spread": 0.999,
+      "entropy": 0.752,
+      "dead": 0.213,
+      "saturated": 0.122
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 16
+     },
+     "eta2": 0.97,
+     "level": 0.692
+    },
+    "ph_onset": {
+     "range": {
+      "spread": 0.344,
+      "entropy": 0.298,
+      "dead": 0.842,
+      "saturated": 0.006
+     },
+     "hf": 0.134,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.84,
+      "recall": 1,
+      "f1": 0.913,
+      "latency": 0,
+      "peaks": 50
+     },
+     "eta2": 0.027,
+     "level": 0.476
+    },
+    "ph_harsh": {
+     "range": {
+      "spread": 0.986,
+      "entropy": 0.85,
+      "dead": 0.183,
+      "saturated": 0.054
+     },
+     "hf": 0.008,
+     "flashes": {
+      "max": 4,
+      "over": 0.04
+     },
+     "accents": {
+      "precision": 0.269,
+      "recall": 0.333,
+      "f1": 0.298,
+      "latency": -0.117,
+      "peaks": 52
+     },
+     "eta2": 0.823,
+     "level": 0.257
+    },
+    "ph_tension": {
+     "range": {
+      "spread": 0.999,
+      "entropy": 0.758,
+      "dead": 0.227,
+      "saturated": 0.153
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 0
+     },
+     "eta2": 0.929,
+     "level": 0.524
+    },
+    "ph_activity": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.797,
+      "dead": 0.274,
+      "saturated": 0.067
+     },
+     "hf": 0.05,
+     "flashes": {
+      "max": 4,
+      "over": 0.368
+     },
+     "accents": {
+      "precision": 0.612,
+      "recall": 0.976,
+      "f1": 0.752,
+      "latency": -0.022,
+      "peaks": 67
+     },
+     "eta2": 0.215,
+     "level": 0.196
+    },
+    "ph_arousal": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.761,
+      "dead": 0.228,
+      "saturated": 0.23
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.714,
+      "recall": 0.119,
+      "f1": 0.204,
+      "latency": 0.033,
+      "peaks": 7
+     },
+     "eta2": 0.929,
+     "level": 0.188
+    },
+    "ph_hits": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.864,
+      "dead": 0.149,
+      "saturated": 0.044
+     },
+     "hf": 0.137,
+     "flashes": {
+      "max": 4.5,
+      "over": 0.392
+     },
+     "accents": {
+      "precision": 0.482,
+      "recall": 0.976,
+      "f1": 0.646,
+      "latency": -0.017,
+      "peaks": 85
+     },
+     "eta2": 0.211,
+     "level": 0.249
+    },
+    "shift_loudness": {
+     "range": {
+      "spread": 0.999,
+      "entropy": 0.752,
+      "dead": 0.213,
+      "saturated": 0.122
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.643,
+      "recall": 0.214,
+      "f1": 0.321,
+      "latency": -0.005,
+      "peaks": 14
+     },
+     "eta2": 0.399,
+     "level": 0.103
+    },
+    "shift_tension": {
+     "range": {
+      "spread": 0.999,
+      "entropy": 0.758,
+      "dead": 0.227,
+      "saturated": 0.153
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 0
+     },
+     "eta2": 0.441,
+     "level": 0.14
+    },
+    "shift_harsh": {
+     "range": {
+      "spread": 0.986,
+      "entropy": 0.85,
+      "dead": 0.183,
+      "saturated": 0.054
+     },
+     "hf": 0.008,
+     "flashes": {
+      "max": 4,
+      "over": 0.032
+     },
+     "accents": {
+      "precision": 0.019,
+      "recall": 0.024,
+      "f1": 0.021,
+      "latency": 0.012,
+      "peaks": 52
+     },
+     "eta2": 0.292,
+     "level": 0.338
+    },
+    "shift_hits": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.864,
+      "dead": 0.149,
+      "saturated": 0.044
+     },
+     "hf": 0.137,
+     "flashes": {
+      "max": 4,
+      "over": 0.328
+     },
+     "accents": {
+      "precision": 0.094,
+      "recall": 0.19,
+      "f1": 0.126,
+      "latency": 0.045,
+      "peaks": 85
+     },
+     "eta2": 0.089,
+     "level": 0.066
+    }
+   },
+   "playhead": {
+    "profile": "music",
+    "onsets": 85,
+    "tempo": 120.05
+   }
+  },
+  "riser": {
+   "duration": 24,
+   "accents": 24,
+   "sections": [
+    0,
+    4,
+    16,
+    24
+   ],
+   "build": [
+    4,
+    16
+   ],
+   "measures": {
+    "rms": {
+     "range": {
+      "spread": 0.733,
+      "entropy": 0.892,
+      "dead": 0.068,
+      "saturated": 0.002
+     },
+     "hf": 0.011,
+     "flashes": {
+      "max": 4,
+      "over": 0.097
+     },
+     "accents": {
+      "precision": 0.472,
+      "recall": 0.708,
+      "f1": 0.567,
+      "latency": 0.045,
+      "peaks": 36
+     },
+     "eta2": 0.681,
+     "build": -0.614,
+     "buildRise": -0.089,
+     "level": 0.624
+    },
+    "bass": {
+     "range": {
+      "spread": 0.897,
+      "entropy": 0.874,
+      "dead": 0.031,
+      "saturated": 0.054
+     },
+     "hf": 0.082,
+     "flashes": {
+      "max": 13,
+      "over": 0.624
+     },
+     "accents": {
+      "precision": 0.147,
+      "recall": 0.708,
+      "f1": 0.243,
+      "latency": 0.045,
+      "peaks": 116
+     },
+     "eta2": 0.135,
+     "build": 0.499,
+     "buildRise": 0.208,
+     "level": 0.858
+    },
+    "bass_att": {
+     "range": {
+      "spread": 0.532,
+      "entropy": 0.852,
+      "dead": 0,
+      "saturated": 0
+     },
+     "hf": 0.004,
+     "flashes": {
+      "max": 4.5,
+      "over": 0.097
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 23
+     },
+     "eta2": 0.424,
+     "build": 0.91,
+     "buildRise": 0.205,
+     "level": 0.666
+    },
+    "mid": {
+     "range": {
+      "spread": 0.869,
+      "entropy": 0.888,
+      "dead": 0.203,
+      "saturated": 0.041
+     },
+     "hf": 0.131,
+     "flashes": {
+      "max": 15,
+      "over": 0.516
+     },
+     "accents": {
+      "precision": 0.239,
+      "recall": 0.917,
+      "f1": 0.379,
+      "latency": 0.012,
+      "peaks": 92
+     },
+     "eta2": 0.263,
+     "build": 0.2,
+     "buildRise": 0.007,
+     "level": 0.086
+    },
+    "treb": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.845,
+      "dead": 0.285,
+      "saturated": 0.064
+     },
+     "hf": 0.126,
+     "flashes": {
+      "max": 9,
+      "over": 0.613
+     },
+     "accents": {
+      "precision": 0.277,
+      "recall": 0.958,
+      "f1": 0.43,
+      "latency": 0.012,
+      "peaks": 83
+     },
+     "eta2": 0.411,
+     "build": 0.147,
+     "buildRise": 0.011,
+     "level": -0.095
+    },
+    "centroid": {
+     "range": {
+      "spread": 0.662,
+      "entropy": 0.804,
+      "dead": 0.263,
+      "saturated": 0
+     },
+     "hf": 0.008,
+     "flashes": {
+      "max": 8,
+      "over": 0.484
+     },
+     "accents": {
+      "precision": 0.5,
+      "recall": 0.917,
+      "f1": 0.647,
+      "latency": 0.012,
+      "peaks": 44
+     },
+     "eta2": 0.806,
+     "build": 0.759,
+     "buildRise": 0.237,
+     "level": -0.4
+    },
+    "hits": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.717,
+      "dead": 0.377,
+      "saturated": 0.04
+     },
+     "hf": 0.104,
+     "flashes": {
+      "max": 6,
+      "over": 0.484
+     },
+     "accents": {
+      "precision": 0.414,
+      "recall": 1,
+      "f1": 0.585,
+      "latency": -0.005,
+      "peaks": 58
+     },
+     "eta2": 0.467,
+     "build": -0.787,
+     "buildRise": -0.457,
+     "level": 0.376
+    },
+    "rms_offline": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.922,
+      "dead": 0.079,
+      "saturated": 0.074
+     },
+     "hf": 0.002,
+     "flashes": {
+      "max": 6.5,
+      "over": 0.204
+     },
+     "accents": {
+      "precision": 0.122,
+      "recall": 0.25,
+      "f1": 0.164,
+      "latency": 0.045,
+      "peaks": 49
+     },
+     "eta2": 0.385,
+     "build": 0.361,
+     "buildRise": 0.113,
+     "level": 1
+    },
+    "hits_offline": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.739,
+      "dead": 0.361,
+      "saturated": 0.039
+     },
+     "hf": 0.108,
+     "flashes": {
+      "max": 5,
+      "over": 0.462
+     },
+     "accents": {
+      "precision": 0.411,
+      "recall": 0.958,
+      "f1": 0.575,
+      "latency": -0.022,
+      "peaks": 56
+     },
+     "eta2": 0.438,
+     "build": -0.823,
+     "buildRise": -0.354,
+     "level": 0.366
+    },
+    "ph_loudness": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.785,
+      "dead": 0.303,
+      "saturated": 0.081
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 2
+     },
+     "eta2": 0.961,
+     "build": -0.752,
+     "buildRise": -0.09,
+     "level": 0.539
+    },
+    "ph_onset": {
+     "range": {
+      "spread": 0.55,
+      "entropy": 0.521,
+      "dead": 0.658,
+      "saturated": 0.006
+     },
+     "hf": 0.206,
+     "flashes": {
+      "max": 9.5,
+      "over": 0.559
+     },
+     "accents": {
+      "precision": 0.267,
+      "recall": 0.958,
+      "f1": 0.418,
+      "latency": -0.005,
+      "peaks": 86
+     },
+     "eta2": 0.002,
+     "build": 0.286,
+     "buildRise": -0.009,
+     "level": 0.298
+    },
+    "ph_harsh": {
+     "range": {
+      "spread": 0.995,
+      "entropy": 0.863,
+      "dead": 0.144,
+      "saturated": 0.053
+     },
+     "hf": 0.007,
+     "flashes": {
+      "max": 8.5,
+      "over": 0.183
+     },
+     "accents": {
+      "precision": 0.421,
+      "recall": 0.333,
+      "f1": 0.372,
+      "latency": -0.005,
+      "peaks": 19
+     },
+     "eta2": 0.822,
+     "build": 0.095,
+     "buildRise": 0.03,
+     "level": 0.468
+    },
+    "ph_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.771,
+      "dead": 0.135,
+      "saturated": 0.099
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 0
+     },
+     "eta2": 0.83,
+     "build": 0.448,
+     "buildRise": 0.412,
+     "level": 0.286
+    },
+    "ph_activity": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.913,
+      "dead": 0.097,
+      "saturated": 0.073
+     },
+     "hf": 0.043,
+     "flashes": {
+      "max": 5.5,
+      "over": 0.419
+     },
+     "accents": {
+      "precision": 0.371,
+      "recall": 0.958,
+      "f1": 0.535,
+      "latency": -0.055,
+      "peaks": 62
+     },
+     "eta2": 0.179,
+     "build": -0.526,
+     "buildRise": -0.291,
+     "level": 0.146
+    },
+    "ph_arousal": {
+     "range": {
+      "spread": 0.998,
+      "entropy": 0.894,
+      "dead": 0.076,
+      "saturated": 0.053
+     },
+     "hf": 0.002,
+     "flashes": {
+      "max": 2,
+      "over": 0
+     },
+     "accents": {
+      "precision": 1,
+      "recall": 0.083,
+      "f1": 0.154,
+      "latency": 0.045,
+      "peaks": 2
+     },
+     "eta2": 0.543,
+     "build": -0.719,
+     "buildRise": -0.377,
+     "level": 0.316
+    },
+    "ph_hits": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.839,
+      "dead": 0.195,
+      "saturated": 0.049
+     },
+     "hf": 0.138,
+     "flashes": {
+      "max": 6.5,
+      "over": 0.527
+     },
+     "accents": {
+      "precision": 0.324,
+      "recall": 0.958,
+      "f1": 0.484,
+      "latency": -0.022,
+      "peaks": 71
+     },
+     "eta2": 0.072,
+     "build": -0.543,
+     "buildRise": -0.354,
+     "level": 0.244
+    },
+    "shift_loudness": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.785,
+      "dead": 0.303,
+      "saturated": 0.081
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.5,
+      "recall": 0.042,
+      "f1": 0.077,
+      "latency": -0.055,
+      "peaks": 2
+     },
+     "eta2": 0.925,
+     "build": -0.82,
+     "buildRise": -0.253,
+     "level": -0.378
+    },
+    "shift_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.771,
+      "dead": 0.135,
+      "saturated": 0.099
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 0
+     },
+     "eta2": 0.072,
+     "build": -0.895,
+     "buildRise": -0.925,
+     "level": -0.155
+    },
+    "shift_harsh": {
+     "range": {
+      "spread": 0.995,
+      "entropy": 0.863,
+      "dead": 0.144,
+      "saturated": 0.053
+     },
+     "hf": 0.008,
+     "flashes": {
+      "max": 8.5,
+      "over": 0.151
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 20
+     },
+     "eta2": 0.787,
+     "build": 0.046,
+     "buildRise": 0.026,
+     "level": -0.433
+    },
+    "shift_hits": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.839,
+      "dead": 0.195,
+      "saturated": 0.049
+     },
+     "hf": 0.139,
+     "flashes": {
+      "max": 7,
+      "over": 0.495
+     },
+     "accents": {
+      "precision": 0.155,
+      "recall": 0.458,
+      "f1": 0.232,
+      "latency": -0.022,
+      "peaks": 71
+     },
+     "eta2": 0.3,
+     "build": -0.325,
+     "buildRise": -0.196,
+     "level": -0.129
+    }
+   },
+   "playhead": {
+    "profile": "music",
+    "onsets": 71,
+    "tempo": 120.12
+   }
+  },
+  "swell": {
+   "duration": 24,
+   "accents": 24,
+   "sections": [
+    0,
+    4,
+    16,
+    24
+   ],
+   "build": [
+    4,
+    16
+   ],
+   "measures": {
+    "rms": {
+     "range": {
+      "spread": 0.748,
+      "entropy": 0.787,
+      "dead": 0.094,
+      "saturated": 0.002
+     },
+     "hf": 0.006,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.826,
+      "recall": 0.792,
+      "f1": 0.809,
+      "latency": 0.045,
+      "peaks": 23
+     },
+     "eta2": 0.803,
+     "build": -0.222,
+     "buildRise": -0.027,
+     "level": 0.664
+    },
+    "bass": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.781,
+      "dead": 0.383,
+      "saturated": 0.067
+     },
+     "hf": 0.037,
+     "flashes": {
+      "max": 11,
+      "over": 0.505
+     },
+     "accents": {
+      "precision": 0.296,
+      "recall": 0.875,
+      "f1": 0.442,
+      "latency": 0.045,
+      "peaks": 71
+     },
+     "eta2": 0.375,
+     "build": 0.764,
+     "buildRise": 0.179,
+     "level": 0.949
+    },
+    "bass_att": {
+     "range": {
+      "spread": 0.683,
+      "entropy": 0.853,
+      "dead": 0.236,
+      "saturated": 0
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 2,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.045,
+      "recall": 0.042,
+      "f1": 0.043,
+      "latency": -0.104,
+      "peaks": 22
+     },
+     "eta2": 0.687,
+     "build": 0.889,
+     "buildRise": 0.172,
+     "level": 0.762
+    },
+    "mid": {
+     "range": {
+      "spread": 0.825,
+      "entropy": 0.839,
+      "dead": 0.283,
+      "saturated": 0.044
+     },
+     "hf": 0.195,
+     "flashes": {
+      "max": 11,
+      "over": 0.699
+     },
+     "accents": {
+      "precision": 0.222,
+      "recall": 0.917,
+      "f1": 0.358,
+      "latency": 0.012,
+      "peaks": 99
+     },
+     "eta2": 0.084,
+     "build": 0.584,
+     "buildRise": 0.306,
+     "level": 0.446
+    },
+    "treb": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.819,
+      "dead": 0.342,
+      "saturated": 0.061
+     },
+     "hf": 0.333,
+     "flashes": {
+      "max": 15,
+      "over": 0.731
+     },
+     "accents": {
+      "precision": 0.161,
+      "recall": 0.917,
+      "f1": 0.273,
+      "latency": 0.012,
+      "peaks": 137
+     },
+     "eta2": 0.091,
+     "build": 0.246,
+     "buildRise": 0.12,
+     "level": -0.046
+    },
+    "centroid": {
+     "range": {
+      "spread": 0.945,
+      "entropy": 0.916,
+      "dead": 0.225,
+      "saturated": 0.016
+     },
+     "hf": 0.015,
+     "flashes": {
+      "max": 6,
+      "over": 0.624
+     },
+     "accents": {
+      "precision": 0.292,
+      "recall": 0.875,
+      "f1": 0.438,
+      "latency": 0.012,
+      "peaks": 72
+     },
+     "eta2": 0.734,
+     "build": -0.121,
+     "buildRise": 0.069,
+     "level": -0.561
+    },
+    "hits": {
+     "range": {
+      "spread": 0.938,
+      "entropy": 0.83,
+      "dead": 0.032,
+      "saturated": 0.085
+     },
+     "hf": 0.201,
+     "flashes": {
+      "max": 11,
+      "over": 0.677
+     },
+     "accents": {
+      "precision": 0.187,
+      "recall": 0.958,
+      "f1": 0.313,
+      "latency": -0.005,
+      "peaks": 123
+     },
+     "eta2": 0.334,
+     "build": 0.275,
+     "buildRise": 0.146,
+     "level": -0.074
+    },
+    "rms_offline": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.88,
+      "dead": 0.053,
+      "saturated": 0.1
+     },
+     "hf": 0.005,
+     "flashes": {
+      "max": 4,
+      "over": 0.108
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 34
+     },
+     "eta2": 0.368,
+     "build": 0.734,
+     "buildRise": 0.303,
+     "level": 1
+    },
+    "hits_offline": {
+     "range": {
+      "spread": 0.944,
+      "entropy": 0.837,
+      "dead": 0.042,
+      "saturated": 0.085
+     },
+     "hf": 0.188,
+     "flashes": {
+      "max": 11,
+      "over": 0.688
+     },
+     "accents": {
+      "precision": 0.18,
+      "recall": 0.917,
+      "f1": 0.301,
+      "latency": -0.022,
+      "peaks": 122
+     },
+     "eta2": 0.328,
+     "build": 0.28,
+     "buildRise": 0.152,
+     "level": -0.116
+    },
+    "ph_loudness": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.63,
+      "dead": 0.426,
+      "saturated": 0.081
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 0
+     },
+     "eta2": 0.981,
+     "build": -0.538,
+     "buildRise": -0.266,
+     "level": 0.543
+    },
+    "ph_onset": {
+     "range": {
+      "spread": 0.455,
+      "entropy": 0.501,
+      "dead": 0.656,
+      "saturated": 0.003
+     },
+     "hf": 0.227,
+     "flashes": {
+      "max": 8.5,
+      "over": 0.387
+     },
+     "accents": {
+      "precision": 0.297,
+      "recall": 0.917,
+      "f1": 0.449,
+      "latency": -0.005,
+      "peaks": 74
+     },
+     "eta2": 0.034,
+     "build": 0.225,
+     "buildRise": 0.013,
+     "level": 0.158
+    },
+    "ph_harsh": {
+     "range": {
+      "spread": 0.99,
+      "entropy": 0.943,
+      "dead": 0.103,
+      "saturated": 0.059
+     },
+     "hf": 0.015,
+     "flashes": {
+      "max": 9.5,
+      "over": 0.548
+     },
+     "accents": {
+      "precision": 0.098,
+      "recall": 0.25,
+      "f1": 0.141,
+      "latency": -0.022,
+      "peaks": 61
+     },
+     "eta2": 0.807,
+     "build": -0.792,
+     "buildRise": -0.366,
+     "level": 0.208
+    },
+    "ph_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.857,
+      "dead": 0.235,
+      "saturated": 0.059
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 1
+     },
+     "eta2": 0.395,
+     "build": -0.846,
+     "buildRise": -0.472,
+     "level": 0.218
+    },
+    "ph_activity": {
+     "range": {
+      "spread": 0.984,
+      "entropy": 0.897,
+      "dead": 0.199,
+      "saturated": 0.067
+     },
+     "hf": 0.037,
+     "flashes": {
+      "max": 6.5,
+      "over": 0.667
+     },
+     "accents": {
+      "precision": 0.253,
+      "recall": 0.917,
+      "f1": 0.396,
+      "latency": -0.022,
+      "peaks": 87
+     },
+     "eta2": 0.611,
+     "build": 0.028,
+     "buildRise": 0.121,
+     "level": -0.403
+    },
+    "ph_arousal": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.858,
+      "dead": 0.097,
+      "saturated": 0.262
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.75,
+      "recall": 0.125,
+      "f1": 0.214,
+      "latency": 0.028,
+      "peaks": 4
+     },
+     "eta2": 0.457,
+     "build": -0.94,
+     "buildRise": -0.798,
+     "level": -0.543
+    },
+    "ph_hits": {
+     "range": {
+      "spread": 0.944,
+      "entropy": 0.832,
+      "dead": 0.042,
+      "saturated": 0.095
+     },
+     "hf": 0.176,
+     "flashes": {
+      "max": 13,
+      "over": 0.688
+     },
+     "accents": {
+      "precision": 0.163,
+      "recall": 0.917,
+      "f1": 0.277,
+      "latency": -0.022,
+      "peaks": 135
+     },
+     "eta2": 0.363,
+     "build": 0.38,
+     "buildRise": 0.247,
+     "level": -0.129
+    },
+    "shift_loudness": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.63,
+      "dead": 0.426,
+      "saturated": 0.081
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 0
+     },
+     "eta2": 0.969,
+     "build": -0.493,
+     "buildRise": 0.041,
+     "level": -0.41
+    },
+    "shift_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.857,
+      "dead": 0.235,
+      "saturated": 0.059
+     },
+     "hf": 0,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 1
+     },
+     "eta2": 0.239,
+     "build": -0.636,
+     "buildRise": -0.345,
+     "level": 0.022
+    },
+    "shift_harsh": {
+     "range": {
+      "spread": 0.99,
+      "entropy": 0.943,
+      "dead": 0.103,
+      "saturated": 0.059
+     },
+     "hf": 0.016,
+     "flashes": {
+      "max": 10,
+      "over": 0.538
+     },
+     "accents": {
+      "precision": 0.183,
+      "recall": 0.458,
+      "f1": 0.262,
+      "latency": -0.038,
+      "peaks": 60
+     },
+     "eta2": 0.782,
+     "build": 0.71,
+     "buildRise": 0.346,
+     "level": -0.167
+    },
+    "shift_hits": {
+     "range": {
+      "spread": 0.944,
+      "entropy": 0.832,
+      "dead": 0.042,
+      "saturated": 0.095
+     },
+     "hf": 0.178,
+     "flashes": {
+      "max": 13,
+      "over": 0.645
+     },
+     "accents": {
+      "precision": 0.172,
+      "recall": 0.958,
+      "f1": 0.291,
+      "latency": -0.005,
+      "peaks": 134
+     },
+     "eta2": 0.339,
+     "build": 0.277,
+     "buildRise": 0.164,
+     "level": 0.209
+    }
+   },
+   "playhead": {
+    "profile": "music",
+    "onsets": 137,
+    "tempo": 120.24
+   }
+  },
+  "timbre": {
+   "duration": 36,
+   "accents": 12,
+   "sections": null,
+   "build": null,
+   "measures": {
+    "rms": {
+     "range": {
+      "spread": 0.493,
+      "entropy": 0.543,
+      "dead": 0,
+      "saturated": 0.156
+     },
+     "hf": 0.01,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 10
+     },
+     "timbre": 0.5,
+     "brightness": 0,
+     "kinds": {
+      "dark": 0.989,
+      "rough": 0.914,
+      "bright": 0.512,
+      "clipped": 0.846
+     },
+     "level": 0.739
+    },
+    "bass": {
+     "range": {
+      "spread": 0.739,
+      "entropy": 0.743,
+      "dead": 0.25,
+      "saturated": 0.009
+     },
+     "hf": 0.003,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 2
+     },
+     "timbre": 0.609,
+     "brightness": 0,
+     "kinds": {
+      "dark": 0.634,
+      "rough": 0.463,
+      "bright": 0,
+      "clipped": 0.571
+     },
+     "level": 0.791
+    },
+    "bass_att": {
+     "range": {
+      "spread": 0.715,
+      "entropy": 0.767,
+      "dead": 0.226,
+      "saturated": 0
+     },
+     "hf": 0,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 1
+     },
+     "timbre": 0.607,
+     "brightness": 0,
+     "kinds": {
+      "dark": 0.638,
+      "rough": 0.46,
+      "bright": 0.004,
+      "clipped": 0.571
+     },
+     "level": 0.797
+    },
+    "mid": {
+     "range": {
+      "spread": 0.498,
+      "entropy": 0.822,
+      "dead": 0,
+      "saturated": 0.014
+     },
+     "hf": 0.012,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 4
+     },
+     "timbre": 0.75,
+     "brightness": 0.778,
+     "kinds": {
+      "dark": 0.39,
+      "rough": 0.723,
+      "bright": 0.488,
+      "clipped": 0.439
+     },
+     "level": -0.333
+    },
+    "treb": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.755,
+      "dead": 0.344,
+      "saturated": 0.061
+     },
+     "hf": 0.031,
+     "flashes": {
+      "max": 20,
+      "over": 0.17
+     },
+     "accents": {
+      "precision": 0.031,
+      "recall": 0.167,
+      "f1": 0.053,
+      "latency": 0,
+      "peaks": 64
+     },
+     "timbre": 0.381,
+     "brightness": 1,
+     "kinds": {
+      "dark": 0.075,
+      "rough": 0.045,
+      "bright": 0.824,
+      "clipped": 0.279
+     },
+     "level": -0.555
+    },
+    "centroid": {
+     "range": {
+      "spread": 0.699,
+      "entropy": 0.384,
+      "dead": 0.001,
+      "saturated": 0
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 12
+     },
+     "timbre": 0.5,
+     "brightness": 1,
+     "kinds": {
+      "dark": 0.089,
+      "rough": 0.32,
+      "bright": 0.788,
+      "clipped": 0.322
+     },
+     "level": -0.704
+    },
+    "hits": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.463,
+      "dead": 0.643,
+      "saturated": 0.047
+     },
+     "hf": 0.059,
+     "flashes": {
+      "max": 10,
+      "over": 0.262
+     },
+     "accents": {
+      "precision": 0.109,
+      "recall": 0.917,
+      "f1": 0.195,
+      "latency": -0.05,
+      "peaks": 101
+     },
+     "timbre": 0.761,
+     "brightness": 0.536,
+     "kinds": {
+      "dark": 0.004,
+      "rough": 0.009,
+      "bright": 0.009,
+      "clipped": 0.771
+     },
+     "level": 0.065
+    },
+    "rms_offline": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.463,
+      "dead": 0.272,
+      "saturated": 0.228
+     },
+     "hf": 0.003,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 105
+     },
+     "timbre": 0.5,
+     "brightness": 0,
+     "kinds": {
+      "dark": 0.995,
+      "rough": 0.795,
+      "bright": 0,
+      "clipped": 0.836
+     },
+     "level": 1
+    },
+    "hits_offline": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.483,
+      "dead": 0.627,
+      "saturated": 0.048
+     },
+     "hf": 0.06,
+     "flashes": {
+      "max": 10,
+      "over": 0.277
+     },
+     "accents": {
+      "precision": 0.117,
+      "recall": 1,
+      "f1": 0.209,
+      "latency": 0.033,
+      "peaks": 103
+     },
+     "timbre": 0.751,
+     "brightness": 0.512,
+     "kinds": {
+      "dark": 0.007,
+      "rough": 0.008,
+      "bright": 0.009,
+      "clipped": 0.77
+     },
+     "level": 0.081
+    },
+    "ph_loudness": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.679,
+      "dead": 0.06,
+      "saturated": 0.126
+     },
+     "hf": 0.003,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 36
+     },
+     "timbre": 0.621,
+     "brightness": 0.171,
+     "kinds": {
+      "dark": 0.865,
+      "rough": 0.953,
+      "bright": 0.855,
+      "clipped": 0.857
+     },
+     "level": 0.253
+    },
+    "ph_onset": {
+     "range": {
+      "spread": 0.006,
+      "entropy": 0.08,
+      "dead": 0.966,
+      "saturated": 0.005
+     },
+     "hf": 0.121,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 1,
+      "recall": 0.917,
+      "f1": 0.957,
+      "latency": 0.017,
+      "peaks": 11
+     },
+     "timbre": 0.865,
+     "brightness": 0.459,
+     "kinds": {
+      "dark": 0,
+      "rough": 0.001,
+      "bright": 0,
+      "clipped": 0
+     },
+     "level": -0.081
+    },
+    "ph_harsh": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.666,
+      "dead": 0.257,
+      "saturated": 0.202
+     },
+     "hf": 0.003,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 16
+     },
+     "timbre": 0.501,
+     "brightness": 1,
+     "kinds": {
+      "dark": 0.337,
+      "rough": 0.991,
+      "bright": 0.827,
+      "clipped": 0.005
+     },
+     "level": -0.481
+    },
+    "ph_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.893,
+      "dead": 0.103,
+      "saturated": 0.068
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 0
+     },
+     "timbre": 0.604,
+     "brightness": 0.886,
+     "kinds": {
+      "dark": 0.169,
+      "rough": 0.303,
+      "bright": 0.514,
+      "clipped": 0.597
+     },
+     "level": -0.344
+    },
+    "ph_activity": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.284,
+      "dead": 0.432,
+      "saturated": 0.054
+     },
+     "hf": 0.01,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 1,
+      "recall": 0.917,
+      "f1": 0.957,
+      "latency": -0.083,
+      "peaks": 11
+     },
+     "timbre": 0.746,
+     "brightness": 0.601,
+     "kinds": {
+      "dark": 0.299,
+      "rough": 0.456,
+      "bright": 0.452,
+      "clipped": 0.303
+     },
+     "level": -0.297
+    },
+    "ph_arousal": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.904,
+      "dead": 0.129,
+      "saturated": 0.056
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.636,
+      "recall": 0.583,
+      "f1": 0.609,
+      "latency": 0,
+      "peaks": 11
+     },
+     "timbre": 0.69,
+     "brightness": 0.672,
+     "kinds": {
+      "dark": 0.146,
+      "rough": 0.354,
+      "bright": 0.244,
+      "clipped": 0.358
+     },
+     "level": -0.265
+    },
+    "ph_hits": {
+     "range": {
+      "spread": 0.329,
+      "entropy": 0.238,
+      "dead": 0.875,
+      "saturated": 0.005
+     },
+     "hf": 0.085,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 1,
+      "recall": 0.833,
+      "f1": 0.909,
+      "latency": -0.017,
+      "peaks": 10
+     },
+     "timbre": 0.527,
+     "brightness": 0.554,
+     "kinds": {
+      "dark": 0.002,
+      "rough": 0.008,
+      "bright": 0.008,
+      "clipped": 0.008
+     },
+     "level": -0.209
+    },
+    "shift_loudness": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.679,
+      "dead": 0.06,
+      "saturated": 0.126
+     },
+     "hf": 0.003,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 36
+     },
+     "timbre": 0.657,
+     "brightness": 0.414,
+     "kinds": {
+      "dark": 0.903,
+      "rough": 0.95,
+      "bright": 0.87,
+      "clipped": 0.881
+     },
+     "level": 0.188
+    },
+    "shift_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.893,
+      "dead": 0.103,
+      "saturated": 0.068
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 0.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 1
+     },
+     "timbre": 0.368,
+     "brightness": 0.451,
+     "kinds": {
+      "dark": 0.52,
+      "rough": 0.329,
+      "bright": 0.432,
+      "clipped": 0.32
+     },
+     "level": 0.013
+    },
+    "shift_harsh": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.666,
+      "dead": 0.257,
+      "saturated": 0.202
+     },
+     "hf": 0.002,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 15
+     },
+     "timbre": 0.413,
+     "brightness": 0.43,
+     "kinds": {
+      "dark": 0.614,
+      "rough": 0.769,
+      "bright": 0.658,
+      "clipped": 0.119
+     },
+     "level": -0.118
+    },
+    "shift_hits": {
+     "range": {
+      "spread": 0.329,
+      "entropy": 0.238,
+      "dead": 0.875,
+      "saturated": 0.005
+     },
+     "hf": 0.086,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 10
+     },
+     "timbre": 0.499,
+     "brightness": 0.484,
+     "kinds": {
+      "dark": 0.002,
+      "rough": 0.001,
+      "bright": 0.001,
+      "clipped": 0.002
+     },
+     "level": -0.166
+    }
+   },
+   "playhead": {
+    "profile": "music",
+    "onsets": 10,
+    "tempo": 57.1
+   }
+  },
+  "sfx": {
+   "duration": 24,
+   "accents": 14,
+   "sections": null,
+   "build": null,
+   "measures": {
+    "rms": {
+     "range": {
+      "spread": 0.54,
+      "entropy": 0.666,
+      "dead": 0.509,
+      "saturated": 0.001
+     },
+     "hf": 0.016,
+     "flashes": {
+      "max": 3,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.571,
+      "recall": 0.571,
+      "f1": 0.571,
+      "latency": 0.015,
+      "peaks": 14
+     },
+     "level": 0.711
+    },
+    "bass": {
+     "range": {
+      "spread": 0.71,
+      "entropy": 0.432,
+      "dead": 0.724,
+      "saturated": 0.034
+     },
+     "hf": 0.049,
+     "flashes": {
+      "max": 9,
+      "over": 0.151
+     },
+     "accents": {
+      "precision": 0.292,
+      "recall": 0.5,
+      "f1": 0.368,
+      "latency": 0.014,
+      "peaks": 24
+     },
+     "level": 0.51
+    },
+    "bass_att": {
+     "range": {
+      "spread": 0.542,
+      "entropy": 0.532,
+      "dead": 0.644,
+      "saturated": 0
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 9
+     },
+     "level": 0.502
+    },
+    "mid": {
+     "range": {
+      "spread": 0.989,
+      "entropy": 0.677,
+      "dead": 0.456,
+      "saturated": 0.053
+     },
+     "hf": 0.028,
+     "flashes": {
+      "max": 6,
+      "over": 0.108
+     },
+     "accents": {
+      "precision": 0.44,
+      "recall": 0.786,
+      "f1": 0.564,
+      "latency": 0.014,
+      "peaks": 25
+     },
+     "level": 0.675
+    },
+    "treb": {
+     "range": {
+      "spread": 0.678,
+      "entropy": 0.591,
+      "dead": 0.55,
+      "saturated": 0.037
+     },
+     "hf": 0.031,
+     "flashes": {
+      "max": 6,
+      "over": 0.054
+     },
+     "accents": {
+      "precision": 0.391,
+      "recall": 0.643,
+      "f1": 0.486,
+      "latency": 0.014,
+      "peaks": 23
+     },
+     "level": 0.744
+    },
+    "centroid": {
+     "range": {
+      "spread": 0.992,
+      "entropy": 0.931,
+      "dead": 0.085,
+      "saturated": 0.083
+     },
+     "hf": 0.007,
+     "flashes": {
+      "max": 8,
+      "over": 0.215
+     },
+     "accents": {
+      "precision": 0.129,
+      "recall": 0.286,
+      "f1": 0.178,
+      "latency": 0.014,
+      "peaks": 31
+     },
+     "level": 0.372
+    },
+    "hits": {
+     "range": {
+      "spread": 0.895,
+      "entropy": 0.555,
+      "dead": 0.615,
+      "saturated": 0.026
+     },
+     "hf": 0.078,
+     "flashes": {
+      "max": 7,
+      "over": 0.172
+     },
+     "accents": {
+      "precision": 0.324,
+      "recall": 0.857,
+      "f1": 0.471,
+      "latency": -0.003,
+      "peaks": 37
+     },
+     "level": 0.663
+    },
+    "rms_offline": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.97,
+      "dead": 0.109,
+      "saturated": 0.063
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.5,
+      "recall": 0.643,
+      "f1": 0.563,
+      "latency": 0.032,
+      "peaks": 18
+     },
+     "level": 1
+    },
+    "hits_offline": {
+     "range": {
+      "spread": 0.801,
+      "entropy": 0.608,
+      "dead": 0.564,
+      "saturated": 0.019
+     },
+     "hf": 0.097,
+     "flashes": {
+      "max": 6,
+      "over": 0.032
+     },
+     "accents": {
+      "precision": 0.429,
+      "recall": 0.857,
+      "f1": 0.571,
+      "latency": -0.01,
+      "peaks": 28
+     },
+     "level": 0.361
+    },
+    "ph_loudness": {
+     "range": {
+      "spread": 0.999,
+      "entropy": 0.959,
+      "dead": 0.084,
+      "saturated": 0.063
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.125,
+      "recall": 0.071,
+      "f1": 0.091,
+      "latency": 0.031,
+      "peaks": 8
+     },
+     "level": 0.701
+    },
+    "ph_onset": {
+     "range": {
+      "spread": 0.154,
+      "entropy": 0.272,
+      "dead": 0.852,
+      "saturated": 0.003
+     },
+     "hf": 0.163,
+     "flashes": {
+      "max": 4,
+      "over": 0.022
+     },
+     "accents": {
+      "precision": 0.571,
+      "recall": 0.857,
+      "f1": 0.686,
+      "latency": -0.002,
+      "peaks": 21
+     },
+     "level": 0.173
+    },
+    "ph_harsh": {
+     "range": {
+      "spread": 0.997,
+      "entropy": 0.949,
+      "dead": 0.105,
+      "saturated": 0.056
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.417,
+      "recall": 0.357,
+      "f1": 0.385,
+      "latency": -0.035,
+      "peaks": 12
+     },
+     "level": 0.667
+    },
+    "ph_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.88,
+      "dead": 0.074,
+      "saturated": 0.088
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 1
+     },
+     "level": 0.702
+    },
+    "ph_activity": {
+     "range": {
+      "spread": 0.989,
+      "entropy": 0.731,
+      "dead": 0.263,
+      "saturated": 0.06
+     },
+     "hf": 0.025,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.706,
+      "recall": 0.857,
+      "f1": 0.774,
+      "latency": -0.052,
+      "peaks": 17
+     },
+     "level": 0.442
+    },
+    "ph_arousal": {
+     "range": {
+      "spread": 0.998,
+      "entropy": 0.921,
+      "dead": 0.081,
+      "saturated": 0.053
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.2,
+      "recall": 0.071,
+      "f1": 0.105,
+      "latency": 0.034,
+      "peaks": 5
+     },
+     "level": 0.549
+    },
+    "ph_hits": {
+     "range": {
+      "spread": 0.801,
+      "entropy": 0.523,
+      "dead": 0.651,
+      "saturated": 0.018
+     },
+     "hf": 0.084,
+     "flashes": {
+      "max": 5,
+      "over": 0.032
+     },
+     "accents": {
+      "precision": 0.52,
+      "recall": 0.929,
+      "f1": 0.667,
+      "latency": -0.019,
+      "peaks": 25
+     },
+     "level": 0.539
+    },
+    "shift_loudness": {
+     "range": {
+      "spread": 0.999,
+      "entropy": 0.959,
+      "dead": 0.084,
+      "saturated": 0.063
+     },
+     "hf": 0,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.125,
+      "recall": 0.071,
+      "f1": 0.091,
+      "latency": -0.06,
+      "peaks": 8
+     },
+     "level": -0.277
+    },
+    "shift_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.88,
+      "dead": 0.074,
+      "saturated": 0.088
+     },
+     "hf": 0.002,
+     "flashes": {
+      "max": 1,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 1
+     },
+     "level": -0.313
+    },
+    "shift_harsh": {
+     "range": {
+      "spread": 0.997,
+      "entropy": 0.949,
+      "dead": 0.105,
+      "saturated": 0.056
+     },
+     "hf": 0.001,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0.091,
+      "recall": 0.071,
+      "f1": 0.08,
+      "latency": -0.019,
+      "peaks": 11
+     },
+     "level": -0.226
+    },
+    "shift_hits": {
+     "range": {
+      "spread": 0.801,
+      "entropy": 0.523,
+      "dead": 0.651,
+      "saturated": 0.018
+     },
+     "hf": 0.084,
+     "flashes": {
+      "max": 5,
+      "over": 0.032
+     },
+     "accents": {
+      "precision": 0.08,
+      "recall": 0.143,
+      "f1": 0.103,
+      "latency": -0.001,
+      "peaks": 25
+     },
+     "level": -0.255
+    }
+   },
+   "playhead": {
+    "profile": "music",
+    "onsets": 26,
+    "tempo": 78.9
+   }
+  },
+  "dense": {
+   "duration": 20,
+   "accents": 43,
+   "sections": [
+    0,
+    20
+   ],
+   "build": null,
+   "measures": {
+    "rms": {
+     "range": {
+      "spread": 0.917,
+      "entropy": 0.973,
+      "dead": 0.057,
+      "saturated": 0.027
+     },
+     "hf": 0.057,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "latency": 0.028,
+      "peaks": 43
+     },
+     "eta2": 0,
+     "level": 0.86
+    },
+    "bass": {
+     "range": {
+      "spread": 0.973,
+      "entropy": 0.699,
+      "dead": 0.493,
+      "saturated": 0.048
+     },
+     "hf": 0.061,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 1,
+      "recall": 1,
+      "f1": 1,
+      "latency": 0.033,
+      "peaks": 43
+     },
+     "eta2": 0,
+     "level": 0.87
+    },
+    "bass_att": {
+     "range": {
+      "spread": 0.426,
+      "entropy": 0.775,
+      "dead": 0,
+      "saturated": 0
+     },
+     "hf": 0.006,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 43
+     },
+     "eta2": 0,
+     "level": 0.552
+    },
+    "mid": {
+     "range": {
+      "spread": 0.978,
+      "entropy": 0.758,
+      "dead": 0.265,
+      "saturated": 0.101
+     },
+     "hf": 0.147,
+     "flashes": {
+      "max": 4,
+      "over": 0.338
+     },
+     "accents": {
+      "precision": 0.977,
+      "recall": 0.977,
+      "f1": 0.977,
+      "latency": 0.012,
+      "peaks": 43
+     },
+     "eta2": 0,
+     "level": 0.434
+    },
+    "treb": {
+     "range": {
+      "spread": 0.909,
+      "entropy": 0.925,
+      "dead": 0.008,
+      "saturated": 0.053
+     },
+     "hf": 0.403,
+     "flashes": {
+      "max": 8,
+      "over": 1
+     },
+     "accents": {
+      "precision": 0.286,
+      "recall": 0.977,
+      "f1": 0.442,
+      "latency": 0.014,
+      "peaks": 147
+     },
+     "eta2": 0,
+     "level": 0.357
+    },
+    "centroid": {
+     "range": {
+      "spread": 0.893,
+      "entropy": 0.935,
+      "dead": 0.098,
+      "saturated": 0
+     },
+     "hf": 0.004,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 1,
+      "recall": 0.977,
+      "f1": 0.988,
+      "latency": -0.038,
+      "peaks": 42
+     },
+     "eta2": 0,
+     "level": -0.637
+    },
+    "hits": {
+     "range": {
+      "spread": 0.541,
+      "entropy": 0.604,
+      "dead": 0.001,
+      "saturated": 0.141
+     },
+     "hf": 0.845,
+     "flashes": {
+      "max": 9,
+      "over": 1
+     },
+     "accents": {
+      "precision": 0.254,
+      "recall": 1,
+      "f1": 0.406,
+      "latency": -0.003,
+      "peaks": 169
+     },
+     "eta2": 0,
+     "level": -0.085
+    },
+    "rms_offline": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.904,
+      "dead": 0.181,
+      "saturated": 0.123
+     },
+     "hf": 0.002,
+     "flashes": {
+      "max": 2.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 42
+     },
+     "eta2": 0,
+     "level": 1
+    },
+    "hits_offline": {
+     "range": {
+      "spread": 0.541,
+      "entropy": 0.607,
+      "dead": 0.006,
+      "saturated": 0.14
+     },
+     "hf": 0.788,
+     "flashes": {
+      "max": 9,
+      "over": 1
+     },
+     "accents": {
+      "precision": 0.25,
+      "recall": 0.977,
+      "f1": 0.398,
+      "latency": -0.011,
+      "peaks": 168
+     },
+     "eta2": 0,
+     "level": -0.104
+    },
+    "ph_loudness": {
+     "range": {
+      "spread": 0.995,
+      "entropy": 0.888,
+      "dead": 0.123,
+      "saturated": 0.067
+     },
+     "hf": 0.003,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 21
+     },
+     "eta2": 0,
+     "level": 0.405
+    },
+    "ph_onset": {
+     "range": {
+      "spread": 0.678,
+      "entropy": 0.307,
+      "dead": 0.818,
+      "saturated": 0
+     },
+     "hf": 0.288,
+     "flashes": {
+      "max": 3,
+      "over": 0
+     },
+     "accents": {
+      "precision": 1,
+      "recall": 0.977,
+      "f1": 0.988,
+      "latency": -0.001,
+      "peaks": 42
+     },
+     "eta2": 0,
+     "level": 0.184
+    },
+    "ph_harsh": {
+     "range": {
+      "spread": 0.988,
+      "entropy": 0.877,
+      "dead": 0.218,
+      "saturated": 0.063
+     },
+     "hf": 0.096,
+     "flashes": {
+      "max": 5,
+      "over": 1
+     },
+     "accents": {
+      "precision": 0.5,
+      "recall": 0.977,
+      "f1": 0.661,
+      "latency": -0.08,
+      "peaks": 84
+     },
+     "eta2": 0,
+     "level": -0.794
+    },
+    "ph_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.897,
+      "dead": 0.06,
+      "saturated": 0.09
+     },
+     "hf": 0.003,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 1
+     },
+     "eta2": 0,
+     "level": 0.067
+    },
+    "ph_activity": {
+     "range": {
+      "spread": 0.997,
+      "entropy": 0.807,
+      "dead": 0.127,
+      "saturated": 0.19
+     },
+     "hf": 0.075,
+     "flashes": {
+      "max": 4.5,
+      "over": 1
+     },
+     "accents": {
+      "precision": 0.5,
+      "recall": 0.977,
+      "f1": 0.661,
+      "latency": -0.051,
+      "peaks": 84
+     },
+     "eta2": 0,
+     "level": -0.191
+    },
+    "ph_arousal": {
+     "range": {
+      "spread": 0,
+      "entropy": 0,
+      "dead": 1,
+      "saturated": 0
+     },
+     "hf": 0,
+     "flashes": {
+      "max": 0,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 0
+     },
+     "eta2": 0,
+     "level": 0
+    },
+    "ph_hits": {
+     "range": {
+      "spread": 0.736,
+      "entropy": 0.704,
+      "dead": 0.006,
+      "saturated": 0.123
+     },
+     "hf": 0.514,
+     "flashes": {
+      "max": 8,
+      "over": 1
+     },
+     "accents": {
+      "precision": 0.286,
+      "recall": 0.977,
+      "f1": 0.442,
+      "latency": -0.015,
+      "peaks": 147
+     },
+     "eta2": 0,
+     "level": -0.266
+    },
+    "shift_loudness": {
+     "range": {
+      "spread": 0.995,
+      "entropy": 0.888,
+      "dead": 0.123,
+      "saturated": 0.067
+     },
+     "hf": 0.002,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 21
+     },
+     "eta2": 0,
+     "level": 0.079
+    },
+    "shift_tension": {
+     "range": {
+      "spread": 1,
+      "entropy": 0.897,
+      "dead": 0.06,
+      "saturated": 0.09
+     },
+     "hf": 0,
+     "flashes": {
+      "max": 1.5,
+      "over": 0
+     },
+     "accents": {
+      "precision": 0,
+      "recall": 0,
+      "f1": 0,
+      "latency": null,
+      "peaks": 1
+     },
+     "eta2": 0,
+     "level": 0.003
+    },
+    "shift_harsh": {
+     "range": {
+      "spread": 0.988,
+      "entropy": 0.877,
+      "dead": 0.218,
+      "saturated": 0.063
+     },
+     "hf": 0.095,
+     "flashes": {
+      "max": 5,
+      "over": 0.974
+     },
+     "accents": {
+      "precision": 0.488,
+      "recall": 0.953,
+      "f1": 0.646,
+      "latency": -0.097,
+      "peaks": 84
+     },
+     "eta2": 0,
+     "level": -0.314
+    },
+    "shift_hits": {
+     "range": {
+      "spread": 0.736,
+      "entropy": 0.704,
+      "dead": 0.006,
+      "saturated": 0.123
+     },
+     "hf": 0.508,
+     "flashes": {
+      "max": 8,
+      "over": 1
+     },
+     "accents": {
+      "precision": 0.286,
+      "recall": 0.977,
+      "f1": 0.442,
+      "latency": 0.001,
+      "peaks": 147
+     },
+     "eta2": 0,
+     "level": -0.079
+    }
+   },
+   "playhead": {
+    "profile": "music",
+    "onsets": 147,
+    "tempo": 128.11
+   }
+  }
+ },
+ "redundancy": {
+  "rms": 0.72,
+  "bass": 0.819,
+  "bass_att": 0.661,
+  "mid": 0.336,
+  "treb": 0.168,
+  "centroid": -0.32,
+  "hits": 0.203,
+  "rms_offline": 1,
+  "hits_offline": 0.132,
+  "ph_loudness": 0.522,
+  "ph_onset": 0.201,
+  "ph_harsh": 0.054,
+  "ph_tension": 0.242,
+  "ph_activity": -0.018,
+  "ph_arousal": 0.041,
+  "ph_hits": 0.071,
+  "shift_loudness": -0.116,
+  "shift_tension": -0.048,
+  "shift_harsh": -0.153,
+  "shift_hits": -0.059
+ }
+}

@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Which visual follows the sound? · Playhead</title>
+<!-- SPDX-License-Identifier: Apache-2.0 · Copyright 2026 Daniel Sandner -->
+<style>
+  :root { --bg: #f6f7f8; --card: #fff; --ink: #13181b; --mute: #5b666d; --line: #d9dee1; --accent: #eb6834; --sel: #184f95; --stage: #0d1013; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #15191c; --card: #1e2327; --ink: #e4e8ea; --mute: #9aa5ac; --line: #343c42; --accent: #f07a45; --sel: #7fb0f0; } }
+  * { box-sizing: border-box; }
+  body { margin: 0; font: 15px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; background: var(--bg); color: var(--ink); }
+  main { max-width: 1080px; margin: 0 auto; padding: 24px 16px 48px; }
+  h1 { font-size: 1.45rem; margin: 0 0 4px; }
+  .sub { color: var(--mute); margin: 0 0 16px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 16px; margin-bottom: 14px; }
+  .controls { display: flex; flex-wrap: wrap; gap: 10px 18px; align-items: center; }
+  label { display: inline-flex; gap: 6px; align-items: center; }
+  select, button { font: inherit; color: inherit; background: var(--bg); border: 1px solid var(--line); border-radius: 6px; padding: 5px 8px; }
+  button { cursor: pointer; padding: 7px 14px; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 600; }
+  .pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .side { text-align: center; }
+  .side .name { font-weight: 650; margin: 6px 0 2px; min-height: 1.4em; }
+  canvas.stage { width: 100%; aspect-ratio: 4 / 3; background: var(--stage); border-radius: 8px; display: block; }
+  canvas.lane { width: 100%; height: 54px; display: block; margin-top: 6px; }
+  .mute { color: var(--mute); font-size: 0.9rem; }
+  .hidden { display: none; }
+  a { color: var(--sel); }
+  @media (max-width: 640px) { .pair { grid-template-columns: 1fr; } }
+</style>
+</head>
+<body>
+<main>
+  <h1>Which visual follows the sound?</h1>
+  <p class="sub">The same sound drives two visuals: one from a usual audio-reactive signal (level, FFT bands, an onset
+    trigger), one from <a href="https://github.com/eigensoundlab/playhead">Playhead</a>'s curves. A viewer for
+    <a href="https://github.com/eigensoundlab/playhead/tree/main/experiments/visuals">experiments/visuals</a>; the
+    measures are in its README.</p>
+
+  <section class="card">
+    <div class="controls">
+      <label>Sound <select id="stim"></select></label>
+      <label>Visual <select id="render">
+        <option value="disc">Disc: size and brightness</option>
+        <option value="loom">Looming rings: expansion</option>
+        <option value="spiky">Contour: jaggedness</option>
+        <option value="shake">Camera shake (trauma²)</option>
+      </select></label>
+      <label>Left <select id="drvA"></select></label>
+      <label>Right <select id="drvB"></select></label>
+      <label><input type="checkbox" id="blind"> Hide which is which</label>
+      <button class="primary" id="play">Play</button>
+      <span class="mute" id="status">Loading…</span>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="pair">
+      <div class="side"><canvas class="stage" id="cA" width="640" height="480"></canvas><div class="name" id="nA"></div><canvas class="lane" id="lA" width="640" height="54"></canvas></div>
+      <div class="side"><canvas class="stage" id="cB" width="640" height="480"></canvas><div class="name" id="nB"></div><canvas class="lane" id="lB" width="640" height="54"></canvas></div>
+    </div>
+    <p class="mute" id="truth"></p>
+    <p class="mute">Each lane shows its signal over the whole sound, with the accents (ticks) and sections (lines) the sound
+      was built with. "Hide which is which" puts the two signals on random sides without names; uncheck it to see which
+      was which.</p>
+  </section>
+</main>
+<script>
+"use strict";
+const NAMES = {
+  rms: "RMS envelope follower (live)", bass: "Bass band, MilkDrop-style", bass_att: "Bass band, damped (_att)", mid: "Mid band", treb: "Treble band",
+  centroid: "Spectral centroid", hits: "Onset trigger (live)", rms_offline: "RMS, offline (zero-phase)", hits_offline: "Onset trigger, offline",
+  ph_loudness: "Playhead loudness", ph_onset: "Playhead onset strength", ph_harsh: "Playhead harshness", ph_tension: "Playhead tension",
+  ph_activity: "Playhead activity", ph_arousal: "Playhead arousal", ph_hits: "Playhead onsets (trigger)",
+  shift_loudness: "Control: loudness, time-shifted", shift_tension: "Control: tension, time-shifted", shift_harsh: "Control: harshness, time-shifted", shift_hits: "Control: onsets, time-shifted"
+};
+const STIMULI = { groove: "Groove in four sections", riser: "Riser at constant loudness, then a drop", swell: "Build by density at constant loudness",
+  timbre: "Timbres at equal loudness", sfx: "Sound effects over an ambience", dense: "Dense steady pattern" };
+const DEFAULTS = { disc: ["rms", "ph_loudness"], loom: ["rms_offline", "ph_tension"], spiky: ["centroid", "ph_harsh"], shake: ["hits", "ph_onset"] };
+const $ = id => document.getElementById(id);
+const audio = new Audio();
+let data = null, swap = false, trauma = [0, 0];
+
+for (const [k, v] of Object.entries(STIMULI)) $("stim").add(new Option(v, k));
+async function loadStim() {
+  $("status").textContent = "Loading…";
+  audio.pause(); $("play").textContent = "Play";
+  data = await (await fetch("data/" + $("stim").value + ".json")).json();
+  audio.src = "audio/" + $("stim").value + ".flac";
+  for (const id of ["drvA", "drvB"]) { const s = $(id), keep = s.value; s.innerHTML = ""; for (const k of Object.keys(data.drivers)) s.add(new Option(NAMES[k] || k, k)); if (keep && data.drivers[keep]) s.value = keep; }
+  if (!$("drvA").dataset.touched) setDefaults();
+  $("truth").textContent = data.accents.length + " accents" + (data.sections ? ", sections at " + data.sections.join(", ") + " s" : "") + (data.build ? "; the build runs from " + data.build[0] + " to " + data.build[1] + " s" : "") +
+    (data.blocks ? "; blocks: " + data.blocks.map(b => b.kind).join(", ") : "") + ".";
+  newBlind(); $("status").textContent = data.duration + " s";
+}
+function setDefaults() { const d = DEFAULTS[$("render").value]; $("drvA").value = d[0]; $("drvB").value = d[1]; newBlind(); }
+function newBlind() { swap = Math.random() < 0.5; names(); }
+function sides() { const a = $("drvA").value, b = $("drvB").value; return $("blind").checked && swap ? [b, a] : [a, b]; }
+function names() { const [a, b] = sides(); $("nA").textContent = $("blind").checked ? "A" : NAMES[a] || a; $("nB").textContent = $("blind").checked ? "B" : NAMES[b] || b; drawLanes(); }
+
+function value(k, t) { const d = data.drivers[k]; if (!d) return 0; const i = Math.max(0, Math.min(d.length - 1, Math.floor(t * data.fps))); return d[i]; }
+function noise(x) { return Math.sin(x * 12.9898) * 0.5 + Math.sin(x * 4.1414 + 1.7) * 0.3 + Math.sin(x * 23.17 + 0.4) * 0.2; }
+// fixed random spikes for the contour, the same on both sides
+const SPIKES = Array.from({ length: 72 }, (_, i) => 0.5 + 0.5 * Math.abs(Math.sin(i * 7.31) * Math.cos(i * 3.17)));
+function render(c, v, t, side) {
+  const g = c.getContext("2d"), W = c.width, H = c.height, R = Math.min(W, H);
+  g.fillStyle = "#0d1013"; g.fillRect(0, 0, W, H);
+  const kind = $("render").value;
+  if (kind === "disc") {
+    const r = R * (0.08 + 0.32 * v), L = 18 + 64 * v;
+    g.fillStyle = `hsl(18 85% ${L}%)`; g.beginPath(); g.arc(W / 2, H / 2, r, 0, 2 * Math.PI); g.fill();
+  } else if (kind === "loom") {
+    const s = 0.6 + 1.4 * v;
+    g.strokeStyle = "#7fb0f0"; g.lineWidth = 2;
+    for (let k = 1; k <= 7; k++) { const r = R * 0.06 * k * s; g.globalAlpha = Math.max(0.1, 1 - k / 8); g.beginPath(); g.arc(W / 2, H / 2, r, 0, 2 * Math.PI); g.stroke(); }
+    g.globalAlpha = 1;
+  } else if (kind === "spiky") {
+    g.fillStyle = "#e9ecef"; g.beginPath();
+    for (let i = 0; i <= SPIKES.length; i++) {
+      const a = i / SPIKES.length * 2 * Math.PI, r = R * 0.28 * (1 + (i % 2 ? -1 : 1) * 0.45 * v * SPIKES[i % SPIKES.length]);
+      const x = W / 2 + r * Math.cos(a), y = H / 2 + r * Math.sin(a); i ? g.lineTo(x, y) : g.moveTo(x, y);
+    }
+    g.fill();
+  } else {
+    // trauma: raised by the signal, falling by 1.5 per second; the shake is trauma squared (the game convention)
+    trauma[side] = Math.max(v, trauma[side] - 1.5 / 60);
+    const s = trauma[side] * trauma[side], dx = s * R * 0.08 * noise(t * 31 + side), dy = s * R * 0.08 * noise(t * 37 + 5 + side), rot = s * 0.12 * noise(t * 29 + 9);
+    g.save(); g.translate(W / 2 + dx, H / 2 + dy); g.rotate(rot);
+    g.strokeStyle = "#e9ecef"; g.lineWidth = 2;
+    for (let x = -4; x <= 4; x++) { g.beginPath(); g.moveTo(x * R * 0.08, -R * 0.3); g.lineTo(x * R * 0.08, R * 0.3); g.stroke(); }
+    for (let y = -3; y <= 3; y++) { g.beginPath(); g.moveTo(-R * 0.32, y * R * 0.08); g.lineTo(R * 0.32, y * R * 0.08); g.stroke(); }
+    g.restore();
+  }
+}
+function drawLane(c, k, t) {
+  const g = c.getContext("2d"), W = c.width, H = c.height, d = data.drivers[k] || [], n = d.length;
+  g.clearRect(0, 0, W, H);
+  const css = getComputedStyle(document.body);
+  g.fillStyle = css.getPropertyValue("--line"); g.fillRect(0, 0, W, H);
+  g.strokeStyle = css.getPropertyValue("--mute"); g.lineWidth = 1;
+  for (const s of data.sections || []) { const x = s / data.duration * W; g.beginPath(); g.moveTo(x, 0); g.lineTo(x, H); g.stroke(); }
+  g.fillStyle = css.getPropertyValue("--ink");
+  for (const a of data.accents) g.fillRect(a / data.duration * W, H - 6, 1.5, 6);
+  g.strokeStyle = css.getPropertyValue("--accent"); g.lineWidth = 1.5; g.beginPath();
+  for (let x = 0; x < W; x++) { const i0 = Math.floor(x / W * n), i1 = Math.max(i0 + 1, Math.floor((x + 1) / W * n)); let m = 0; for (let i = i0; i < i1 && i < n; i++) m = Math.max(m, d[i]); const y = H - 8 - m * (H - 12); x ? g.lineTo(x, y) : g.moveTo(x, y); }
+  g.stroke();
+  if (t != null) { g.fillStyle = css.getPropertyValue("--sel"); g.fillRect(t / data.duration * W - 1, 0, 2, H); }
+}
+function drawLanes(t) { if (!data) return; const [a, b] = sides(); drawLane($("lA"), a, t); drawLane($("lB"), b, t); }
+function frame() {
+  if (data) {
+    const t = audio.currentTime || 0, [a, b] = sides();
+    render($("cA"), value(a, t), t, 0); render($("cB"), value(b, t), t, 1);
+    drawLanes(t);
+  }
+  requestAnimationFrame(frame);
+}
+$("stim").onchange = loadStim;
+$("render").onchange = () => { delete $("drvA").dataset.touched; setDefaults(); };
+for (const id of ["drvA", "drvB"]) $(id).onchange = () => { $("drvA").dataset.touched = "1"; newBlind(); };
+$("blind").onchange = newBlind;
+$("play").onclick = () => { if (audio.paused) { audio.play(); $("play").textContent = "Pause"; } else { audio.pause(); $("play").textContent = "Play"; } };
+audio.onended = () => { $("play").textContent = "Play"; };
+loadStim().then(() => requestAnimationFrame(frame)).catch(e => { $("status").textContent = "Could not load: " + e.message; });
+</script>
+</body>
+</html>

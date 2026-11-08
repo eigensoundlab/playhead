@@ -38,6 +38,7 @@ const whole = Playhead.combine([{ doc: kick }, { doc: bass, offset: 0.5, gain: -
 | `looks`, `curveLabels` | the ready-made looks (`name`, `desc`, `code`) and readable names of the curves, for menus |
 | `toMarkers(doc, { kinds })` | `[{ kind: "region" | "marker", start, end?, name }]` from `sections`, `events`, `downbeats`, `onsets` |
 | `curveAt(doc, name, t, fallback)` | a curve's value at time `t`, interpolated: for driving generator and effect parameters |
+| `frames(doc, { fps, curves, scale })` | the curves once per video frame, each value the curve's mean over its frame: `{ fps, frames, curves: { name: [...] }, onsets, beats, downbeats, events }` (frame numbers). `scale` `"fixed"` (default: every curve 0..1 as the strip draws it), `"file"` (each curve from its 5th to 95th percentile in the file) or `"raw"` |
 | `process(input, toolId, params)` | runs one of the effects bench tools: `{ outputs: [{ suffix, sampleRate, channels }], report }` |
 | `tools()` | the tools and their parameters (id, label, range, default) |
 | `combine(parts, opts)` | a document for the sum of several sounds, from their documents alone (no audio, no new analysis), for folder tracks, layered effects and stems. `parts`: `[{ doc, offset, gain }]` (seconds, dB). `opts`: `rate`, `duration`, `wave` (a real overview of the sum, instead of the estimate), `aligned`. `doc.combined` lists the parts and the rule used for each curve ([Combining](#combining-documents)) |
@@ -308,6 +309,59 @@ public class PlayheadDriver : MonoBehaviour {
 ```
 
 The same documents give adaptive music its section and downbeat times (transitions on bar lines), and give mixing its trigger curves (duck the music under impacts, a de-harsh-style band cut that follows `harshness`).
+
+### Audio and video editors (markers)
+
+`playhead markers` reads an audio file or a `.playhead.json` document (no second analysis) and writes the sections,
+events, downbeats or onsets (`--kinds`) in an editor's own format:
+
+| Editor | Command | Import |
+|---|---|---|
+| Audacity | `--format audacity > labels.txt` | File > Import > Labels: point labels for events and bars, region labels for sections |
+| DaVinci Resolve | `--format edl --fps 25 > markers.edl` (`--start-tc` if the timeline does not start at 01:00:00:00) | Timeline > Import > Timeline Markers from EDL: sections as blue markers with their duration, events and bars as yellow ones |
+| Premiere Pro, Final Cut Pro, Resolve, Shotcut, Kdenlive | `--format srt > sections.srt` | import as captions: a caption track that names each section or event in time |
+| REAPER | the [REAPER actions](../integrations/reaper/README.md) | take markers, project markers and regions, clipped to what each item plays |
+| spreadsheets, scripts | `--format csv` / `tsv` / `json` | `kind, start, end, name` |
+
+The EDL and SRT formats follow what those editors export; please report an editor that reads them differently.
+
+### VJ, 3D and game tools (frames)
+
+`playhead frames` gives the curves once per video frame, so a visual can follow the sound without analysing it live:
+each frame's value is the curve's mean over that frame (nothing aliased at 24, 30 or 60 fps), on 0..1 as the strip
+draws it, plus columns that are 1 on the frames with an onset, a beat or a downbeat. For a visual, `--scale file`
+spreads each curve over the whole 0..1 range (from its 5th to its 95th percentile in the file), as a VJ would set a
+gain; leave onset strength at the default scale, which keeps its peaks apart. `--curve-rate 100` when analysing gives
+the curves finer steps than the default 20 per second for long files.
+
+```sh
+playhead frames hit.wav --fps 60 --curves loudness,onsetStrength,harshness,tension > hit.csv
+playhead frames cue.playhead.json --fps 24 --curves loudness,tension --format blender > cue_keys.py
+playhead frames cue.wav --fps 60 --format json > cue.frames.json
+```
+
+- **TouchDesigner**: load the CSV into a Table DAT and turn it into channels with a DAT to CHOP (first row as names);
+  a Lookup CHOP or the timeline frame picks the row. Onset, beat and downbeat columns trigger with a Trigger CHOP.
+- **Blender**: run the script in the Text Editor. It keys each curve as a custom property of an Empty named after the
+  sound (one key per frame from frame 1) and sets the scene's frame rate; drive any property from one (Copy as New
+  Driver, then Paste Driver).
+- **Unreal Engine**: import the CSV as a DataTable (the frame column is the row name), or read the JSON; sample the row
+  at `AudioComponent` time × fps. **Unity**: the JSON or the document itself (see Unity above).
+- **After Effects, Resolume and others**: the CSV through the host's expression or script import.
+
+Which curves suit visuals best is an open question; [experiments/visuals](../experiments/visuals/README.md) compares
+Playhead's curves with the usual drivers (level, three FFT bands, beat) on measures of what a visual does with them.
+
+### Markers and automation as a research area
+
+Markers and automation carry more than positions: a marker is a decision (cut here, this is a section, this hit
+counts), an envelope is a judgement over time (how harsh, how tense). Playhead writes both from the same analysis, so
+they can be compared with what editors place by hand. Open questions worth testing: whether Playhead's events agree
+with where editors cut sound effects (precision and recall against hand-placed cuts, with a tolerance of a few
+milliseconds); whether its sections agree with the regions mixers and editors draw; whether curves written as
+automation (harshness to a shelf, tension to a reverb) save the passes a mixer would otherwise ride by hand, and
+sound as good in a blind test; and whether a tempo map from a recording's bars keeps edits musical where a fixed grid
+does not.
 
 ## Limits
 
