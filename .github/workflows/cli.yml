@@ -1,5 +1,5 @@
-# Builds the Playhead command line as one executable per platform and attaches it, with the library bundles,
-# to the GitHub release. Runs when a release is published, or by hand: then the files are kept as workflow artifacts,
+# Builds the Playhead command line as one executable per platform and attaches it, with the library bundles and
+# Playhead for REAPER (with that platform's executable and its installer), to the GitHub release. Runs when a release is published, or by hand: then the files are kept as workflow artifacts,
 # and attached to the release named in "tag" if one is given (to add files a failed run left out).
 name: Command line and library
 
@@ -37,6 +37,26 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: Compress-Archive -Path dist/playhead.exe -DestinationPath playhead-cli-${{ runner.os }}-${{ runner.arch }}.zip
+      # Playhead for REAPER with this system's command line: unpack, then run "Playhead - Install" in REAPER
+      - name: REAPER package (Linux, macOS)
+        if: runner.os != 'Windows'
+        run: |
+          d="Playhead for REAPER"
+          mkdir -p "$d/lib"
+          cp integrations/reaper/Playhead\ -\ *.lua "integrations/reaper/Playhead Control.jsfx" integrations/reaper/README.md LICENSE NOTICE "$d/"
+          cp integrations/reaper/lib/*.lua "$d/lib/"
+          cp dist/playhead "$d/"
+          zip -r "playhead-reaper-${{ runner.os }}-${{ runner.arch }}.zip" "$d"
+      - name: REAPER package (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $d = "Playhead for REAPER"
+          New-Item -ItemType Directory -Force -Path "$d/lib" | Out-Null
+          Copy-Item -Path "integrations/reaper/Playhead - *.lua", "integrations/reaper/Playhead Control.jsfx", "integrations/reaper/README.md", "LICENSE", "NOTICE" -Destination $d
+          Copy-Item -Path "integrations/reaper/lib/*.lua" -Destination "$d/lib"
+          Copy-Item -Path "dist/playhead.exe" -Destination $d
+          Compress-Archive -Path $d -DestinationPath "playhead-reaper-${{ runner.os }}-${{ runner.arch }}.zip"
       - name: Library bundles
         if: runner.os == 'Linux'
         run: cp dist/playhead-core.js dist/playhead-core.mjs .
@@ -45,6 +65,7 @@ jobs:
           name: playhead-${{ runner.os }}-${{ runner.arch }}
           path: |
             playhead-cli-*
+            playhead-reaper-*
             playhead-core.*
       - name: Attach to the release
         if: github.event_name == 'release' || inputs.tag != ''
@@ -52,4 +73,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
-        run: gh release upload "$TAG" playhead-cli-* $(ls playhead-core.* 2>/dev/null) --clobber
+        run: gh release upload "$TAG" playhead-cli-* playhead-reaper-* $(ls playhead-core.* 2>/dev/null) --clobber

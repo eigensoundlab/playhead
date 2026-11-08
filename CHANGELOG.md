@@ -30,6 +30,16 @@
     In the REAPER theme the outline keeps REAPER's peak colour and tints run from neutral to a hot yellow. Before, a
     harshness tint in blues met a blue peak colour.
 - **`waveRamp`** (theme): a waveform's tint through several colours instead of the two ends `waveLow` → `waveHigh`.
+- **REAPER: installing and removing.**
+  - Each release gets `playhead-reaper-<system>.zip`, with the actions, the effect and the command line for that
+    system. Run its **Playhead - Install** once from REAPER: it copies everything into the resource folder, adds the
+    actions to the action list and checks the command line. Running it again updates.
+  - **Playhead - Uninstall** takes the actions off the list and deletes the files. If asked, it also deletes the
+    stored analyses and the settings.
+  - A **ReaPack** repository at `https://eigensoundlab.github.io/playhead/reaper/index.xml`, written by the site build
+    (`tools/reapack-index.js`), with every file pinned to the commit built and its checksum.
+- **REAPER: [a guide to Playhead's curves as envelopes](integrations/reaper/ENVELOPES.md):** writing them, seeing
+  and editing them, linking parameters, MIDI CC, recipes and what to check when nothing moves.
 
 ### Changed
 - **The lab's strips:**
@@ -41,6 +51,9 @@
   stays readable on a light page or REAPER theme.
 
 ### Fixed
+- **REAPER tests on Windows** (`python integrations\reaper\test\run_tests.py`): the core tests run there, with a real
+  batch job through `cmd.exe` in place of the POSIX shell checks; the action tests, which need a POSIX shell, are
+  skipped with a note unless asked for.
 - **REAPER: the analysing window** is sized for scaled displays (Windows at 125 or 150 %), and its note keeps a margin
   from the bottom edge.
 

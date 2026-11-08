@@ -26,7 +26,12 @@
 -- @changelog
 --   The views of rhythm and form in the strip window: bar raster (the cursors in the row of their bar, clicks
 --   seek within the bar), tempogram, repetition (lag view), modulation spectrogram and curve rhythms (scalogram).
---   The tool "Stretch keeping the attacks" in Process selected items (with Playhead 0.3.0 or later).
+--   Zoom in the strip window as in REAPER's arrange view (mouse wheel; Ctrl, Shift or Alt and the wheel scrolls;
+--   the middle button drags), following playback when REAPER's view does.
+--   Colour palettes for the strip window: REAPER theme, Playhead, Heat, Colour-blind safe, Greyscale.
+--   The tool "Stretch keeping the attacks" in Process selected items (with Playhead 0.3.0 or later); the item
+--   is lengthened or shortened to play the stretched takes.
+--   The analysing window fits its text on scaled displays.
 
 -- SPDX-License-Identifier: Apache-2.0
 -- Copyright 2026 Daniel Sandner

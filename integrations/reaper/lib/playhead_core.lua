@@ -2362,6 +2362,17 @@ end
 -- settings
 ------------------------------------------------------------------------------------------------------------------------
 M.SETTINGS_SECTION = "Playhead"
+-- the package, as "Playhead - Install" copies it and "Playhead - Uninstall" removes it (ReaPack users have the same
+-- files from the index; see tools/reapack-index.js)
+M.PACKAGE = {
+  actions = { "Playhead - Analyse selected items.lua", "Playhead - Add markers for selected items.lua", "Playhead - Write curves as automation.lua",
+    "Playhead - Process selected items.lua", "Playhead - Strip window.lua", "Playhead - Settings.lua" },
+  lib = { "playhead_core.lua", "playhead_reaper.lua" },
+  effect = "Playhead Control.jsfx",
+  tools = { "Playhead - Install.lua", "Playhead - Uninstall.lua" },
+  docs = { "README.md" },
+  executables = { "playhead", "playhead.exe", "playhead-cli.cjs" }
+}
 M.DEFAULTS = {
   exe = "",              -- the playhead executable, or playhead-cli.js / playhead-cli.cjs (run with node)
   node = "node",         -- Node.js, for the .js command line

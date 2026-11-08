@@ -120,7 +120,30 @@ function Mock.new(T, opts)
     if i < 0 then return nil end
     return listing[p][i + 1]
   end
+  function R.EnumerateSubdirectories(p, i)
+    check("EnumerateSubdirectories", { "string", "integer" }, p, i)
+    if i < 0 then return nil end
+    local dirs = {}
+    for _, f in ipairs(T.listdir(p)) do if T.isdir(p .. "/" .. f) then dirs[#dirs + 1] = f end end
+    return dirs[i + 1]
+  end
   function R.GetExtState(s, k) check("GetExtState", { "string", "string" }, s, k); return env.ext[s .. "/" .. k] or "" end
+  function R.DeleteExtState(s, k, persist) check("DeleteExtState", { "string", "string", "boolean" }, s, k, persist); env.ext[s .. "/" .. k] = nil end
+  -- the action list: env.actions[path] = command id while a script is in it
+  env.actions, env.action_commits = {}, 0
+  function R.AddRemoveReaScript(add, section, path, commit)
+    check("AddRemoveReaScript", { "boolean", "integer", "string", "boolean" }, add, section, path, commit)
+    if section ~= 0 then err("AddRemoveReaScript: section " .. section .. " (0 is the main section)") end
+    if commit then env.action_commits = env.action_commits + 1 end
+    if add then
+      if not T.exists(path) then return 0 end
+      env.actions[path] = env.actions[path] or (50000 + #path)
+      return env.actions[path]
+    end
+    local had = env.actions[path] ~= nil
+    env.actions[path] = nil
+    return had and 1 or 0
+  end
   function R.SetExtState(s, k, v, persist)
     check("SetExtState", { "string", "string", "string", "boolean" }, s, k, v, persist)
     if type(v) == "string" and v:find("[\r\n]") then err("SetExtState: value with a line break") end

@@ -46,6 +46,15 @@ return function(T)
     local main = T.read(script("Analyse selected items")) or ""
     for _, n in ipairs(SCRIPTS) do if not main:find("%[main%] Playhead %- " .. n:gsub("%p", "%%%0") .. "%.lua") then bad[#bad + 1] = "@provides lacks " .. n end end
     if not main:find("[effect] Playhead Control.jsfx", 1, true) then bad[#bad + 1] = "@provides lacks the JSFX" end
+    -- the installer and uninstaller: loadable, licensed, kept out of ReaPack (which installs and removes by itself)
+    for _, n in ipairs({ "Install", "Uninstall" }) do
+      local f = script(n)
+      local chunk, e = loadfile(f)
+      if not chunk then bad[#bad + 1] = e end
+      local text = T.read(f) or ""
+      if not (text:find("^%-%- @noindex") and text:find("SPDX%-License%-Identifier: Apache%-2%.0")) then bad[#bad + 1] = n .. ": no @noindex or licence" end
+      if main:find("Playhead - " .. n, 1, true) then bad[#bad + 1] = "@provides should not list " .. n end
+    end
     check("scripts: every file loads and has its licence and ReaPack header; the package provides all of them", #bad == 0, bad[1])
   end
   if not have_cli then return end
@@ -448,6 +457,70 @@ return function(T)
           if not pieces[k] or math.abs(pieces[k].vol - want) > 1e-9 or math.abs(pieces[k].pos - (200 + ev.start)) > 1e-6 then ok = false end
         end
         return ok, #pieces .. " pieces for " .. #G2.events .. " events"
+      end)
+  end
+
+  ------------------------------------------------------------------------------------------------------------------
+  -- Install and uninstall (last: they change the resource folder)
+  ------------------------------------------------------------------------------------------------------------------
+  do
+    local P = core.PACKAGE
+    local dl = T.tmp .. "/Downloads/Playhead for REAPER"           -- an unpacked download, with the executable
+    T.mkdirs(dl .. "/lib")
+    local function copy(from, to) local h = io.open(from, "rb"); local b = h:read("a"); h:close(); h = io.open(to, "wb"); h:write(b); h:close() end
+    for _, f in ipairs(P.actions) do copy(T.pkg .. "/" .. f, dl .. "/" .. f) end
+    for _, f in ipairs(P.tools) do copy(T.pkg .. "/" .. f, dl .. "/" .. f) end
+    for _, f in ipairs(P.lib) do copy(T.pkg .. "/lib/" .. f, dl .. "/lib/" .. f) end
+    copy(T.pkg .. "/" .. P.effect, dl .. "/" .. P.effect)
+    copy(T.pkg .. "/README.md", dl .. "/README.md")
+    do local h = io.open(dl .. "/playhead", "wb"); h:write("#!/bin/sh\necho 9.9.9\n"); h:close() end
+    local sd, ed = resource .. "/Scripts/Playhead", resource .. "/Effects/Playhead"
+    env.actions, env.action_commits = {}, 0
+    env.message_answers = { 1 }
+    scenario("install: copies the package (and the executable) into the resource folder and adds 7 actions in one commit",
+      dl .. "/Playhead - Install.lua", nil, function()
+        local all = T.exists(ed .. "/" .. P.effect) and T.exists(sd .. "/playhead") and T.exists(sd .. "/README.md")
+        for _, f in ipairs(P.actions) do all = all and T.exists(sd .. "/" .. f) and env.actions[sd .. "/" .. f] ~= nil end
+        for _, f in ipairs(P.lib) do all = all and T.exists(sd .. "/lib/" .. f) end
+        local n = 0
+        for _ in pairs(env.actions) do n = n + 1 end
+        local msg = last_message()
+        return all and n == 7 and env.actions[sd .. "/Playhead - Uninstall.lua"] and env.action_commits == 1 and msg:find("is installed", 1, true)
+          and msg:find("Playhead - Strip window", 1, true), n .. " actions; " .. msg:sub(1, 60)
+      end)
+    env.message_answers = { 1 }
+    scenario("install: running it again updates in place, with no second set of actions", dl .. "/Playhead - Install.lua", nil, function()
+      local n = 0
+      for _ in pairs(env.actions) do n = n + 1 end
+      return n == 7 and last_message():find("is installed", 1, true), n .. " actions"
+    end)
+    env.message_answers = { 2 }
+    scenario("install: Cancel changes nothing", dl .. "/Playhead - Install.lua", nil, function()
+      return #env.messages == 1 and env.action_commits == 2, #env.messages .. " messages"
+    end)
+    -- uninstall, keeping analyses and settings
+    local cached = #T.listdir(cache)
+    env.ext["Playhead/look"] = "structure"
+    env.message_answers = { 1, 7 }
+    scenario("uninstall: removes the actions and the files, keeps analyses and settings when asked to",
+      sd .. "/Playhead - Uninstall.lua", nil, function()
+        local n = 0
+        for _ in pairs(env.actions) do n = n + 1 end
+        local files_gone = not T.exists(sd .. "/Playhead - Strip window.lua") and not T.exists(sd .. "/lib/playhead_core.lua") and not T.exists(ed .. "/" .. P.effect)
+          and not T.exists(sd .. "/playhead")
+        return n == 0 and files_gone and #T.listdir(cache) == cached and cached > 0 and env.ext["Playhead/look"] == "structure" and last_message():find("is removed", 1, true),
+          n .. " actions left; " .. last_message():sub(1, 80)
+      end)
+    -- install again, then uninstall with the analyses and settings
+    env.message_answers = { 1 }
+    env.run_script(dl .. "/Playhead - Install.lua", 30)
+    env.message_answers = { 1, 6 }
+    scenario("uninstall: with the analyses and settings, nothing of Playhead is left in the resource folder or the settings",
+      sd .. "/Playhead - Uninstall.lua", nil, function()
+        local keys = {}
+        for k in pairs(env.ext) do if k:find("^Playhead/") then keys[#keys + 1] = k end end
+        return not T.exists(sd) and not T.exists(ed) and not T.exists(resource .. "/Data/Playhead") and #keys == 0,
+          (#keys > 0 and ("settings left: " .. table.concat(keys, ", ")) or "") .. (T.exists(sd) and (" left in Scripts/Playhead: " .. table.concat(T.listdir(sd), ", ")) or "")
       end)
   end
 end

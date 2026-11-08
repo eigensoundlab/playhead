@@ -7,7 +7,8 @@
 -- is checked against the JavaScript it follows.
 --
 -- T: check(name, ok, detail), fixtures { robot, arc, reference } (texts), sh_argv(cmd) and win_argv(cmd) (how
--- /bin/sh and the Windows C runtime split a command line), run_sh(path), read(path), tmpdir.
+-- /bin/sh and the Windows C runtime split a command line), run_sh(text, path) (absent without a POSIX sh),
+-- run_bat(text, path) (on Windows: through cmd.exe), read(path), tmpdir.
 
 return function(T)
   local M = require("playhead_core")
@@ -515,8 +516,12 @@ return function(T)
       "tab\there", "", "-dash", "~tilde", "*glob?", "unicode é ü", "back\\slash\\", "ends with \\\\", "(paren)", "!bang", "^caret", "<lt>gt" }
     local posix = { "printf", "%s\\n" }
     for _, a in ipairs(tricky) do posix[#posix + 1] = a end
-    local got = T.sh_argv(M.command_line(posix, "posix"))
-    check("command line: POSIX quoting survives /bin/sh", list_eq(got, tricky), #got .. " arguments")
+    if T.sh_argv then
+      local got = T.sh_argv(M.command_line(posix, "posix"))
+      check("command line: POSIX quoting survives /bin/sh", list_eq(got, tricky), #got .. " arguments")
+    else
+      T.note("no POSIX sh here: the POSIX quoting is checked where there is one (macOS, Linux, GitHub Actions)")
+    end
     local win_ok, bad = true, nil
     for _, a in ipairs(tricky) do
       local q = M.quote_windows(a)
@@ -545,18 +550,39 @@ return function(T)
     check("command line: Playhead executable or Node with playhead-cli.js",
       list_eq(M.cli_argv("/opt/playhead", "node", { "version" }), { "/opt/playhead", "version" })
         and list_eq(M.cli_argv("/src/tools/playhead-cli.js", "/usr/bin/node", { "tools" }), { "/usr/bin/node", "/src/tools/playhead-cli.js", "tools" }))
-    -- a real POSIX job: output to files, result moved into place, status written last
     local dir = T.tmpdir
-    local part, final = dir .. "/result.part", dir .. "/result.json"
-    local spec = { os = "linux", argv = { "sh", "-c", 'printf "%s" "$1" > "$2"; echo out; echo err >&2', "x", "it's \"done\"", part },
-      stdout = dir .. "/job.out", stderr = dir .. "/job.err", status = dir .. "/job.status", move_from = part, move_to = final, path_extra = { "/nonexistent dir" } }
-    T.run_sh(M.job_script(spec), dir .. "/job.sh")
-    local okjob = T.read(spec.status) == "0\n" and T.read(final) == "it's \"done\"" and T.read(spec.stdout) == "out\n" and T.read(spec.stderr) == "err\n" and T.read(part) == nil
-    local spec2 = { os = "linux", argv = { "sh", "-c", "exit 3" }, stdout = dir .. "/j2.out", stderr = dir .. "/j2.err", status = dir .. "/j2.status",
-      move_from = dir .. "/nothing", move_to = dir .. "/never" }
-    T.run_sh(M.job_script(spec2), dir .. "/j2.sh")
-    check("job script (sh): output to files, result moved after success, exit code written last", okjob and T.read(spec2.status) == "3\n" and T.read(dir .. "/never") == nil,
-      tostring(T.read(spec.status)))
+    if T.run_sh then
+      -- a real POSIX job: output to files, result moved into place, status written last
+      local part, final = dir .. "/result.part", dir .. "/result.json"
+      local spec = { os = "linux", argv = { "sh", "-c", 'printf "%s" "$1" > "$2"; echo out; echo err >&2', "x", "it's \"done\"", part },
+        stdout = dir .. "/job.out", stderr = dir .. "/job.err", status = dir .. "/job.status", move_from = part, move_to = final, path_extra = { "/nonexistent dir" } }
+      T.run_sh(M.job_script(spec), dir .. "/job.sh")
+      local okjob = T.read(spec.status) == "0\n" and T.read(final) == "it's \"done\"" and T.read(spec.stdout) == "out\n" and T.read(spec.stderr) == "err\n" and T.read(part) == nil
+      local spec2 = { os = "linux", argv = { "sh", "-c", "exit 3" }, stdout = dir .. "/j2.out", stderr = dir .. "/j2.err", status = dir .. "/j2.status",
+        move_from = dir .. "/nothing", move_to = dir .. "/never" }
+      T.run_sh(M.job_script(spec2), dir .. "/j2.sh")
+      check("job script (sh): output to files, result moved after success, exit code written last", okjob and T.read(spec2.status) == "3\n" and T.read(dir .. "/never") == nil,
+        tostring(T.read(spec.status)))
+    end
+    if T.run_bat then
+      -- on Windows, a real batch job through cmd.exe, in a folder whose name has a space and a %
+      local wdir = dir .. [[\job 100% here]]
+      os.execute('mkdir "' .. wdir .. '" 2>nul')
+      local src, part, final = wdir .. [[\source.txt]], wdir .. [[\result.part]], wdir .. [[\result.json]]
+      local h = io.open(src, "wb"); h:write("done"); h:close()
+      -- certutil (in every Windows) writes the source, encoded, to the part file and reports on stdout
+      local spec = { os = "windows", argv = { "certutil", "-f", "-encode", src, part },
+        stdout = wdir .. [[\job.out]], stderr = wdir .. [[\job.err]], status = wdir .. [[\job.status]], move_from = part, move_to = final }
+      T.run_bat(M.job_script(spec), dir .. [[\job.bat]])
+      local spec2 = { os = "windows", argv = { "certutil", "-f", "-encode", wdir .. [[\missing.txt]], wdir .. [[\r2.part]] },
+        stdout = wdir .. [[\j2.out]], stderr = wdir .. [[\j2.err]], status = wdir .. [[\j2.status]], move_from = wdir .. [[\r2.part]], move_to = wdir .. [[\never.json]] }
+      T.run_bat(M.job_script(spec2), dir .. [[\j2.bat]])
+      local status, status2 = (T.read(spec.status) or ""):gsub("%s+$", ""), (T.read(spec2.status) or ""):gsub("%s+$", "")
+      check("job script (batch, run by cmd.exe): output to files, result moved after success, exit code written last",
+        status == "0" and (T.read(final) or ""):find("CERTIFICATE", 1, true) ~= nil and (T.read(spec.stdout) or "") ~= "" and T.read(part) == nil
+          and status2 ~= "" and status2 ~= "0" and T.read(wdir .. [[\never.json]]) == nil,
+        "status " .. status .. ", failing job " .. status2)
+    end
     local bat = M.job_script({ os = "windows", argv = { [[C:\Program Files\Playhead\playhead.exe]], "analyze", [[D:\Sounds\100% wet.wav]], "--out", [[C:\c\x.part]] },
       stdout = [[C:\j\1.out]], stderr = [[C:\j\1.err]], status = [[C:\j\1.status]], move_from = [[C:\c\x.part]], move_to = [[C:\c\x.json]], path_extra = { [[C:\ffmpeg\bin]] } })
     check("job script (batch): UTF-8 code page, quoted arguments, % doubled, exit code captured safely",

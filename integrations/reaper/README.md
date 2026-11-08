@@ -10,10 +10,12 @@ takes from Playhead's analysis-driven tools, and as a strip view of the item in 
 not need REAPER (document reading, time mapping, the strip renderer, command lines) are a plain Lua library with its
 own tests, so the package is also a base for your own analysis-driven scripts.
 
-**Status.** New, and so far tested outside REAPER: in a mock REAPER that checks every API call against its documented
-signature, with the real command line, and against REAPER's documentation and published scripts (see [Tests](#tests)
-and [Limits](#limits)). First runs in REAPER are welcome; please report what does not work, with the ReaScript
-console's output.
+**Status.** New. Tested outside REAPER in a mock REAPER that checks every API call against its documented signature,
+with the real command line, and against REAPER's documentation and published scripts (see [Tests](#tests) and
+[Limits](#limits)); first runs in REAPER on Windows went well. Please report what does not work, with the
+ReaScript console's output.
+
+**Guides:** [working with Playhead's curves (envelopes) in REAPER](ENVELOPES.md).
 
 ## Requirements
 
@@ -34,15 +36,43 @@ Find the resource folder with REAPER's **Options > Show REAPER resource path in 
 
 ## Installing
 
+Use one of these ways, not two: each adds its own set of actions.
+
+**With the installer (simplest).**
+1. Download `playhead-reaper-<system>.zip` from the [Playhead releases](https://github.com/eigensoundlab/playhead/releases)
+   and unpack it anywhere. It holds the actions, their library, the effect, this README and the Playhead command line
+   for your system.
+2. In REAPER, open **Actions > Show action list**, then **New action > Load ReaScript...**, choose
+   `Playhead - Install.lua` in the unpacked folder, and **Run** it.
+3. It copies everything into REAPER's resource folder (`Scripts/Playhead`, `Effects/Playhead`), adds the six actions
+   and **Playhead - Uninstall** to the action list, and checks the command line.
+
+To update, run the installer from a newer download; settings and analyses are kept. To remove Playhead, run
+**Playhead - Uninstall** from the action list. It takes the actions off the list and deletes the files. It then asks
+whether to delete the stored analyses and settings too.
+
+**With ReaPack** (installs and updates through ReaPack).
+1. **Extensions > ReaPack > Import repositories...**, paste `https://eigensoundlab.github.io/playhead/reaper/index.xml`.
+2. **Extensions > ReaPack > Browse packages**, find **Playhead for REAPER**, install it, and **Apply**.
+
+The package holds the six actions, the library and the effect, pinned to one commit with checksums. ReaPack offers
+each new version as an update. The command line is not part of it: put the executable for your system in
+`<resource>/Scripts/Playhead/`, or choose it in **Playhead - Settings**. ReaPack removes the package by itself
+(right-click it in Browse packages).
+
+**From a Playhead checkout** (to follow development):
+- Load the six `Playhead - ....lua` files from `integrations/reaper/` with **Load ReaScript...**; they find `lib/`
+  next to them.
+- Copy `Playhead Control.jsfx` into `<resource>/Effects/Playhead/`.
+- Choose `tools/playhead-cli.js` (with Node) or an executable in **Playhead - Settings**.
+
+After `git pull`, REAPER runs the new scripts, with no copying. Running `Playhead - Install.lua` from the checkout
+installs a copy instead.
+
 **By hand.** Copy the six `Playhead - ....lua` files and the `lib` folder into `<resource>/Scripts/Playhead/`
 (with the executable, if you use it), and `Playhead Control.jsfx` into `<resource>/Effects/Playhead/`. Then
 **Actions > Show action list > New action > Load ReaScript...**, select the six action files, and bind keys or
 toolbar buttons to them as you like.
-
-**ReaPack.** The scripts carry ReaPack headers for [reapack-index](https://github.com/cfillion/reapack-index): one
-package, "Playhead for REAPER", whose entry is `Playhead - Analyse selected items.lua`. It provides the other five
-actions, the two library files and the effect (installed into REAPER's Effects folder). After installing, put the
-executable in `<resource>/Scripts/Playhead/` or choose it in **Playhead - Settings**.
 
 ## The actions
 
@@ -72,6 +102,7 @@ Options:
 - *Scaling*: `fixed` writes the curves as the strip shows them (the 0..1 curves as they are, the descriptor curves on
   their 5th to 95th percentile in the file, loudness in LUFS from -60 to 0); `item` stretches each curve so that its
   5th to 95th percentile inside the item spans 0..1, which uses a parameter's full range on any material.
+  Step-by-step use, linking, MIDI CC and recipes: [ENVELOPES.md](ENVELOPES.md).
 - *Point tolerance* (default 0.01) and *most points per curve* (default 2000): the points are thinned so that the
   envelope stays within the tolerance of the full curve, then to at most that many points.
 - *Write on track*: `item` (the item's own track) or `selected` (the first selected track, to drive another track).
@@ -96,8 +127,22 @@ waveform (filled, mirrored, horizon or line), events, onsets, beats, bar lines, 
 legend under the strip. It follows the take (offset, rate, loop, reversed sections), shows the edit and play
 cursors, and moves the edit cursor where you click. Right-click for the ready-made looks (those a file cannot show
 are greyed), your own look code (for example `wave:harshness lane:activity ticks:events`; codes from the Playhead
-app can be pasted), analysing again, automatic analysis of newly selected items, and docking. Space starts and stops
-playback.
+app can be pasted), analysing again, automatic analysis of newly selected items, colours, and docking. Space starts
+and stops playback.
+
+**Zoom** works as in REAPER's arrange view:
+- the mouse wheel zooms around the mouse;
+- Ctrl, Shift or Alt with the wheel, or a horizontal wheel, scrolls;
+- the middle button drags the view.
+
+While zoomed in, a bar along the bottom shows where the view is in the item. The view follows the play cursor when
+REAPER's own view does (**View: Toggle auto-view-scroll during playback**). **Show the whole item** in the menu zooms
+out. **Colours** in the menu offers five palettes, kept between sessions:
+- REAPER theme: REAPER's background and peak colour, with tints from neutral to a hot yellow;
+- Playhead's own colours;
+- Heat;
+- Colour-blind safe: viridis and Okabe-Ito;
+- Greyscale.
 
 The views of rhythm and form are drawn here as in the Playhead app:
 - **Bar raster** (`raster:<curve>`, `~4bars` for a row per 4 bars; music): a row per bar, top to bottom, the curve
@@ -109,8 +154,8 @@ The views of rhythm and form are drawn here as in the Playhead app:
   the first time the look is shown.
 
 A view the analysis does not have (a tempogram of a sound effect) leaves the waveform in its place, and the legend
-says why. Colours follow the REAPER theme where it offers them. The strip is drawn once and redrawn only when the
-item, the look, the window size or the theme changes. As a toolbar button it shows whether the window is open.
+says why. The strip is drawn once and redrawn only when the item, the look, the zoom, the window size or the colours
+change. As a toolbar button it shows whether the window is open.
 
 **Playhead - Settings.** The executable (empty: look in `<resource>/Scripts/Playhead/`, then on the PATH), Node for
 the `.js` command line, the analysis profile (`auto`: sound effects up to 10 s, music above; `fast`: curves only;
@@ -225,6 +270,17 @@ pip install lupa
 python3 integrations/reaper/test/run_tests.py                    # all tests
 python3 integrations/reaper/test/run_tests.py --update-fixtures  # rewrite the fixtures first (needs Node)
 ```
+
+On Windows the command is `python` (or `py`), not `python3`:
+
+```bat
+python integrations\reaper\test\run_tests.py
+```
+
+There the core tests run, with a real batch job through `cmd.exe` in place of the POSIX shell checks. The action
+scripts' tests simulate REAPER on macOS and Linux, starting the command line through POSIX job scripts, so on Windows
+they are skipped unless you add `--actions` and Git for Windows' `sh` is found. GitHub Actions runs all of them on
+every push. The ReaPack index (`tools/reapack-index.js`) is checked too: every file, its checksum and the version.
 
 The core is checked against documents made by the command line and against what `src/playhead.js` computes from
 them: `curveAt`, `toMarkers`, look codes, legends and the rectangles, triangles and texts `drawStrip` draws for

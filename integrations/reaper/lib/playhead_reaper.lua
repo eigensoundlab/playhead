@@ -73,6 +73,40 @@ function R.move(src, dst)
   os.remove(src)
   return true
 end
+--- Copies a file (binary), replacing the target.
+function R.copy_file(src, dst)
+  local fi = io.open(src, "rb")
+  if not fi then return nil, "cannot read " .. src end
+  local fo, err = io.open(dst, "wb")
+  if not fo then fi:close(); return nil, "cannot write " .. dst .. " (" .. tostring(err) .. ")" end
+  while true do
+    local chunk = fi:read(1 << 20)
+    if not chunk then break end
+    fo:write(chunk)
+  end
+  fi:close(); fo:close()
+  return true
+end
+function R.list_dirs(dir)
+  local out, i = {}, 0
+  if not reaper.EnumerateSubdirectories then return out end
+  reaper.EnumerateSubdirectories(dir, -1)
+  while true do
+    local d = reaper.EnumerateSubdirectories(dir, i)
+    if not d then break end
+    out[#out + 1] = d
+    i = i + 1
+  end
+  return out
+end
+--- Removes a folder and everything in it. Returns the number of files removed.
+function R.remove_tree(dir)
+  local n = 0
+  for _, d in ipairs(R.list_dirs(dir)) do n = n + R.remove_tree(R.join(dir, d)) end
+  for _, f in ipairs(R.list_files(dir)) do if os.remove(R.join(dir, f)) then n = n + 1 end end
+  R.remove_empty_dir(dir)
+  return n
+end
 function R.list_files(dir)
   local out, i = {}, 0
   if not reaper.EnumerateFiles then return out end
@@ -120,6 +154,19 @@ end
 function R.set(key, value)
   local text = tostring(value or ""):gsub("[\r\n]", " ")   -- ExtState values may not contain line breaks
   reaper.SetExtState(R.SECTION, key, text, true)
+  -- the names of the settings kept, so that "Playhead - Uninstall" can remove them (REAPER cannot list them)
+  local keys = reaper.GetExtState(R.SECTION, "_keys")
+  if not ("," .. keys .. ","):find("," .. key .. ",", 1, true) then
+    reaper.SetExtState(R.SECTION, "_keys", keys == "" and key or (keys .. "," .. key), true)
+  end
+end
+--- Removes every setting kept (see R.set), and the ones every version kept.
+function R.forget_settings()
+  local keys = core.split(reaper.GetExtState(R.SECTION, "_keys"), ",")
+  for k in pairs(core.DEFAULTS) do keys[#keys + 1] = k end
+  for _, k in ipairs({ "palette", "strip_auto", "strip_dock", "strip_dockstate", "strip_x", "strip_y", "strip_w", "strip_h", "last_tool", "curves", "markers",
+    "checked_exe", "checked_version", "_keys" }) do keys[#keys + 1] = k end
+  for _, k in ipairs(keys) do if k ~= "" then reaper.DeleteExtState(R.SECTION, k, true) end end
 end
 function R.settings()
   local s = {}

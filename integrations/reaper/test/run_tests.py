@@ -5,8 +5,13 @@
 #
 # Tests of Playhead for REAPER, outside REAPER, in Lua 5.4 (the Lua of REAPER 6 and 7) through lupa:
 #   pip install lupa
-#   python3 integrations/reaper/test/run_tests.py                    # all tests
+#   python3 integrations/reaper/test/run_tests.py                    # all tests (on Windows: python or py, not python3)
 #   python3 integrations/reaper/test/run_tests.py --update-fixtures  # first rewrite the fixtures (needs Node)
+#
+# On Windows the core tests run, with a real batch job through cmd.exe in place of the POSIX shell checks. The action
+# scripts' tests simulate REAPER on macOS and Linux (they start the command line through POSIX job scripts), so they
+# are skipped there unless --actions is given and a POSIX sh is found (Git for Windows has one); GitHub Actions runs
+# them on every push.
 #
 # 1. test_core.lua: lib/playhead_core.lua against documents made by the Playhead command line and against what
 #    src/playhead.js computes from them (fixtures/, written by make_fixtures.js).
@@ -14,6 +19,26 @@
 #    API calls against their documented signatures. With Node available, the scripts run the real command line
 #    (tools/playhead-cli.js) through their job scripts, as they would in REAPER on macOS or Linux.
 import argparse, json, os, shutil, subprocess, sys, tempfile, time
+
+WINDOWS = os.name == "nt"
+if hasattr(sys.stdout, "reconfigure"):   # names with arrows and accents, in any console code page
+    sys.stdout.reconfigure(errors="replace")
+
+
+def find_sh():
+    """A POSIX shell: on the PATH, or Git for Windows' own."""
+    sh = shutil.which("sh")
+    if sh or not WINDOWS:
+        return sh
+    for base in [os.environ.get("ProgramFiles", r"C:\Program Files"), os.environ.get("ProgramFiles(x86)", ""), os.environ.get("LOCALAPPDATA", "")]:
+        for rel in [r"Git\bin\sh.exe", r"Git\usr\bin\sh.exe", r"Programs\Git\bin\sh.exe"]:
+            p = os.path.join(base, rel) if base else ""
+            if p and os.path.exists(p):
+                return p
+    return None
+
+
+SH = find_sh()
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PKG = os.path.dirname(HERE)
@@ -125,25 +150,34 @@ def run_core(res, tmp, lua=None):
         return
 
     def sh_argv(cmd):
-        out = subprocess.run(["sh", "-c", cmd], capture_output=True).stdout
+        out = subprocess.run([SH, "-c", cmd], capture_output=True).stdout
         return L.table_from(out.split(b"\n")[:-1])
 
     def run_sh(text, path):
         with open(path, "w", newline="") as f:
             f.write(text)
-        subprocess.run(["sh", path], capture_output=True)
+        subprocess.run([SH, path], capture_output=True)
 
-    T = L.table_from({
+    def run_bat(text, path):
+        with open(path, "w", newline="") as f:
+            f.write(text)
+        subprocess.run(["cmd.exe", "/D", "/V:OFF", "/S", "/C", '"' + path + '"'], capture_output=True)
+
+    entries = {
         "check": lambda name, ok, detail=None: res.check(name, ok, detail),
         "note": res.note,
         "fixtures": L.table_from(fixtures),
         "tools_json": read(os.path.join(FIX, "tools.json")) or b"[]",
-        "sh_argv": sh_argv,
         "win_argv": lambda s: L.table_from(win_argv(s)),
-        "run_sh": run_sh,
         "read": read,
-        "tmpdir": tmp,
-    })
+        "tmpdir": tmp.replace("\\", "/") if not WINDOWS else tmp,
+        "windows": WINDOWS,
+    }
+    if SH:
+        entries.update({"sh_argv": sh_argv, "run_sh": run_sh})
+    if WINDOWS:
+        entries["run_bat"] = run_bat
+    T = L.table_from(entries)
     L.eval('(require("test_core"))')(T)
 
 
@@ -198,10 +232,54 @@ def run_actions(res, tmp):
     L.eval('(require("test_actions"))')(T)
 
 
+def run_index(res, tmp):
+    """The ReaPack index (tools/reapack-index.js): every file of the package, pinned to one commit, with its hash."""
+    import hashlib, urllib.parse
+    import xml.etree.ElementTree as ET
+    node, _ = node_cli()
+    if not node:
+        res.note("ReaPack index: needs Node (skipped)")
+        return
+    out = os.path.join(tmp, "index.xml")
+    p = subprocess.run([node, os.path.join(ROOT, "tools", "reapack-index.js"), "--ref", "0123456789abcdef0123456789abcdef01234567", "--out", out], capture_output=True)
+    if p.returncode != 0:
+        res.check("ReaPack index: written", False, p.stderr.decode("utf-8", "replace")[-300:])
+        return
+    root = ET.parse(out).getroot()
+    packs = root.findall("./category/reapack")
+    sources = root.findall(".//source")
+    want = ["Playhead - Analyse selected items.lua", "Playhead - Add markers for selected items.lua", "Playhead - Write curves as automation.lua",
+            "Playhead - Process selected items.lua", "Playhead - Strip window.lua", "Playhead - Settings.lua",
+            "lib/playhead_core.lua", "lib/playhead_reaper.lua", "Playhead Control.jsfx"]
+    bad = []
+    got = []
+    for s in sources:
+        f = s.get("file") or packs[0].get("name")
+        got.append(f)
+        prefix = "https://raw.githubusercontent.com/eigensoundlab/playhead/0123456789abcdef0123456789abcdef01234567/integrations/reaper/"
+        if not s.text.startswith(prefix) or urllib.parse.unquote(s.text[len(prefix):]) != f:
+            bad.append("url of " + f)
+        data = read(os.path.join(PKG, f)) or b""
+        if s.get("hash") != "1220" + hashlib.sha256(data).hexdigest():
+            bad.append("hash of " + f)
+        is_action = f.startswith("Playhead - ")
+        if (s.get("main") == "main") != is_action:
+            bad.append("main section of " + f)
+        if (s.get("type") == "effect") != f.endswith(".jsfx"):
+            bad.append("type of " + f)
+    version = packs[0].find("version").get("name") if packs else None
+    header = (read(os.path.join(PKG, "Playhead - Analyse selected items.lua")) or b"").decode("utf-8")
+    res.check("ReaPack index: one package with every action, the library and the effect, pinned to a commit, with hashes; "
+              "the scripts' version", root.get("version") == "1" and root.get("name") == "Playhead" and len(packs) == 1 and sorted(got) == sorted(want)
+              and not bad and version and ("@version " + version) in header,
+              "; ".join(bad) or "%d files, version %s" % (len(got), version))
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--update-fixtures", action="store_true", help="rewrite fixtures/ with make_fixtures.js (needs Node)")
     ap.add_argument("--core-only", action="store_true", help="skip the action scripts")
+    ap.add_argument("--actions", action="store_true", help="on Windows, run the action scripts' tests too (needs a POSIX sh)")
     a = ap.parse_args()
     if a.update_fixtures:
         node, _ = node_cli()
@@ -225,7 +303,16 @@ def main():
                 res.note("Lua 5.3: " + n + ("  [" + str(d) + "]" if d else ""))
             res.check("Lua 5.3: the same %d core checks pass (older REAPER versions)" % len(q.items), q.items and not bad,
                       "%d failed" % len(bad) if bad else "")
-        if not a.core_only:
+        run_index(res, tmp)
+        if a.core_only:
+            pass
+        elif WINDOWS and not (a.actions and SH):
+            res.note("action scripts: skipped on Windows (they are tested in a mock REAPER on macOS or Linux, where they "
+                     "start the command line through POSIX job scripts; GitHub Actions runs them on every push). "
+                     "Run with --actions to try them with Git for Windows' sh" + (" (none found)" if not SH else "") + ".")
+        elif not SH:
+            res.note("action scripts: skipped (no POSIX sh found)")
+        else:
             print("\nAction scripts in a mock REAPER")
             run_actions(res, tmp)
     except Exception as e:  # a Lua error ends the run as a failure with its message
