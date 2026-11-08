@@ -1,0 +1,485 @@
+{
+ "generator": "experiments/bench/run.js, Playhead 0.3.0",
+ "results": [
+  {
+   "name": "straight",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 14.53,
+    "oldBiasMs": -14.53,
+    "medianMs": 0.67,
+    "p90Ms": 4.65
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 110.05,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.224,
+    "swing": 1,
+    "timing": {
+     "tightness": 0.4,
+     "offsets": {
+      "low": 0,
+      "mid": -1.7,
+      "high": -0.4
+     }
+    }
+   },
+   "pulseClarity": 0.58,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -1.7,
+    "high": -0.4
+   },
+   "tightnessMs": 0.4,
+   "swingErr": 0,
+   "tempogram": {
+    "top": 55,
+    "octaveOff": -1,
+    "withinPct": 0.04,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "snare-laid-back",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 14.21,
+    "oldBiasMs": -14.21,
+    "medianMs": 0.63,
+    "p90Ms": 4.65
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 109.87,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.251,
+    "swing": 1,
+    "timing": {
+     "tightness": 0.1,
+     "offsets": {
+      "low": 0,
+      "mid": 24.9,
+      "high": -0.4
+     }
+    }
+   },
+   "pulseClarity": 0.58,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -0.1,
+    "high": -0.4
+   },
+   "tightnessMs": 0.1,
+   "swingErr": 0,
+   "tempogram": {
+    "top": 55,
+    "octaveOff": -1,
+    "withinPct": 0.04,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "hats-pushed",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 14.67,
+    "oldBiasMs": -14.67,
+    "medianMs": 0.71,
+    "p90Ms": 10.55
+   },
+   "bands": 0.95,
+   "rhythm": {
+    "tempo": 110.05,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.221,
+    "swing": 1,
+    "timing": {
+     "tightness": 0.6,
+     "offsets": {
+      "low": 0,
+      "mid": -1.7,
+      "high": -15.3
+     }
+    }
+   },
+   "pulseClarity": 0.59,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -1.7,
+    "high": -0.3
+   },
+   "tightnessMs": 0.6,
+   "swingErr": 0,
+   "tempogram": {
+    "top": 55,
+    "octaveOff": -1,
+    "withinPct": 0.04,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "loose",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 14.98,
+    "oldBiasMs": -14.98,
+    "medianMs": 0.63,
+    "p90Ms": 7.89
+   },
+   "bands": 0.94,
+   "rhythm": {
+    "tempo": 110.01,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.215,
+    "swing": 1,
+    "timing": {
+     "tightness": 10.9,
+     "offsets": {
+      "low": 0,
+      "mid": -5.7,
+      "high": 0.7
+     }
+    }
+   },
+   "pulseClarity": 0.54,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -5.7,
+    "high": 0.7
+   },
+   "tightnessMs": 10.9,
+   "swingErr": 0,
+   "tempogram": {
+    "top": 55,
+    "octaveOff": -1,
+    "withinPct": 0.04,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "swing-1.5",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 14.6,
+    "oldBiasMs": -14.6,
+    "medianMs": 0.5,
+    "p90Ms": 1.97
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 100.04,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.177,
+    "swing": 1.535,
+    "timing": {
+     "tightness": 0.1,
+     "offsets": {
+      "low": 0,
+      "mid": -1,
+      "high": -3.7
+     }
+    }
+   },
+   "pulseClarity": 0.53,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -1,
+    "high": -3.7
+   },
+   "tightnessMs": 0.1,
+   "swingErr": 0.03,
+   "tempogram": {
+    "top": 50,
+    "octaveOff": -1,
+    "withinPct": 0.91,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "swing-2",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 13.7,
+    "oldBiasMs": -13.7,
+    "medianMs": 0.5,
+    "p90Ms": 4.24
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 100.04,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.166,
+    "swing": 2.036,
+    "timing": {
+     "tightness": 1.5,
+     "offsets": {
+      "low": 0,
+      "mid": -2.1,
+      "high": -2.7
+     }
+    }
+   },
+   "pulseClarity": 0.5,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -2.1,
+    "high": -2.7
+   },
+   "tightnessMs": 1.5,
+   "swingErr": 0.04,
+   "tempogram": {
+    "top": 50,
+    "octaveOff": -1,
+    "withinPct": 0.91,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "swing-3",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 14.6,
+    "oldBiasMs": -14.6,
+    "medianMs": 0.5,
+    "p90Ms": 6.21
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 100.06,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.165,
+    "swing": 3.072,
+    "timing": {
+     "tightness": 2.1,
+     "offsets": {
+      "low": 0,
+      "mid": -3,
+      "high": -3
+     }
+    }
+   },
+   "pulseClarity": 0.47,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -3,
+    "high": -3
+   },
+   "tightnessMs": 2.1,
+   "swingErr": 0.07,
+   "tempogram": {
+    "top": 50,
+    "octaveOff": -1,
+    "withinPct": 0.91,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "waltz",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 12.45,
+    "oldBiasMs": -12.45,
+    "medianMs": 0.59,
+    "p90Ms": 1.27
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 132.08,
+    "reliable": true,
+    "beatsPerBar": 3,
+    "downbeatConfidence": 0.401,
+    "swing": 1,
+    "timing": {
+     "tightness": 0.3,
+     "offsets": {
+      "low": 0,
+      "mid": -0.1,
+      "high": -0.6
+     }
+    }
+   },
+   "pulseClarity": 0.81,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -0.1,
+    "high": -0.6
+   },
+   "tightnessMs": 0.3,
+   "swingErr": 0,
+   "tempogram": {
+    "top": 131,
+    "octaveOff": 0,
+    "withinPct": 0.86,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "sixteenths",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 14.21,
+    "oldBiasMs": -14.21,
+    "medianMs": 0.73,
+    "p90Ms": 23.13
+   },
+   "bands": 0.96,
+   "rhythm": {
+    "tempo": 96.04,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.366,
+    "swing": null,
+    "timing": {
+     "tightness": 0.1,
+     "offsets": {
+      "low": 0,
+      "mid": -0.1,
+      "high": -0.4
+     }
+    }
+   },
+   "pulseClarity": 0.81,
+   "downbeats": 1,
+   "meterRight": true,
+   "offsetErrMs": {
+    "mid": -0.1,
+    "high": -0.4
+   },
+   "tightnessMs": 0.1,
+   "tempogram": {
+    "top": 95,
+    "octaveOff": 0,
+    "withinPct": 0.79,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "pulse-32",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 9.8,
+    "oldBiasMs": -9.8,
+    "medianMs": 0.7,
+    "p90Ms": 0.7
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 119.11,
+    "reliable": false,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0,
+    "swing": null,
+    "timing": null
+   },
+   "pulseClarity": 0,
+   "tempogram": {
+    "top": 32,
+    "octaveOff": 0,
+    "withinPct": 0.68,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "pulse-480",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 14.16,
+    "oldBiasMs": -14.16,
+    "medianMs": 0.7,
+    "p90Ms": 0.7
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 120.13,
+    "reliable": true,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.286,
+    "swing": null,
+    "timing": {
+     "tightness": 0,
+     "offsets": {
+      "low": null,
+      "mid": null,
+      "high": 0
+     }
+    }
+   },
+   "pulseClarity": 0.84,
+   "tempogram": {
+    "top": 480,
+    "octaveOff": 0,
+    "withinPct": 0,
+    "range": [
+     30,
+     588
+    ]
+   }
+  },
+  {
+   "name": "no-beat",
+   "onsets": {
+    "found": 1,
+    "oldMedianMs": 15.21,
+    "oldBiasMs": -15.21,
+    "medianMs": 0.45,
+    "p90Ms": 2.14
+   },
+   "bands": 1,
+   "rhythm": {
+    "tempo": 111.82,
+    "reliable": false,
+    "beatsPerBar": 4,
+    "downbeatConfidence": 0.177,
+    "swing": null,
+    "timing": null
+   },
+   "pulseClarity": 0.29
+  }
+ ]
+}

@@ -374,7 +374,7 @@ return function(T)
       table.sort(regs, function(a, b) return a.pos < b.pos end)
       local e2, e3 = robot_doc.events[2], robot_doc.events[3]
       local p2, p3 = pieces[2], pieces[3]
-      local ok = #env.items == n_items + 2 and #pieces == 3 and p2 and math.abs(p2.pos - (300 + e2.start - 0.1 - 0.005)) < 1e-9
+      local ok = #env.items == n_items + 2 and #pieces == 3 and p2 and math.abs(p2.pos - (300 + core.attack_time(robot_doc, e2.start) - 0.1 - 0.005)) < 1e-9
         and p2.takes[1].name == "robot hit (steel) 01 " .. e2.word and p3.takes[1].name == "robot hit (steel) 02 " .. e3.word
         and math.abs(p3.pos + p3.len - (300 + e3.decayEnd - 0.1 + 0.06)) < 1e-9 and math.abs(p3.fadeout - 0.06) < 1e-9 and pieces[1].takes[1].name == "robot hit (steel).wav"
         and #regs == 2 and regs[2].name == p3.takes[1].name and math.abs(regs[2].rgnend - (p3.pos + p3.len)) < 1e-9

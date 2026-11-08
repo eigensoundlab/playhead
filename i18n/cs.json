@@ -635,7 +635,7 @@
  "lib.look.raster.name": "Taktový rastr",
  "lib.look.raster.desc": "Pro hudbu. Řádek na takt, shora dolů, jako pattern bicích: [[síla nástupu|onset strength]] v průběhu každého taktu, s oddíly. Takty, které hrají stejně, se seřadí do sloupců; přechody, breaky a dropy se ukážou jako řádky, které se liší.",
  "lib.look.tempogram.name": "Tempogram",
- "lib.look.tempogram.desc": "Pro hudbu. Jak silně je v čase přítomné každé tempo (40 až 240 BPM, rychlá nahoře). Pravidelný puls je jasná čára, změna tempa ji ohne, dvojnásobné a poloviční tempo jsou slabší čáry. S taktovými čarami.",
+ "lib.look.tempogram.desc": "Pro hudbu. Jak silně je v čase přítomné každé tempo (30 až 590 BPM, rychlá nahoře). Pravidelný puls je jasná čára, změna tempa ji ohne, dvojnásobné a poloviční tempo jsou slabší čáry. S taktovými čarami.",
  "lib.look.repetition.name": "Opakování (podle zpoždění)",
  "lib.look.repetition.desc": "Pro hudbu. Jak moc se každý okamžik podobá okamžiku o daný čas dříve (ten čas, [[zpoždění|lag]], roste směrem nahoru). Jasná vodorovná čára znamená, že hudba opakuje, co zaznělo tak dávno předtím. S oddíly.",
  "lib.look.modulation.name": "Modulační spektrogram",
@@ -651,7 +651,7 @@
  "lib.legend.spectrogram": "spektrogram (mel, nízké frekvence dole)",
  "lib.legend.spectrogramAbsent": "spektrogram (v této analýze chybí)",
  "lib.legend.tempogramCyclic": "tempogram, oktávy složené (80 až 160 BPM; tempo, jeho polovina a dvojnásobek sdílejí řádek)",
- "lib.legend.tempogram": "tempogram (40 až 240 BPM, rychlá nahoře)",
+ "lib.legend.tempogram": "tempogram ({lo} až {hi} BPM, rychlá nahoře)",
  "lib.legend.musicAbsent": " (jen hudba; v této analýze chybí)",
  "lib.legend.lag": "opakování: jasné tam, kde hudba opakuje, co zaznělo o zpoždění dříve (zpoždění roste nahoru)",
  "lib.legend.modulation": "modulace: jak rychle hladina pulzuje (0,5 až 128 Hz, rychlé nahoře): rytmus, pak chvění a tremolo, pak drsnost",
@@ -797,5 +797,9 @@
  "lib.legend.tempoSpeed": " změny všech deskriptorů najednou",
  "lib.legend.tempoOf": " nárůstů křivky {curve}",
  "lib.legend.tempoWeight": ", šedě tam, kde je {curve} nízko",
- "lib.curve.timbreHarshness": "tvrdost barvy"
+ "lib.curve.timbreHarshness": "tvrdost barvy",
+ "lib.curve.onsetLow": "nástupy v basech (kopák)",
+ "lib.curve.onsetMid": "nástupy ve středech (virbl)",
+ "lib.curve.onsetHigh": "nástupy ve výškách (činely)",
+ "lib.curve.pulseClarity": "zřetelnost pulzu"
 }

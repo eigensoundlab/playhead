@@ -135,7 +135,8 @@ loudest layer stays. Each item counts with the part of its file it plays and its
 backwards, at another rate or loop their source are left out with a note.
 
 **Playhead - Split items at sounds.** Splits each selected item into its sounds: a cut a few milliseconds before each
-event (or each onset), so no attack is cut, and never two cuts closer than the shortest piece (default 60 ms; the
+event (or each onset), placed from the sample where the sound starts to rise (with Playhead 0.4 and later), so no
+attack is cut, and never two cuts closer than the shortest piece (default 60 ms; the
 sound joins the piece before). Each piece can be named after its sound (`door 03 tonal hit`), ended where its sound
 has decayed (plus a faded tail, default 60 ms) and given a region of the same name: with the region render matrix
 (or *Render: regions*, `$region` in the file name) a recording of many hits becomes one file per hit. Pieces before

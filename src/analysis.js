@@ -946,7 +946,7 @@ function rhythmOf(F) {
   const reg = new Int8Array(B), regN = [0, 0, 0];
   for (let b = 0; b < B; b++) { const f = melC(b); reg[b] = f < 200 ? 0 : f < 2000 ? 1 : 2; regN[reg[b]]++; }
   const bw = new Float32Array(B); for (let b = 0; b < B; b++) bw[b] = (reg[b] === 0 ? RHYTHM.lowWeight : 1) / Math.max(1, regN[reg[b]]);
-  const oR = new Float32Array(n);
+  const oR = new Float32Array(n), oB = [new Float32Array(n), new Float32Array(n), new Float32Array(n)];
   const lagR = Math.max(1, Math.round(DT_REF / dt));
   for (let m = lagR; m < n; m++) {
     if (!X.gate[m]) continue;
@@ -957,10 +957,19 @@ function rhythmOf(F) {
       if (b > 0 && Cc[p + b - 1] > ref) ref = Cc[p + b - 1];
       if (b < B - 1 && Cc[p + b + 1] > ref) ref = Cc[p + b + 1];
       const d = Cc[q + b] - ref;
-      if (d > 0) sum += bw[b] * d;
+      if (d > 0) { sum += bw[b] * d; oB[reg[b]][m] += d / Math.max(1, regN[reg[b]]); }
     }
     oR[m] = sum;
   }
+  // the same onset function per region (low < 200 Hz, mid to 2 kHz, high above): roughly kick, snare and body, hats
+  // and cymbals. Local mean removed, rectified and smoothed as the whole; each on its own scale (scaled later)
+  const bandEnv = oB.map(o => {
+    const lmB = movMean(o, fr(0.5)), raw = Float32Array.from(o, (v, m) => Math.max(0, v - lmB[m])), out = new Float32Array(n);
+    const sg = Math.max(0.6, RHYTHM.smooth / dt), K = Math.ceil(3 * sg), gk = []; let gs = 0;
+    for (let k = -K; k <= K; k++) { const v = Math.exp(-0.5 * (k / sg) * (k / sg)); gk.push(v); gs += v; }
+    for (let m = 0; m < n; m++) { let v = 0; for (let k = -K; k <= K; k++) { const j = m + k; if (j >= 0 && j < n) v += gk[k + K] * raw[j]; } out[m] = v / gs; }
+    return out;
+  });
   const lm = movMean(oR, fr(0.5));
   const env = new Float32Array(n);
   let s2 = 0;
@@ -994,15 +1003,18 @@ function rhythmOf(F) {
   const NW = centers.length;
   const acn = new Float32Array(NW * nL);   // raw, normalised by lag 0 (tempo)
   const acm = new Float32Array(NW * nL);   // mean removed (clarity)
+  // mean removed, every lag up to the window (for the tempogram image, which reaches past the beat tracker's range)
+  const acW = new Float32Array(NW * W);
   const wE = new Float32Array(NW), wS = new Float32Array(NW);
   const reA = new Float64Array(NF), imA = new Float64Array(NF);
-  const acInto = (dst, w) => {
+  const acInto = (dst, w, all) => {
     fftA(reA, imA);
     for (let k = 0; k < NF; k++) { reA[k] = reA[k] * reA[k] + imA[k] * imA[k]; imA[k] = 0; }
     fftA(reA, imA);
     const a0 = reA[0];
     if (!(a0 > 0)) return;
     for (let l = 0; l < nL; l++) dst[w * nL + l] = reA[lagMin + l] / a0;
+    if (all) for (let l = 0; l < W; l++) all[w * W + l] = reA[l] / a0;
   };
   for (let w = 0; w < NW; w++) {
     const s0 = centers[w] - (W >> 1);
@@ -1019,7 +1031,7 @@ function rhythmOf(F) {
     acInto(acn, w);
     reA.fill(0); imA.fill(0);
     for (let k = 0; k < W; k++) { const m = s0 + k; const v = (m >= 0 && m < n ? envT[m] : mean) - mean; reA[k] = v * winA[k]; }
-    acInto(acm, w);
+    acInto(acm, w, acW);
   }
   const lagBpm = l => 60 / ((lagMin + l) * dt);
 
@@ -1031,18 +1043,19 @@ function rhythmOf(F) {
   }
 
   /* tempogram for display: the clarity autocorrelation (mean removed, so only periodicity counts) on a log-tempo axis,
-     24 bins per octave from bpmMin, faded where the onsets are weak, as for clarity. One column per window. */
-  const TG_OCT = 24, tgBins = Math.floor(TG_OCT * Math.log2(RHYTHM.bpmMax / RHYTHM.bpmMin) + 1e-9) + 1;
+     24 bins per octave from 30 BPM to about 590 (104 bins; wider than the beat tracker's range: slow phrase pulses
+     below, the 16ths and fast rolls above), faded where the onsets are weak, as for clarity. One column per window. */
+  const TG_OCT = 24, TG_MIN = 30, TG_MAX = 600, tgBins = Math.floor(TG_OCT * Math.log2(TG_MAX / TG_MIN) + 1e-9) + 1;
   const tgData = new Float32Array(NW * tgBins);
-  if (nL > 1) for (let k = 0; k < tgBins; k++) {
-    const x = 60 / (RHYTHM.bpmMin * Math.pow(2, k / TG_OCT) * dt) - lagMin, i = Math.floor(x), f = x - i;
-    if (x < 0 || i >= nL - 1) continue;
+  for (let k = 0; k < tgBins; k++) {
+    const x = 60 / (TG_MIN * Math.pow(2, k / TG_OCT) * dt), i = Math.floor(x), f = x - i;
+    if (i < 1 || i >= W - 1) continue;
     for (let w = 0; w < NW; w++) {
-      const v = acm[w * nL + i] * (1 - f) + acm[w * nL + i + 1] * f;
+      const v = acW[w * W + i] * (1 - f) + acW[w * W + i + 1] * f;
       tgData[w * tgBins + k] = Math.max(0, v) * (1 - Math.exp(-wS[w] / RHYTHM.strengthRef));
     }
   }
-  const tempogram = { bpmMin: RHYTHM.bpmMin, perOctave: TG_OCT, bins: tgBins, start: centers[0] * dt, hop: hopT * dt, cols: NW, data: tgData };
+  const tempogram = { bpmMin: TG_MIN, perOctave: TG_OCT, bins: tgBins, start: centers[0] * dt, hop: hopT * dt, cols: NW, data: tgData };
 
   /* global tempo: mean tempogram over active windows + log-normal prior (librosa style) */
   const mean = new Float64Array(nL);
@@ -1193,7 +1206,7 @@ function rhythmOf(F) {
   }
 
   /* downbeats (heuristic, 4/4 assumed): low-band onsets plus chord change at the beat */
-  let downbeats = [], downConf = 0, downPhase = 0;
+  let downbeats = [], downConf = 0, downPhase = 0, beatsPerBar = 4, meterEvidence = null;
   if (beats.length >= 8) {
     const B = NMEL;
     const low = new Float32Array(n);
@@ -1218,13 +1231,24 @@ function rhythmOf(F) {
     }
     const z = a => { const mu = a.reduce((x, y) => x + y, 0) / a.length; const sd = Math.sqrt(a.reduce((x, y) => x + (y - mu) * (y - mu), 0) / a.length) || 1; return a.map(v => (v - mu) / sd); };
     const zl = z(lowS), zc = z(chg);
-    const ph = [0, 0, 0, 0], cn = [0, 0, 0, 0];
-    for (let i = 0; i < beats.length; i++) { ph[i % 4] += 0.6 * zl[i] + zc[i]; cn[i % 4]++; }
-    const sc = ph.map((v, i) => cn[i] ? v / cn[i] : -Infinity);
-    const order = [0, 1, 2, 3].sort((a, b) => sc[b] - sc[a]);
-    downPhase = order[0];
-    downConf = sc[order[0]] - sc[order[1]];
-    for (let i = downPhase; i < beats.length; i += 4) downbeats.push(beats[i]);
+    // for a bar of P beats: the score of each phase (the mean evidence of the beats it would make downbeats), and how
+    // far the best stands above the others (the evidence for that bar length)
+    const scoreOf = P => {
+      const ph = new Array(P).fill(0), cn = new Array(P).fill(0);
+      for (let i = 0; i < beats.length; i++) { ph[i % P] += 0.6 * zl[i] + zc[i]; cn[i % P]++; }
+      const sc = ph.map((v, i) => cn[i] ? v / cn[i] : -Infinity), order = sc.map((_, i) => i).sort((a, b) => sc[b] - sc[a]);
+      const rest = order.slice(1).map(i => sc[i]), restMean = rest.reduce((a, b) => a + b, 0) / rest.length;
+      return { phase: order[0], conf: sc[order[0]] - sc[order[1]], evidence: sc[order[0]] - restMean };
+    };
+    const s4 = scoreOf(4), s3 = scoreOf(3);
+    meterEvidence = { 3: s3.evidence, 4: s4.evidence };
+    // 4/4 unless 3/4 is clearly the better fit (the beats then fall in threes)
+    const use3 = beats.length >= 12 && s3.evidence > 0.6 && s3.evidence > 1.5 * Math.max(0.05, s4.evidence);
+    beatsPerBar = use3 ? 3 : 4;
+    const S = use3 ? s3 : s4;
+    downPhase = S.phase;
+    downConf = S.conf;
+    for (let i = downPhase; i < beats.length; i += beatsPerBar) downbeats.push(beats[i]);
   }
 
   /* summary */
@@ -1239,7 +1263,7 @@ function rhythmOf(F) {
     env, clarity, ltempo, plp, tempo, medClar,
     reliable: medClar >= RHYTHM.clarityMin && F.dur >= 10,
     tempoRange: [q(0.05), q(0.95)],
-    beats, plpBeats, downbeats, downConf, downPhase,
+    beats, plpBeats, downbeats, downConf, downPhase, beatsPerBar, meterEvidence, bandEnv,
     beatTimes: beats.map(frameTime), plpTimes: plpBeats.map(frameTime), downTimes: downbeats.map(frameTime),
     onsetTimes: X.onsets.map(m => m * dt), tempogram
   };

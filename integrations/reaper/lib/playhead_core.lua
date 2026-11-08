@@ -269,14 +269,16 @@ end
 -- readable names of the curves, in menu order (as Playhead.curveLabels)
 M.CURVE_ORDER = { "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "lufs",
   "onsetStrength", "structureNovelty", "localPulse", "n1Kurtosis", "n2RepetitionHz", "n4Velocity", "n5Cpp",
-  "n5Coherence", "n6Arrow", "n7Surprisal", "n8Recurrence", "timbreHarshness" }
+  "n5Coherence", "n6Arrow", "n7Surprisal", "n8Recurrence", "timbreHarshness", "onsetLow", "onsetMid", "onsetHigh",
+  "pulseClarity" }
 M.CURVE_LABELS = {
   loudness = "loudness", activity = "activity", arousal = "arousal", harshness = "harshness", tension = "tension",
   harmonicTension = "harmonic tension", surprise = "novelty (spectral surprise)", lufs = "loudness (LUFS)",
   structureNovelty = "structural change", localPulse = "local pulse", onsetStrength = "onset strength (hits)",
   n1Kurtosis = "impulsiveness", n2RepetitionHz = "repetition rate", n4Velocity = "spectral motion", n5Cpp = "periodicity",
   n5Coherence = "phase coherence", n6Arrow = "time arrow", n7Surprisal = "surprisal", n8Recurrence = "recurrence",
-  timbreHarshness = "timbre harshness"
+  timbreHarshness = "timbre harshness", onsetLow = "low onsets (kick)", onsetMid = "mid onsets (snare)",
+  onsetHigh = "high onsets (hats)", pulseClarity = "pulse clarity"
 }
 -- the number each curve is known by in Playhead Control.jsfx (its hidden "source" sliders); 0 = another curve
 M.CURVE_CODES = {}
@@ -408,6 +410,17 @@ function M.describe_document(doc, label)
   if type(doc.rhythm) == "table" then
     L[#L + 1] = fmt("  tempo %s BPM (%s), %d beats, %d bars", M.num(doc.rhythm.tempo or 0, 1),
       doc.rhythm.reliable and "steady" or "no steady beat", #(doc.rhythm.beats or {}), #(doc.rhythm.downbeats or {}))
+    -- timing on the beat grid (Playhead 0.4 and later): tightness, each band against the low band, swing, meter
+    local tm = doc.rhythm.timing
+    if type(tm) == "table" and tm ~= NULL then
+      local o = type(tm.offsets) == "table" and tm.offsets or {}
+      local function ms(v) if type(v) ~= "number" then return "-" end return fmt("%+.1f ms", v) end
+      local sw = doc.rhythm.swing
+      L[#L + 1] = fmt("  timing: tightness %s ms; snare band %s, hat band %s against the kick band; %s; %s beats a bar",
+        type(tm.tightness) == "number" and M.num(tm.tightness, 1) or "-", ms(o.mid), ms(o.high),
+        type(sw) == "number" and (sw == 1 and "straight 8ths" or ("swing " .. M.num(sw, 2))) or "swing not measured",
+        tostring(doc.rhythm.beatsPerBar or 4))
+    end
   end
   if type(doc.sections) == "table" and #doc.sections > 0 then
     local labs = {}
@@ -795,8 +808,22 @@ end
 ------------------------------------------------------------------------------------------------------------------------
 -- splitting at events
 ------------------------------------------------------------------------------------------------------------------------
+--- The time of a sound's start to the sample: the nearest of the document's attacks (onsets refined to where the level
+--- starts to rise, Playhead 0.4 and later) within 40 ms, else t as it is.
+function M.attack_time(doc, t)
+  local at = type(doc) == "table" and doc.attacks
+  if type(at) ~= "table" or at == NULL then return t end
+  local best, bd = t, 0.04
+  for _, a in ipairs(at) do
+    local x = type(a) == "table" and tonumber(a.t)
+    if x and abs(x - t) < bd then best, bd = x, abs(x - t) end
+  end
+  return best
+end
+
 --- Where to split an item into its sounds: cuts (project times inside the item, `pre` seconds before each sound and
---- at least `min_gap` apart) and the pieces between them { start, stop, name, sounds, sound_end }. A piece's name
+--- at least `min_gap` apart; each sound's start to the sample where the document has its attacks) and the pieces
+--- between them { start, stop, name, sounds, sound_end }. A piece's name
 --- is the word of its first event ("tonal hit"); sound_end is where its events have decayed (events only).
 --- opts: kind "events" | "onsets", pre (s), min_gap (s). Returns the plan, or nil and why not.
 function M.split_plan(doc, m, opts)
@@ -806,12 +833,13 @@ function M.split_plan(doc, m, opts)
   local starts = {}
   if opts.kind == "onsets" then
     if type(doc.onsets) ~= "table" then return nil, "no onsets in this analysis" end
-    for _, t in ipairs(doc.onsets) do for _, T in ipairs(M.file_to_project(m, t, 10000)) do starts[#starts + 1] = { t = T, name = "onset" } end end
+    for _, t in ipairs(doc.onsets) do for _, T in ipairs(M.file_to_project(m, M.attack_time(doc, t), 10000)) do starts[#starts + 1] = { t = T, name = "onset" } end end
   else
     if type(doc.events) ~= "table" then return nil, "no events in this analysis (the fast profile leaves them out)" end
     for _, e in ipairs(doc.events) do
       local t = tonumber(e.start)
       if t then
+        t = M.attack_time(doc, t)
         local stop = tonumber(e.decayEnd) or tonumber(e["end"]) or t
         for _, T in ipairs(M.file_to_project(m, t, 10000)) do
           starts[#starts + 1] = { t = T, name = trim(tostring(e.word or "event")), stop = min(m.pos + m.len, T + max(0, stop - t) / m.rate) }
@@ -1049,7 +1077,9 @@ local function tempo_view(doc, cyclic)
   end
   local function row_of(bpm) if cyclic then return P - 1 - P * log2(bpm / FOLD) end return B - 1 - P * log2(bpm / tg.bpmMin) end
   local ticks = {}
-  for _, bpm in ipairs(cyclic and { 90, 120, 140 } or { 60, 90, 120, 180 }) do
+  local marks = cyclic and { 90, 120, 140 } or { 60, 90, 120, 180 }
+  if not cyclic and tg.bpmMin * 2 ^ ((B - 1) / P) > 400 then marks[#marks + 1] = 360 end
+  for _, bpm in ipairs(marks) do
     local row = row_of(bpm) + 0.5
     if row > 0.5 and row < rows - 0.5 then ticks[#ticks + 1] = { row = row, text = tostring(bpm) } end
   end
@@ -1313,7 +1343,7 @@ M.LOOKS = {
   character = { name = "Sound character", desc = "For sound effects. Curves only, overlaid and mirrored like a waveform: where the hits are (onset strength), harshness and impulsiveness (clicks, cracks, crackle), with onsets marked.", code = "form:overlay,shape:mirror,lane:onsetStrength,lane:harshness,lane:n1Kurtosis,ticks:onsets" },
   surprise = { name = "Hits and surprise", desc = "For sound effects. As Sound character, with spectral surprise (where the sound turns into something new) in place of impulsiveness.", code = "form:overlay,shape:mirror,lane:onsetStrength,lane:harshness,lane:n7Surprisal,ticks:onsets" },
   raster = { name = "Bar raster", desc = "For music. A row per bar, top to bottom, like a drum pattern: onset strength through each bar, with sections. Bars that hit the same way line up in columns; fills, breaks and drops show as rows that differ.", code = "raster:onsetStrength,sections" },
-  tempogram = { name = "Tempogram", desc = "For music. How strongly each tempo (40 to 240 BPM, fast at the top) is present over time. A steady beat is a bright line, a tempo change bends it, double and half tempo show as fainter lines. With bar lines.", code = "spec:tempo,ticks:downbeats" },
+  tempogram = { name = "Tempogram", desc = "For music. How strongly each tempo (30 to 590 BPM, fast at the top) is present over time. A steady beat is a bright line, a tempo change bends it, double and half tempo show as fainter lines. With bar lines.", code = "spec:tempo,ticks:downbeats" },
   repetition = { name = "Repetition (lag view)", desc = "For music. How alike each moment is to the moment a given time before (that time, the lag, going up). A bright horizontal line means the music repeats what played that long ago. With sections.", code = "spec:lag,sections" },
   modulation = { name = "Modulation spectrogram", desc = "For any sound. How fast its level pulses, and how strongly, over time: rhythm below about 4 Hz, fluctuation, tremolo and flutter from 4 to 20 Hz, roughness above (fast at the top). Engines, rotors, tremolo, growls and buzzes show as bright rows at their rate; steady tones and plain noise stay dark.", code = "spec:mod" },
   rhythms = { name = "Curve rhythms (scalogram)", desc = "Research view, for any sound. The periodic patterns in onset strength, from fast (top) to slow (bottom): beat, bar and phrase in music, flutter and tremolo in effects. Fainter near the ends, where the sound is too short to be sure of a period.", code = "scalogram:onsetStrength" },
@@ -1419,7 +1449,15 @@ function M.describe_look(layers, doc)
     if t == "wave" then parts[#parts + 1] = (l.colour and has(l.colour)) and ("colour: " .. lab(l.colour)) or "waveform"
     elseif t == "spec" and not l.of then parts[#parts + 1] = (not doc or doc.spectrum) and "spectrogram (mel, low at the bottom)" or "spectrogram (not in this analysis)"
     elseif t == "spec" and l.of == "tempo" then
-      parts[#parts + 1] = (l.cyclic and "tempogram, octaves folded (80 to 160 BPM; a tempo, its half and its double share a row)" or "tempogram (40 to 240 BPM, fast at the top)")
+      -- the tempogram's own range (documents from Playhead 0.3 reach 40 to 240 BPM, later ones 30 to 590), the top
+      -- to the nearest 10 above 100, as the library writes it
+      local tg = doc and type(doc.rhythm) == "table" and doc.rhythm ~= NULL and doc.rhythm.tempogram or nil
+      local lo, hi = 30, 590
+      if type(tg) == "table" and tg ~= NULL then
+        lo, hi = tg.bpmMin, tg.bpmMin * 2 ^ ((tg.bins - 1) / tg.perOctave)
+        hi = hi >= 100 and round(hi / 10) * 10 or round(hi)
+      end
+      parts[#parts + 1] = (l.cyclic and "tempogram, octaves folded (80 to 160 BPM; a tempo, its half and its double share a row)" or fmt("tempogram (%s to %s BPM, fast at the top)", M.num(lo), M.num(hi)))
         .. ((not doc or (type(doc.rhythm) == "table" and doc.rhythm.tempogram)) and "" or " (music only; not in this analysis)")
     elseif t == "spec" and l.of == "lag" then
       parts[#parts + 1] = "repetition: bright where the music repeats what played a lag earlier (lag going up)" .. ((not doc or doc.repetition) and "" or " (music only; not in this analysis)")

@@ -88,7 +88,8 @@ return function(T)
     end
     check("document: curve_at equals Playhead.curveAt (interpolation, silence, ends)", worst < 1e-12 and count > 80, count .. " values, worst " .. worst)
     local lines = M.describe_document(arc, "cue arc")
-    check("document: summary for the console", #lines >= 5 and lines[1]:find("music profile") ~= nil and table.concat(lines, "\n"):find("sections: A B B C D E A B A") ~= nil,
+    check("document: summary for the console (with the timing on the beat grid)", #lines >= 5 and lines[1]:find("music profile") ~= nil and table.concat(lines, "\n"):find("sections: A B B C D E A B A") ~= nil
+      and table.concat(lines, "\n"):find("timing: tightness", 1, true) ~= nil,
       lines[1])
   end
 
@@ -258,10 +259,11 @@ return function(T)
     local p3 = M.split_plan(robot, M.take_map({ pos = 0, len = RL, offs = 0, rate = 1, src_len = RL }), { kind = "onsets", pre = 0.005, min_gap = 0.05 })
     local _, why_split = M.split_plan(robot, M.take_map({ pos = 0, len = 1, offs = 0, rate = 1, src_len = RL, sections = { { offs = 0, len = RL, rev = true } } }), {})
     local e2, e3 = robot.events[2], robot.events[3]
+    local s2, s3 = M.attack_time(robot, e2.start), M.attack_time(robot, e3.start)
     check("split: a cut before each event heard; pieces named by their first event, ending where their events have decayed",
-      #p.cuts == 2 and near(p.cuts[1], 10 + e2.start - 0.1 - 0.005) and near(p.cuts[2], 10 + e3.start - 0.1 - 0.005) and #p.pieces == 3
-        and p.pieces[1].sounds == 0 and p.pieces[2].name == e2.word and near(p.pieces[2].sound_end, 10 + e2.decayEnd - 0.1)
-        and p.pieces[3].name == e3.word and near(p.pieces[3].sound_end, 10 + e3.decayEnd - 0.1) and near(p.pieces[3].stop, 11),
+      #p.cuts == 2 and near(p.cuts[1], 10 + s2 - 0.1 - 0.005) and near(p.cuts[2], 10 + s3 - 0.1 - 0.005) and #p.pieces == 3
+        and p.pieces[1].sounds == 0 and p.pieces[2].name == e2.word and near(p.pieces[2].sound_end, 10 + math.max(s2, e2.decayEnd) - 0.1)
+        and p.pieces[3].name == e3.word and near(p.pieces[3].sound_end, 10 + e3.decayEnd - 0.1) and near(p.pieces[3].stop, 11) and math.abs(s2 - e2.start) < 0.04,
       string.format("%d cuts, %d pieces", #p.cuts, #p.pieces))
     check("split: cuts closer than the shortest piece are left out (their sounds join the piece before); onsets; backwards refused",
       #p2.cuts == 1 and p2.pieces[2].sounds == 2 and near(p2.pieces[2].sound_end, 10 + e3.decayEnd - 0.1) and #p3.cuts == #robot.onsets - 1

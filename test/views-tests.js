@@ -20,7 +20,7 @@ module.exports = async function (check) {
     for (let i = 0; i < n; i++) { const t = i / rate; harsh.push(t >= 16 && (t % 0.75) < 0.15 ? 0.9 : 0.3); loud.push(t < 16 ? 0.1 : 0.8); }
     const doc = { schema: "playhead-analysis", source: { duration: 32 }, curves: { rate, harshness: harsh, loudness: loud }, rhythm: null };
     const v = P.view(doc, "tempo", { source: "harshness" }), w = P.view(doc, "tempo", { source: "harshness", weight: "loudness" });
-    const bpm = r => 40 * Math.pow(2, (v.rows - 1 - r) / 24), colOf = t => v.colAt(t);
+    const bpm = r => 30 * Math.pow(2, (v.rows - 1 - r) / 24), colOf = t => v.colAt(t);
     const strongest = (c0, c1) => { let best = -1, bv = -1; for (let r = 0; r < v.rows; r++) { let s = 0; for (let c = c0; c < c1; c++) s += v.values[r * v.cols + c]; if (s > bv) { bv = s; best = r; } } return { bpm: bpm(best), sum: bv / (c1 - c0) }; };
     const late = strongest(colOf(22), colOf(30)), early = strongest(colOf(2), colOf(10));
     const octave = x => Math.abs(Math.log2(x / 80) - Math.round(Math.log2(x / 80)));

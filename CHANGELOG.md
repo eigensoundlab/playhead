@@ -3,6 +3,25 @@
 ## Unreleased
 
 ### Added
+- **Timing to the sample, and the beat grid** (the infrastructure for rhythm descriptors):
+  - `attacks`: every onset refined to the sample where its level starts to rise, with the band it rises in (low:
+    kick and bass, mid: snare and body, high: hats and cymbals). The frame onsets came about 14 ms early; the
+    attacks are within 0.5 to 0.7 ms (median) on the bench.
+  - `onsetLow`, `onsetMid`, `onsetHigh`: onset strength per band, so `raster:onsetLow` is the kick's bar raster.
+  - `rhythm.grid`: each attack's bar, place in the bar and deviation in ms; `rhythm.bars`: per bar the tightness and
+    each band's offset from the low band (a laid-back snare reads +25 ms); `rhythm.timing`, their medians;
+    `rhythm.swing`, the 8th-note swing ratio.
+  - `rhythm.beatsPerBar` (3/4 told from 4/4, downbeats every 3 beats where the beats clearly fall in threes),
+    `rhythm.downbeatConfidence`, `rhythm.meter` (the evidence for 3 and 4), and the `pulseClarity` curve.
+  - The tempogram reaches 30 to 590 BPM (was 40 to 240): slow phrase pulses below, 16ths and rolls above. The legend
+    gives each document's own range.
+  - REAPER: Split items at sounds cuts at the attacks (to the sample); Analyse prints the timing (tightness, the
+    snare and hat bands against the kick, swing, beats a bar); the new curves can be written as automation.
+- **The descriptor bench** ([experiments/bench](experiments/bench/README.md)): grooves from synthesized drums whose
+  every hit is known to the sample (straight, a laid-back snare, pushed hats, loose timing, swing 1.5 to 3, a waltz,
+  16ths, pulses at 32 and 480 BPM, no beat), with the measures, so old and new descriptors are tested on the same
+  ground. Swing comes out within 0.07, offsets within 0.3 ms, tightness 10.9 ms for 12 ms of random timing, the waltz
+  as 3/4. `test/grid-tests.js` runs it with the tests.
 - **Stretch keeping the attacks** (tool `stretch`, in the lab, the command line and REAPER's Process items): changes the
   length without changing the pitch and keeps every attack as it is. Playhead's onsets (or its event starts), refined to
   the sample where the level starts to rise, mark the attacks; the first 30 ms of each are copied unchanged and placed

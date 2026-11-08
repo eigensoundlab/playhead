@@ -132,6 +132,104 @@ async function fromAnalysis(F, input, opts) {
   if (!PROFILES.includes(opts.profile || "auto")) throw new Error("Playhead.fromAnalysis: unknown profile " + opts.profile);
   return build(F, toBuffer(input), opts, Date.now(), typeof opts.onProgress === "function" ? opts.onProgress : () => {});
 }
+/* ---------------- attacks and the beat grid ---------------- */
+// An onset moved to where its level starts to rise, to the sample: the analysis finds onsets on 11.6 ms frames and
+// labels them up to about 25 ms before the sound. Within 15 ms before to 35 ms after the onset: the 1 ms envelope's
+// highest point and the quietest point before it; then back from the peak to where the envelope was last below a tenth
+// of the way up (searching back, not forward, so the ripple of an earlier sound's low tail is not taken for the rise).
+function refineAttack(x, sr, t) {
+  const o = Math.round(t * sr), a = Math.max(0, o - Math.round(0.015 * sr)), b = Math.min(x.length, o + Math.round(0.035 * sr)), r = Math.max(1, Math.round(0.001 * sr));
+  if (b - a < 4 * r) return t;
+  const env = new Float32Array(b - a); let acc = 0;
+  for (let i = a; i < b; i++) { acc += Math.abs(x[i]); if (i - r >= a) acc -= Math.abs(x[i - r]); env[i - a] = acc / r; }
+  let pk = 0; for (let i = 1; i < env.length; i++) if (env[i] > env[pk]) pk = i;
+  let lo = 0; for (let i = 1; i <= pk; i++) if (env[i] < env[lo]) lo = i;
+  const th = env[lo] + 0.1 * (env[pk] - env[lo]);
+  let i = pk; while (i > lo && env[i - 1] >= th) i--;
+  return (a + Math.max(0, i - r + 1)) / sr;
+}
+const BANDS = ["low", "mid", "high"];
+// Each onset as an attack: its time to the sample and the band it rises in most (low < 200 Hz, mid to 2 kHz, high
+// above), with the three shares
+function attacksOf(F, buf, times, R) {
+  const n = buf.length, x = new Float32Array(n), C = buf.numberOfChannels;
+  for (let c = 0; c < C; c++) { const d = buf.getChannelData(c); for (let i = 0; i < n; i++) x[i] += d[i] / C; }
+  // each band on its own scale, but no band's scale below a tenth of the strongest's (a band that hardly ever rises is
+  // not blown up to look like the others)
+  const own = R.bandEnv.map(e => { const v = Array.from(e).filter(u => u > 0).sort((a, b) => a - b); return v.length ? v[Math.floor(0.99 * (v.length - 1))] || 0 : 0; });
+  const big = Math.max(...own) || 1, tops = own.map(v => Math.max(v, 0.1 * big));
+  return times.map(t => {
+    const ft = refineAttack(x, buf.sampleRate, t), m = Math.floor(ft / F.dt);
+    const s = R.bandEnv.map((e, k) => { let mx = 0; for (let j = Math.max(0, m - 3); j <= Math.min(F.nF - 1, m + 2); j++) mx = Math.max(mx, e[j]); return mx / tops[k]; });
+    const tot = s[0] + s[1] + s[2] || 1, k = s.indexOf(Math.max(...s));
+    return { t: rnd(ft, 5), band: BANDS[k], bands: s.map(v => rnd(v / tot, 3)) };
+  });
+}
+// The attacks on the beat grid. The beat's length comes from a straight line through the attacks that fall on beats
+// over five bars (Theil-Sen, so a late snare or a flam does not tilt it); each bar's downbeat from its low-band attacks
+// on beats (kick, bass) where it has some, else from all its attacks on beats: the grid is where the low end puts the
+// beats, and the other bands' offsets are read against it ("the snare 25 ms behind the kick"). Each attack then takes
+// the nearest place in the beat (the 16ths, and the swung 8th when the music swings) and its deviation from it in ms.
+// Swing: from beats with a single attack inside them, the median place of that attack, as a ratio (1 straight, 2 the
+// triplet feel, 3 dotted; null when too few beats have one). Per bar: each band's median deviation (offsets), and the tightness: the spread of the
+// deviations once each band's offset is taken out (1.4826 x their median absolute deviation, ms), so a laid-back
+// snare is not "loose" and one stray onset does not make a bar so.
+// Returns { grid: [{ t, bar, pos (beats into the bar), dev (ms), band }], bars: [{ start, beat, tightness, offsets }],
+// swing } or null without a beat.
+function gridOf(attacks, beats, downbeats, bpb) {
+  if (beats.length < 8 || downbeats.length < 2) return null;
+  const nb = beats.length, beatAt = t => { let lo = 0, hi = nb - 1; while (hi - lo > 1) { const mid = (lo + hi) >> 1; if (beats[mid] <= t) lo = mid; else hi = mid; } return lo; };
+  const median = v => { if (!v.length) return null; const w = v.slice().sort((a, b) => a - b); return w.length % 2 ? w[w.length >> 1] : (w[w.length / 2 - 1] + w[w.length / 2]) / 2; };
+  // swing from single off-beat attacks
+  const inner = new Map();
+  for (const a of attacks) {
+    const i = beatAt(a.t); if (i >= nb - 1 || a.t < beats[0]) continue;
+    const p = (a.t - beats[i]) / (beats[i + 1] - beats[i]);
+    if (p > 0.1 && p < 0.9) { if (!inner.has(i)) inner.set(i, []); inner.get(i).push(p); }
+  }
+  const single = []; for (const ps of inner.values()) if (ps.length === 1) single.push(ps[0]);
+  const med = single.length >= 8 ? median(single) : null;
+  const swing = med != null && med > 0.4 && med < 0.8 && single.filter(p => Math.abs(p - med) < 0.08).length >= 0.6 * single.length ? med / (1 - med) : null;
+  const swung = swing != null && swing > 1.15 ? swing / (1 + swing) : null;
+  const slots = [0, 0.25, 0.5, 0.75, 1].filter(s => !swung || Math.abs(s - swung) > 0.1).concat(swung ? [swung] : []);
+  // the attacks on beats: [global beat index, time, band]
+  const on = [];
+  for (const a of attacks) {
+    const i = beatAt(a.t);
+    for (const j of [i, i + 1]) if (j >= 0 && j < nb && Math.abs(a.t - beats[j]) < 0.06) { on.push([j, a.t, a.band]); break; }
+  }
+  const theilSen = pts => {
+    const sl = []; for (let i = 0; i < pts.length; i++) for (let j = i + 1; j < pts.length; j++) if (pts[j][0] !== pts[i][0]) sl.push((pts[j][1] - pts[i][1]) / (pts[j][0] - pts[i][0]));
+    return sl.length ? median(sl) : null;
+  };
+  const first = beats.indexOf(downbeats[0]), grid = [], bars = [];
+  for (let k = 0, i0 = first; i0 + bpb < nb; k++, i0 += bpb) {
+    const t0 = beats[i0], t1 = beats[i0 + bpb], per = (t1 - t0) / bpb;
+    let b = theilSen(on.filter(p => p[0] >= i0 - 2 * bpb && p[0] < i0 + 3 * bpb));
+    if (!(b > 0.7 * per && b < 1.3 * per)) b = per;
+    const mine = on.filter(p => p[0] >= i0 && p[0] < i0 + bpb), low = mine.filter(p => p[2] === "low");
+    const a0 = median((low.length ? low : mine).map(p => p[1] - (p[0] - i0) * b));
+    const a = a0 != null && Math.abs(a0 - t0) < 0.06 ? a0 : t0;
+    const rows = [];
+    for (const at of attacks) {
+      const x = (at.t - a) / b;
+      if (x < -0.125 || x >= bpb - 0.125) continue;            // from a 32nd before the downbeat to a 32nd before the next
+      const j = Math.floor(x), q = x - j;
+      let best = slots[0]; for (const sl of slots) if (Math.abs(q - sl) < Math.abs(q - best)) best = sl;
+      const pos = j + best;
+      if (pos < -1e-9 || pos >= bpb - 1e-9) continue;
+      rows.push({ t: at.t, bar: k, pos: rnd(pos, 3), dev: (q - best) * b * 1000, band: at.band });
+    }
+    const offsets = {};
+    for (const band of BANDS) { const m = median(rows.filter(r => r.band === band).map(r => r.dev)); offsets[band] = m == null ? null : rnd(m, 1); }
+    const resid = rows.map(r => r.dev - (offsets[r.band] || 0)), mr = median(resid);
+    const mad = resid.length >= 4 ? median(resid.map(v => Math.abs(v - mr))) : null;
+    for (const r of rows) { r.dev = rnd(r.dev, 1); grid.push(r); }
+    bars.push({ start: rnd(a, 4), beat: rnd(b, 4), tightness: mad == null ? null : rnd(1.4826 * mad, 1), offsets });
+  }
+  // within 15 % of 1 the off-beats are straight (the beat tracker's own frames move them that much)
+  return { grid, bars, swing: swing == null ? null : swing > 0.87 && swing < 1.15 ? 1 : rnd(swing, 3) };
+}
 async function build(F, buf, opts, t0, prog) {
   const profileIn = opts.profile || "auto";
   const profile = profileIn === "auto" ? (F.dur <= 10 ? "sfx" : "music") : profileIn;
@@ -181,6 +279,13 @@ async function build(F, buf, opts, t0, prog) {
     // onset strength (spectral flux, the beat tracker's input): where the hits and attacks are, scaled to its 99th percentile
     const Rr = WL.rhythmOf(F), envS = Array.from(Rr.env).filter(v => v > 0).sort((a, b) => a - b), envTop = envS.length ? envS[Math.floor(0.99 * (envS.length - 1))] || 1 : 1;
     doc.curves.onsetStrength = resample(Rr.env.map(v => Math.min(1, v / envTop)), F, cols, null, "max");
+    // the same per band (low < 200 Hz, mid to 2 kHz, high above: roughly kick, snare, hats), each to its own 99th percentile
+    Rr.bandEnv.forEach((e, k) => {
+      const v = Array.from(e).filter(u => u > 0).sort((a, b) => a - b), top = v.length ? v[Math.floor(0.99 * (v.length - 1))] || 1 : 1;
+      doc.curves["onset" + ["Low", "Mid", "High"][k]] = resample(e.map(u => Math.min(1, u / top)), F, cols, null, "max");
+    });
+    // each onset to the sample where its level starts to rise, with the band it rises in
+    doc.attacks = attacksOf(F, buf, ev.onsetTimes, Rr);
     const s = D.summary;
     doc.descriptors = plain({
       kurtosis: { K: s.kurtosis.K, Kmax: s.kurtosis.Kmax, band: s.kurtosis.band },
@@ -196,7 +301,17 @@ async function build(F, buf, opts, t0, prog) {
   }
   if (profile === "music") {
     const R = WL.rhythmOf(F), St = WL.structureOf(F);
-    doc.rhythm = { tempo: rnd(R.tempo, 2), reliable: !!R.reliable, clarity: rnd(R.medClar, 3), beats: R.beatTimes.map(t => rnd(t, 4)), downbeats: R.downTimes.map(t => rnd(t, 4)) };
+    doc.rhythm = { tempo: rnd(R.tempo, 2), reliable: !!R.reliable, clarity: rnd(R.medClar, 3), beats: R.beatTimes.map(t => rnd(t, 4)), downbeats: R.downTimes.map(t => rnd(t, 4)),
+      beatsPerBar: R.beatsPerBar, downbeatConfidence: rnd(1 - Math.exp(-Math.max(0, R.downConf || 0)), 3),
+      meter: R.meterEvidence ? { 3: rnd(R.meterEvidence[3], 3), 4: rnd(R.meterEvidence[4], 3) } : null };
+    doc.curves.pulseClarity = resample(R.clarity, F, cols, null);
+    // the attacks on the beat grid: place in the bar, deviation in ms, and per bar the tightness and each band's offset
+    const G = R.reliable && doc.attacks ? gridOf(doc.attacks, R.beatTimes, R.downTimes, R.beatsPerBar) : null;
+    if (G) {
+      const med = v => { const w = v.filter(x => x != null).sort((a, b) => a - b); return w.length ? rnd(w[w.length >> 1], 1) : null; };
+      Object.assign(doc.rhythm, { grid: G.grid, bars: G.bars, swing: G.swing,
+        timing: { tightness: med(G.bars.map(b => b.tightness)), offsets: { low: med(G.bars.map(b => b.offsets.low)), mid: med(G.bars.map(b => b.offsets.mid)), high: med(G.bars.map(b => b.offsets.high)) } } });
+    }
     doc.sections = St.segs.map(sg => ({ start: rnd(sg.t0, 3), end: rnd(sg.t1, 3), label: sg.label }));
     // structural change (Foote novelty) and the local pulse (PLP, scaled by its clarity), for lanes and modulation
     const pulse = new Float32Array(F.nF);
@@ -285,7 +400,7 @@ const COMBINE_RULES = {
   lufs: "power sum", loudness: "from the summed LUFS", harshness: "loudness + weighted excess", arousal: "max",
   activity: "max", tension: "max", harmonicTension: "weighted mean", surprise: "max", onsetStrength: "sum", structureNovelty: "max", localPulse: "max",
   n1Kurtosis: "loudest", n2RepetitionHz: "loudest", n4Velocity: "loudest", n5Cpp: "loudest", n5Coherence: "loudest", n6Arrow: "loudest",
-  n7Surprisal: "max", n8Recurrence: "weighted mean", timbreHarshness: "weighted mean"
+  n7Surprisal: "max", n8Recurrence: "weighted mean", timbreHarshness: "weighted mean", onsetLow: "sum", onsetMid: "sum", onsetHigh: "sum", pulseClarity: "max"
 };
 // how far a part's gain moves its 0..1 curves (fixed scales: loudness is (LUFS + 60) / 60, harshness is loudness plus a
 // factor, arousal half loudness)
@@ -362,7 +477,7 @@ function combine(parts, opts) {
       if (lufs[c] == null) { out[c] = null; continue; }
       let v = null;
       if (rule === "max") { for (const p of ps) { const x = val(p, k, c); if (x != null && (v == null || x > v)) v = x; } }
-      else if (rule === "sum") { for (const p of ps) { const x = val(p, k, c); if (x != null) v = (v || 0) + x; } if (v != null && k === "onsetStrength") v = Math.min(1, v); }
+      else if (rule === "sum") { for (const p of ps) { const x = val(p, k, c); if (x != null) v = (v || 0) + x; } if (v != null && /^onset/.test(k)) v = Math.min(1, v); }
       else if (rule === "loudest") { let bw = 0; for (const p of ps) { const x = val(p, k, c); if (x != null && p.power[c] > bw) { bw = p.power[c]; v = x; } } }
       else {    // weighted by each part's power; the excess rules add it to the whole's loudness
         let s = 0, w = 0;
@@ -758,7 +873,8 @@ const CURVE_LABELS = {
   loudness: "loudness", activity: "activity", arousal: "arousal", harshness: "harshness", tension: "tension", harmonicTension: "harmonic tension",
   surprise: "novelty (spectral surprise)", lufs: "loudness (LUFS)", structureNovelty: "structural change", localPulse: "local pulse", onsetStrength: "onset strength (hits)",
   n1Kurtosis: "impulsiveness", n2RepetitionHz: "repetition rate", n4Velocity: "spectral motion", n5Cpp: "periodicity", n5Coherence: "phase coherence",
-  n6Arrow: "time arrow", n7Surprisal: "surprisal", n8Recurrence: "recurrence", timbreHarshness: "timbre harshness"
+  n6Arrow: "time arrow", n7Surprisal: "surprisal", n8Recurrence: "recurrence", timbreHarshness: "timbre harshness",
+  onsetLow: "low onsets (kick)", onsetMid: "mid onsets (snare)", onsetHigh: "high onsets (hats)", pulseClarity: "pulse clarity"
 };
 const TICK_KINDS = ["events", "onsets", "beats", "downbeats", "novelty"], FORMS = ["lanes", "overlay"], SHAPES = ["base", "mirror", "horizon", "line"];
 const LOOKS = {
@@ -779,7 +895,7 @@ const LOOKS = {
   surprise: { name: "Hits and surprise", desc: "For sound effects. As Sound character, with spectral surprise (where the sound turns into something new) in place of impulsiveness.", code: "form:overlay,shape:mirror,lane:onsetStrength,lane:harshness,lane:n7Surprisal,ticks:onsets" },
   hits: { name: "Hits and pulse", desc: "The waveform with onset strength (where the hits are) and the local pulse as lanes, beats and bar lines.", code: "wave,lane:onsetStrength,lane:localPulse,ticks:beats+downbeats" },
   raster: { name: "Bar raster", desc: "For music. A row per bar, top to bottom, like a drum pattern: onset strength through each bar, with sections. Bars that hit the same way line up in columns; fills, breaks and drops show as rows that differ.", code: "raster:onsetStrength,sections" },
-  tempogram: { name: "Tempogram", desc: "For music. How strongly each tempo (40 to 240 BPM, fast at the top) is present over time. A steady beat is a bright line, a tempo change bends it, double and half tempo show as fainter lines. With bar lines.", code: "spec:tempo,ticks:downbeats" },
+  tempogram: { name: "Tempogram", desc: "For music. How strongly each tempo (30 to 590 BPM, fast at the top) is present over time. A steady beat is a bright line, a tempo change bends it, double and half tempo show as fainter lines. With bar lines.", code: "spec:tempo,ticks:downbeats" },
   repetition: { name: "Repetition (lag view)", desc: "For music. How alike each moment is to the moment a given time before (that time, the lag, going up). A bright horizontal line means the music repeats what played that long ago. With sections.", code: "spec:lag,sections" },
   modulation: { name: "Modulation spectrogram", desc: "For any sound. How fast its level pulses, and how strongly, over time: rhythm below about 4 Hz, fluctuation, tremolo and flutter from 4 to 20 Hz, roughness above (fast at the top). Engines, rotors, tremolo, growls and buzzes show as bright rows at their rate; steady tones and plain noise stay dark.", code: "spec:mod" },
   rhythms: { name: "Curve rhythms (scalogram)", desc: "Research view, for any sound. The periodic patterns in onset strength, from fast (top) to slow (bottom): beat, bar and phrase in music, flutter and tremolo in effects. Fainter near the ends, where the sound is too short to be sure of a period.", code: "scalogram:onsetStrength" },
@@ -869,7 +985,7 @@ function describeLook(layers, doc) {
   for (const l of layers || []) {
     if (l.type === "wave") parts.push(l.colour && has(l.colour) ? L("lib.legend.colour", "colour: {curve}", { curve: lab(l.colour) }) : L("lib.legend.waveform", "waveform"));
     else if (l.type === "spec" && !l.of) parts.push(!doc || doc.spectrum ? L("lib.legend.spectrogram", "spectrogram (mel, low at the bottom)") : L("lib.legend.spectrogramAbsent", "spectrogram (not in this analysis)"));
-    else if (l.type === "spec" && l.of === "tempo") parts.push((l.cyclic ? L("lib.legend.tempogramCyclic", "tempogram, octaves folded (80 to 160 BPM; a tempo, its half and its double share a row)") : L("lib.legend.tempogram", "tempogram (40 to 240 BPM, fast at the top)"))
+    else if (l.type === "spec" && l.of === "tempo") parts.push((l.cyclic ? L("lib.legend.tempogramCyclic", "tempogram, octaves folded (80 to 160 BPM; a tempo, its half and its double share a row)") : L("lib.legend.tempogram", "tempogram ({lo} to {hi} BPM, fast at the top)", { lo: tempoRange(doc, l)[0], hi: tempoRange(doc, l)[1] }))
       + (l.source === "speed" ? L("lib.legend.tempoSpeed", " of how fast the descriptors change together") : l.source ? L("lib.legend.tempoOf", " of the rises in {curve}", { curve: CURVE_LABELS[l.source] || l.source }) : "")
       + (l.weight ? L("lib.legend.tempoWeight", ", grey where {curve} is low", { curve: CURVE_LABELS[l.weight] || l.weight }) : "")
       + (!doc || l.source || (doc.rhythm && doc.rhythm.tempogram) ? "" : L("lib.legend.musicAbsent", " (music only; not in this analysis)")));
@@ -945,7 +1061,7 @@ function curveValue(arr, rate, ta, tb) {
 //   bar raster  one row per bar (or per 4 bars), top to bottom; left to right is the position in the bar; colour is a
 //               curve (onset strength by default). Bars that hit the same way line up; fills, breaks and drops stand out.
 //               Needs a beat (music profile)
-//   tempogram   how strongly each tempo is present over time, 40 to 240 BPM on a log scale, fast at the top. A steady
+//   tempogram   how strongly each tempo is present over time, 30 to 590 BPM on a log scale, fast at the top. A steady
 //               beat is a bright line, a tempo change bends it, double and half tempo are fainter lines. "cyclic" folds
 //               the octaves onto one (80 to 160 BPM, so the common dance tempi sit mid-strip rather than on its edge), so a
 //               tempo and its half and double share a row (music profile)
@@ -1055,10 +1171,10 @@ function curveTempogram(doc, name) {
   for (let k = -K; k <= K; k++) { const v = Math.exp(-0.5 * (k / sg) ** 2); gk.push(v); gs += v; }
   const env = new Float64Array(n);
   for (let i = 0; i < n; i++) { let v = 0; for (let k = -K; k <= K; k++) { const j = i + k; if (j >= 0 && j < n) v += gk[k + K] * sig[j]; } env[i] = v / gs; }
-  // 8 s windows every 0.5 s; the autocorrelation with the mean removed, 40 to 240 BPM at 24 rows per octave
+  // 8 s windows every 0.5 s; the autocorrelation with the mean removed, 30 to 590 BPM at 24 rows per octave
   const W = Math.min(n, Math.round(8 * rate)), hop = Math.max(1, Math.round(0.5 * rate)), NF = (() => { let p = 1; while (p < 2 * W) p <<= 1; return p; })();
   const fft = WL.getFFT(NF), win = Float64Array.from({ length: W }, (_, k) => 0.5 - 0.5 * Math.cos(2 * Math.PI * (k + 0.5) / W));
-  const bpmMin = 40, perOctave = 24, bins = Math.floor(perOctave * Math.log2(240 / bpmMin) + 1e-9) + 1;
+  const bpmMin = 30, perOctave = 24, bins = Math.floor(perOctave * Math.log2(600 / bpmMin) + 1e-9) + 1;
   const cols = []; for (let ctr = 0; ctr < n; ctr += hop) cols.push(ctr);
   const C = cols.length, data = new Float32Array(C * bins), strength = new Float64Array(C), re = new Float64Array(NF), im = new Float64Array(NF);
   for (let w = 0; w < C; w++) {
@@ -1082,6 +1198,13 @@ function curveTempogram(doc, name) {
   const u8 = new Uint8Array(C * bins); for (let i = 0; i < u8.length; i++) u8[i] = Math.round(255 * Math.min(1, data[i] / pk));
   return { tg: { bpmMin, perOctave, bins, start: cols[0] * dt, hop: hop * dt, columns: C }, u8 };
 }
+// the fastest tempo a tempogram reaches (BPM), to the nearest 10 above 100 (240 for documents of Playhead 0.3, 590 now)
+const tempoTop = tg => { const v = tg.bpmMin * Math.pow(2, (tg.bins - 1) / tg.perOctave); return v >= 100 ? Math.round(v / 10) * 10 : Math.round(v); };
+// the range of the tempogram a document draws: its own, or (without one) the range the analysis gives now
+function tempoRange(doc, l) {
+  const tg = !l.source && doc && doc.rhythm && doc.rhythm.tempogram;
+  return tg ? [tg.bpmMin, tempoTop(tg)] : [30, 590];
+}
 function tempoView(doc, cyclic, of, weight) {
   let tg = doc.rhythm && doc.rhythm.tempogram, u8 = tg && specBytes(tg);
   if (of && of !== "onsets") { const t = curveTempogram(doc, of); tg = t && t.tg; u8 = t && t.u8; }
@@ -1098,7 +1221,8 @@ function tempoView(doc, cyclic, of, weight) {
     for (let i = 0; i < values.length; i++) values[i] /= pk;
   }
   const rowOf = bpm => cyclic ? P - 1 - P * Math.log2(bpm / FOLD) : B - 1 - P * Math.log2(bpm / tg.bpmMin);
-  const yTicks = (cyclic ? [90, 120, 140] : [60, 90, 120, 180]).map(bpm => ({ row: rowOf(bpm) + 0.5, text: String(bpm) })).filter(t => t.row > 0.5 && t.row < rows - 0.5);
+  // the tempi marked on the axis: the beat range, and the slow and fast ends where the tempogram reaches them
+  const yTicks = (cyclic ? [90, 120, 140] : [60, 90, 120, 180].concat(tempoTop(tg) > 400 ? [360] : [])).map(bpm => ({ row: rowOf(bpm) + 0.5, text: String(bpm) })).filter(t => t.row > 0.5 && t.row < rows - 0.5);
   const out = { kind: "tempo", cyclic: !!cyclic, of: of && of !== "onsets" ? of : null, weight: null, rows, cols: C, values, yTicks, colAt: t => Math.max(0, Math.min(C - 1, Math.round((t - tg.start) / tg.hop))) };
   const wc = weight && doc.curves && doc.curves[weight];
   if (Array.isArray(wc) && wc.some(v => v != null)) {

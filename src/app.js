@@ -692,14 +692,14 @@ function drawStripFor(cv, spec, f, cols, h, P, opts) {
 const PHAPI = window.Playhead || null;
 const CMP_COLOURS = ["", "loudness", "activity", "arousal", "harshness", "timbreHarshness", "tension", "harmonicTension", "surprise"];
 const CMP_LINES = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "structureNovelty", "localPulse", "onsetStrength", "n1Kurtosis", "n4Velocity", "n6Arrow", "n7Surprisal"];
-const CMP_LANES = ["structureNovelty", "localPulse", "onsetStrength", "loudness", "activity", "arousal", "harshness", "timbreHarshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
+const CMP_LANES = ["structureNovelty", "localPulse", "pulseClarity", "onsetStrength", "onsetLow", "onsetMid", "onsetHigh", "loudness", "activity", "arousal", "harshness", "timbreHarshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
 const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Bar lines"], ["beats", "Beats"], ["onsets", "Onsets"], ["events", "Events"], ["novelty", "Novelty (top)"]];
 const CMP_SCULPT = ["", "loudness", "arousal", "activity", "harshness", "tension", "onsetStrength", "localPulse"];
 const CMP_MAX_LANES = 3, CMP_HEIGHTS = [64, 96, 128, 160, 192];
 const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), h: store.get("lookHeight", 128), refs: store.get("lookRefs", true) };
 const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"], ["raster", "Bar raster: a row per bar"], ["raster4", "Phrase raster: a row per 4 bars"], ["tempo", "Tempogram"], ["tempocyc", "Tempogram, octaves folded"], ["lag", "Repetition (lag view)"], ["mod", "Modulation spectrogram"], ["scale", "Curve rhythms (scalogram)"]];
 // the views that show one chosen curve (the raster and the scalogram), and the curves offered for them
-const CMP_VIEW_CURVES = ["onsetStrength", "loudness", "activity", "localPulse", "harshness", "timbreHarshness", "arousal", "tension", "surprise", "structureNovelty", "n1Kurtosis", "n7Surprisal"];
+const CMP_VIEW_CURVES = ["onsetStrength", "onsetLow", "onsetMid", "onsetHigh", "loudness", "activity", "localPulse", "harshness", "timbreHarshness", "arousal", "tension", "surprise", "structureNovelty", "n1Kurtosis", "n7Surprisal"];
 const cmpRaster = bg => bg === "raster" || bg === "raster4", cmpCurveView = bg => cmpRaster(bg) || bg === "scale";
 // Playhead tempograms: the tempogram of a curve's rises (or of how fast all descriptors change), and a weighting curve
 const CMP_TEMPO_OF = ["", "speed", "timbreHarshness", "harshness", "loudness", "tension", "activity", "n1Kurtosis"];
