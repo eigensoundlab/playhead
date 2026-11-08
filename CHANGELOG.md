@@ -14,7 +14,9 @@
   at `/listening/`): do the search's arrangements sound punchier, bigger or cleaner than the rough placement they start
   from? 38 blind A/B answers in about 8 minutes, from the arrangement experiment's sessions, loudness matched, with
   two checks and four repeats. The page sends nothing; listeners save a file and send it through a GitHub form. The
-  analysis treats listeners as the unit; simulations put the aim at 16 listeners.
+  analysis treats listeners as the unit; simulations put the aim at 16 listeners. The lab links to it from its
+  header and footer (in all six languages; the test itself is in English), and `tools/serve.js` serves it at
+  `/listening/` as the site does.
 - **REAPER: the views of rhythm and form in the strip window** (package 0.2.0): bar raster, tempogram, repetition,
   modulation spectrogram and curve rhythms, drawn by the Lua port as the library draws them (checked at 38,300 points
   of 26 strips against `drawStrip`, and as numbers against `Playhead.view`). On the bar raster the cursors are drawn

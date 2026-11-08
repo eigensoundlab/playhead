@@ -10,11 +10,13 @@ const path = require("path");
 
 const root = path.resolve(__dirname, "..");
 const port = Number(process.argv[2]) || 8080;
-const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".wav": "audio/wav", ".svg": "image/svg+xml", ".png": "image/png" };
+const types = { ".html": "text/html; charset=utf-8", ".js": "text/javascript; charset=utf-8", ".css": "text/css; charset=utf-8", ".json": "application/json", ".wav": "audio/wav", ".flac": "audio/flac", ".svg": "image/svg+xml", ".png": "image/png" };
 
 http.createServer((req, res) => {
   const url = decodeURIComponent((req.url || "/").split("?")[0]);
-  let file = path.normalize(path.join(root, url === "/" ? "index.html" : url));
+  // the listening test lives at /listening/ on the site (tools/build.js copies it there)
+  const rel = url === "/" ? "index.html" : url.startsWith("/listening/") ? path.join("experiments", "listening", "site", url.slice(11) || "index.html") : url;
+  let file = path.normalize(path.join(root, rel));
   if (!file.startsWith(root)) { res.writeHead(403); res.end(); return; }
   fs.readFile(file, (err, data) => {
     if (err) { res.writeHead(404); res.end("Not found"); return; }

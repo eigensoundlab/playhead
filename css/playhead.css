@@ -35,6 +35,8 @@ header .langbox{margin-left:auto;display:flex;flex-direction:column;align-items:
 header .langcomment{font-size:12.5px}
 h1{font-size:22px;font-weight:600;letter-spacing:-.01em;margin:0;text-wrap:balance}
 header p{margin:6px 0 0;color:var(--ink2);max-width:72ch}
+header p.invite{font-size:13.5px}
+header p.invite a{color:var(--accent);font-weight:600;text-underline-offset:2px}
 h2{font-size:14px;font-weight:600;margin:0;text-wrap:balance}
 .sechead{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin:26px 0 8px}
 .sechead p{margin:0;color:var(--ink2);font-size:13px;max-width:80ch}
