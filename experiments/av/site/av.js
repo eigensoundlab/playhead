@@ -7,7 +7,7 @@
 "use strict";
 (function () {
   const $ = id => document.getElementById(id), D = window.AVDrivers, Q = new URLSearchParams(location.search);
-  const st = { sr: 0, channels: null, name: "", truth: null, S: null, doc: null, P: null, dur: 0, ctx: null, src: null, ab: null, playing: false, t0: 0, offset: 0, spin: 0, last: 0, job: 0 };
+  const st = { sr: 0, channels: null, name: "", truth: null, S: null, doc: null, P: null, dur: 0, ctx: null, src: null, ab: null, playing: false, t0: 0, offset: 0, spin: 0, spinP: 0, last: 0, job: 0 };
   let scene = null;
   const stages = [$("stageS"), $("stageP")], status = t => { $("status").textContent = t; }, progress = p => { $("prog").firstElementChild.style.width = Math.round(100 * p) + "%"; };
   const fmt = (v, d) => (v == null || !isFinite(v) ? "–" : Number(v).toFixed(d == null ? 2 : d));
@@ -78,13 +78,14 @@
     if (st.ctx.state === "suspended") await st.ctx.resume();
     if (!st.ab || st.ab.sampleRate !== st.sr) { st.ab = st.ctx.createBuffer(st.channels.length, st.channels[0].length, st.sr); st.channels.forEach((c, i) => st.ab.copyToChannel(c, i)); }
     if (st.offset >= st.dur - 0.05) st.offset = 0;
+    if (st.offset === 0) st.spin = st.spinP = 0;
     const src = st.ctx.createBufferSource(); src.buffer = st.ab; src.connect(st.ctx.destination);
     src.start(0, st.offset); st.src = src; st.t0 = st.ctx.currentTime - st.offset; st.playing = true; st.last = performance.now();
     src.onended = () => { if (st.src === src) { st.offset = Math.min(st.dur, now()); st.playing = false; st.src = null; $("play").textContent = "Play"; } };
     $("play").textContent = "Pause"; requestAnimationFrame(loop);
   }
   function stop() { if (st.src) { st.offset = now(); const s = st.src; st.src = null; try { s.stop(); } catch (e) { /* already stopped */ } } st.playing = false; $("play").textContent = "Play"; }
-  function seek(t) { const was = st.playing; stop(); st.offset = Math.max(0, Math.min(st.dur, t)); if (was) play(); else frame(true); }
+  function seek(t) { const was = st.playing; stop(); st.offset = Math.max(0, Math.min(st.dur, t)); if (st.offset === 0) st.spin = st.spinP = 0; if (was) play(); else frame(true); }
   $("play").onclick = () => (st.playing ? stop() : play());
   for (const [id, k] of [["tlS", 0], ["tlP", 1]]) $(id).addEventListener("click", e => { if (!st.dur) return; const r = $(id).getBoundingClientRect(); seek((e.clientX - r.left) / r.width * st.dur); });
   $("source").onchange = () => { if ($("source").value === "file") $("file").click(); else loadDemo().then(analyse); };
@@ -97,11 +98,13 @@
     if (!scene || !st.S) return;
     const t = now(), nowMs = performance.now(), dt = still ? 0 : Math.min(0.1, (nowMs - st.last) / 1000);
     st.last = nowMs;
+    // where a side knows no bar (the usual side never, Playhead's before its first trusted downbeat) its hand spins with
+    // its level, by the same rule on both sides
     const dS = D.standardDrive(st.S, t, st.spin);
-    st.spin -= dt * (0.8 + 2.5 * dS.level);                      // the usual side has no bar: its hand spins with the level
+    st.spin -= dt * (0.8 + 2.5 * dS.level);
     const safe = $("safe").checked, cap = d => { d.flash *= safe ? 0.35 : 0.8; return d; };
     scene.draw(0, cap(dS), t);
-    if (st.P) scene.draw(1, cap(st.P.drive(t)), t);
+    if (st.P) { const dP = st.P.drive(t); dP.spin = st.spinP; st.spinP -= dt * (0.8 + 2.5 * dP.level); scene.draw(1, cap(dP), t); }
     for (const id of ["tlS", "tlP"]) $(id).querySelector(".cursor").style.left = (100 * t / Math.max(st.dur, 1e-9)) + "%";
     if (st.playing && t >= st.dur) stop();
   }

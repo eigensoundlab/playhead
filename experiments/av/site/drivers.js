@@ -40,9 +40,13 @@
       hue: new Float32Array(n), trend: new Float32Array(n), rough: new Float32Array(n), bassAtt: new Float32Array(n), kicks: [], snares: [], hats: [], flashes: [] };
     const smooth = new Float64Array(half), re = new Float64Array(N), im = new Float64Array(N);
     const avg = [0, 0, 0], prevRel = [0, 0, 0], lastBeat = [-1e9, -1e9, -1e9], lists = [out.kicks, out.snares, out.hats];
-    let env = 0, pk = 1e-4, cent = 0, slow = 0, long = 0, fast = 0, lastFlash = -1e9, att = 0, rough = 0;
+    // a fair start: the averages are the mean of what has been heard so far until their window is full (no rise from
+    // zero in the first seconds, which would read as a build and a level jump), and the automatic gain starts from a
+    // reference of -20 dBFS RMS (so the first sound is not by definition the loudest)
+    let env = 0, pk = 0.1, cent = null, slow = null, long = null, fast = null, lastFlash = -1e9, att = null, rough = null;
     const ka = Math.exp(-1 / (FPS * 0.01)), kr = Math.exp(-1 / (FPS * 0.25)), kpk = Math.exp(-1 / (FPS * 20));
-    const ema = s => 1 - Math.exp(-1 / (FPS * s));
+    let frame = 0;
+    const ema = s => Math.max(1 - Math.exp(-1 / (FPS * s)), 1 / (frame + 1)), step = (v, x, s) => (v == null ? x : v + ema(s) * (x - v));
     for (let i = 0; i < n; i++) {
       const end = Math.min(x.length, Math.round((i + 1) / FPS * sr));
       // the analyser: the last 2048 samples, Blackman window, magnitude / N, smoothed over frames, in dB as bytes
@@ -63,7 +67,7 @@
       // the level: an RMS follower over the last 1024 samples, against its own slowly falling peak (an automatic gain)
       let e = 0; for (let s = Math.max(0, end - 1024); s < end; s++) e += x[s] * x[s];
       const rms = Math.sqrt(e / 1024), k = rms > env ? ka : kr;
-      env = k * env + (1 - k) * rms; pk = Math.max(env, pk * kpk);
+      env = k * env + (1 - k) * rms; pk = Math.max(env, pk * kpk, 0.01); frame = i;
       const level = clamp01(env / pk); out.level[i] = level;
       // MilkDrop's bands against their running average, and their beats
       const t = i / FPS, rels = [];
@@ -75,13 +79,13 @@
         prevRel[b] = rel;
       }
       out.bass[i] = clamp01(Math.sqrt(rels[0]) / 2); out.mid[i] = clamp01(Math.sqrt(rels[1]) / 2); out.treb[i] = clamp01(Math.sqrt(rels[2]) / 2);
-      att += ema(0.15) * (out.bass[i] - att); out.bassAtt[i] = att;
-      rough += ema(0.1) * (clamp01((rels[2] - 1) / 1.5) - rough); out.rough[i] = rough;
+      att = step(att, out.bass[i], 0.15); out.bassAtt[i] = att;
+      rough = step(rough, clamp01((rels[2] - 1) / 1.5), 0.1); out.rough[i] = rough;
       // colour: the spectral centroid from 100 Hz to 10 kHz on a log scale
-      const c = den > 1e-12 ? clamp01(Math.log2(num / den / 100) / Math.log2(100)) : cent;
-      cent += ema(0.05) * (c - cent); out.hue[i] = cent;
+      const c = den > 1e-12 ? clamp01(Math.log2(num / den / 100) / Math.log2(100)) : cent == null ? 0.5 : cent;
+      cent = step(cent, c, 0.05); out.hue[i] = cent;
       // builds and drops the usual way: the level over 2 s against its 16 s average, and a fast jump over the 2 s level
-      fast += ema(0.05) * (level - fast); slow += ema(2) * (level - slow); long += ema(16) * (level - long);
+      fast = step(fast, level, 0.05); slow = step(slow, level, 2); long = step(long, level, 16);
       out.trend[i] = clamp01((slow / Math.max(long, 1e-3) - 1) * 2.5);
       if (fast - slow > 0.35 && t - lastFlash > 2) { out.flashes.push({ t, s: 1 }); lastFlash = t; }
     }

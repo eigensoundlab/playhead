@@ -35,6 +35,16 @@ computed from the decoded sound rather than read from a playing AnalyserNode so 
 and the page can show any moment, but it is the same arithmetic. Playhead's analysis runs once, in a worker, before
 playing. "Reduce flashing" (on by default) caps the drop's flash.
 
+**Both sides start alike.** Before the first frame neither side has heard anything. The usual side's averages are the
+mean of what it has heard so far until their window is full, and its automatic gain starts from a reference of
+-20 dBFS RMS; a first version let them rise from zero, which in the first seconds read as a full level, a build
+(streaks) and a level-jump flash, and hid that its energy trend does rise in the build (0.50 inside, 0.27 elsewhere;
+it was 0.57 against 0.54). Where a side knows no bar (the usual side never, Playhead's before its first trusted
+downbeat) its hand spins with its level by the same rule. What still differs at the start is what each side reads:
+the colours (spectral centroid against the section), and the rings (the analyser's energy per octave, lit wherever
+anything sounds, against Playhead's hits per octave on the grid, with only a dim floor of what sounds where there is
+no grid yet, as in the demo's intro).
+
 ## The demo
 
 [`experiments/bench/arrangement.js`](../bench/arrangement.js): 64 s at 124 BPM, synthesized in the page with every hit
@@ -51,8 +61,8 @@ What each side found (`test/grid-tests.js` checks the Playhead column):
 | Hats (190) | 133 (186 triggers), +9 ms | **168** (237 triggers), -1 ms |
 | Section boundaries (5) | no such signal | 5, one other |
 | Fill and break | no such signal | both, no other fill |
-| Build (31.0 to 38.7 s) | energy trend 0.57 inside, 0.54 elsewhere | 30.96 to 38.70 s, overlap 1.00 |
-| Drop (38.7 s) | no level jump there (6 elsewhere) | 14 ms off |
+| Build (31.0 to 38.7 s) | energy trend 0.50 inside, 0.27 elsewhere (no start, end or drop) | 30.96 to 38.70 s, overlap 1.00 |
+| Drop (38.7 s) | no level jump there (5 elsewhere) | 14 ms off |
 | Pass-by (27.1 s, 25 m/s) | no such signal | 23 ms off, 24.3 m/s |
 | Distortion (the stab) | treble roughness 0.38 in it, 0.29 before | distortion 0.16 in it, 0.08 before |
 
@@ -66,8 +76,9 @@ trigger in its window, so with 16th hats 121 ms apart one trigger could count fo
 - **Where the music is, Playhead's side knows it.** Kicks, snares and hats land on their hits with no latency; the
   hand keeps the bar; the colours change with the sections; the build runs exactly from its section start to the drop
   and the drop flashes on it, the fill and the break show, and the pass-by crosses the scene at the moment it passes. The usual side has no signal for sections, fills, breaks or a
-  pass-by, flashes on level jumps in the first 20 seconds and not at the drop, and its energy trend does not tell the
-  build from the rest, since the build is not louder.
+  pass-by; it flashes on level jumps (the groove's entry and four others) but not at the drop; and its energy trend does
+  rise in the build (0.50 against 0.27 elsewhere), though it gives no start, end or drop, since the build is not
+  louder.
 - **Snares the usual way are mostly missed**: the mid band jumping over its own average fires 119 times but on only
   29 of the 81 snares.
 - **Hats**: Playhead's high-band hits find 168 of 190, the usual treble beats 133. Playhead's attacks alone found 117:
