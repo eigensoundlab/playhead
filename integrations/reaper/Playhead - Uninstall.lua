@@ -30,6 +30,7 @@ local function norm(p)
 end
 
 local function main()
+  if not R.resource or R.resource == "" then R.message("REAPER's resource folder is not known; nothing was removed.", TITLE) return end
   local text = "Remove Playhead for REAPER?\n\n" ..
     "- its actions from the action list\n" ..
     "- its files in\n    " .. scripts_dir .. "\n  (with the Playhead command line there)\n" ..
