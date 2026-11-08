@@ -9,6 +9,9 @@
 //   playhead analyze - --sr 44100 --channels 2 [...]   raw interleaved float32 (little-endian) samples on stdin
 //   playhead markers <file> [--format tsv|csv|json] [--kinds sections,events,downbeats,onsets] [--profile ...]
 //   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]
+//   playhead arrange --parts parts.json [--goal punch|big|clean] [--range s] [--gains lo,hi] [--count N] [--seed N]
+//                         layers: parts.json is [{ doc: "a.playhead.json", offset, gain, start, end, lock }]; prints the
+//                         candidates (JSON), as Playhead.arrange
 //   playhead tools        list the processing tools and their parameters (JSON)
 //   playhead version
 //
@@ -28,6 +31,7 @@ const HELP = `Playhead ${Playhead.version}: overview curves, events, sections an
   playhead analyze - --sr 44100 --channels 2 [...]     (raw interleaved float32 samples on stdin)
   playhead markers <file> [--format tsv|csv|json] [--kinds sections,events,downbeats,onsets]
   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]
+  playhead arrange --parts parts.json [--goal punch|big|clean] [--range s] [--gains lo,hi] [--count N] [--seed N]
   playhead tools
   playhead version
 
@@ -127,6 +131,25 @@ async function main() {
       process.stderr.write("wrote " + target + "\n");
     }
     console.log(r.report.join("\n"));
+    return;
+  }
+  if (cmd === "arrange") {
+    // layers, each a document (a .playhead.json file, or an audio file analysed with the sfx profile) with where it
+    // sits (offset, s), its gain (dB) and the part of the file heard (start, end, s)
+    if (!o.parts) fail("arrange needs --parts parts.json ([{ doc, offset, gain, start, end, lock }])");
+    let spec; try { spec = JSON.parse(fs.readFileSync(o.parts, "utf8")); } catch (e) { fail("cannot read " + o.parts + ": " + e.message); }
+    if (!Array.isArray(spec) || spec.length < 2) fail("arrange needs two parts or more");
+    const base = path.dirname(o.parts), parts = [];
+    for (const p of spec) {
+      const f = path.resolve(base, String(p.doc || ""));
+      let doc;
+      if (/\.json$/i.test(f)) { try { doc = JSON.parse(fs.readFileSync(f, "utf8")); } catch (e) { fail("cannot read " + f + ": " + e.message); } }
+      else doc = await Playhead.analyze(read(f, o), { profile: "sfx", assetClass: "sfx", name: path.basename(f) });
+      parts.push({ doc, offset: Number(p.offset) || 0, gain: Number(p.gain) || 0, start: p.start == null ? undefined : Number(p.start), end: p.end == null ? undefined : Number(p.end), lock: !!p.lock });
+    }
+    const gr = o.gains ? o.gains.split(",").map(Number) : undefined;
+    const r = Playhead.arrange(parts, { goal: o.goal || "punch", range: o.range ? Number(o.range) : undefined, gainRange: gr, count: o.count ? Number(o.count) : undefined, seed: o.seed ? Number(o.seed) : undefined });
+    console.log(JSON.stringify(r, null, o.pretty ? 1 : 0));
     return;
   }
   fail("unknown command " + cmd + "\n\n" + HELP);

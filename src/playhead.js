@@ -475,6 +475,9 @@ function combine(parts, opts) {
 //   Playhead.arrange(parts, opts)  searches offsets and gains for opts.goal ("punch", "big" or "clean", or weights over
 //     the scores below) and returns { goal, baseline, candidates: [{ parts: [{ offset, gain }], score, measures,
 //     changes }], evaluated, ms }. Parts with lock: true stay as they are; without any, the loudest part stays.
+//     A part may be trimmed (measureParts and arrange): start and end, in seconds of its document, are the part of
+//     the file that is heard (as an editor's item that starts later in its file or ends early); offset still says
+//     where the document's 0 sits.
 //     opts: range (seconds each part may move, default 0.25), gainRange ([lowest, highest] change in dB, default
 //     [-6, 3]; each dB of change costs 0.004 of score, so turning layers down is not a free win), minOffset (default
 //     0), maxOffset, count (candidates, default 6), restarts, steps, seed, maxHarshness (above it the score drops,
@@ -517,8 +520,12 @@ function prepareParts(parts) {
       spec = new Float64Array(n * B);
       for (let i = 0; i < n; i++) { const j = Math.min(cols - 1, Math.floor((i + 0.5) / rate / dur * cols)); for (let b = 0; b < B; b++) spec[i * B + b] = P[j * B + b]; }
     }
-    const s = d.summary && d.summary.soundStart, on = (d.onsets || []).slice();
-    if (s != null && !(on.length && on[0] - s < 0.05)) on.unshift(s);       // a part that starts with sound starts with an onset
+    // a trimmed part: silent outside start..end; where its first heard moment has sound, that is an onset
+    const t0 = p.start > 0 ? p.start : 0, t1 = p.end > t0 ? p.end : Infinity, trimmed = t0 > 0 || t1 < Infinity;
+    if (trimmed) for (let i = 0; i < n; i++) { const t = (i + 0.5) / rate; if (t < t0 || t >= t1) { pow[i] = 0; loud[i] = 0; if (harsh) harsh[i] = 0; if (spec) spec.fill(0, i * B, i * B + B); } }
+    const s = trimmed ? Math.max(t0, (d.summary && d.summary.soundStart) || 0) : d.summary && d.summary.soundStart;
+    const on = (d.onsets || []).filter(t => t >= t0 && t < t1);
+    if (s != null && !(on.length && on[0] - s < 0.05) && (!trimmed || pow[Math.min(n - 1, Math.floor(s * rate))] > 0)) on.unshift(s);       // a part that starts with sound starts with an onset
     return { doc: d, n, pow, loud, harsh, spec, onsets: on, offset: p.offset || 0, gain: p.gain || 0, lock: !!p.lock };
   });
   return { ps: prepared, rate, B, low: bandOf(120) };

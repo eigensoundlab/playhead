@@ -59,6 +59,12 @@ module.exports = async function (check) {
     const distinct = a.candidates.every((c, i) => a.candidates.slice(0, i).every(q => c.parts.some((p, k) => Math.abs(p.offset - q.parts[k].offset) >= 0.015 || Math.abs(p.gain - q.parts[k].gain) >= 1.5)));
     check("arrange: punch moves the click onto the body's attack", best ? "click at " + moved + " s, score " + a.baseline.score + " → " + best.score + "; " + a.evaluated + " tried in " + a.ms + " ms" : "no candidate",
       !!best && a.locked[0] === 1 && Math.abs(moved - 0.16) <= 0.011 && best.measures.overlap === 1 && best.score > a.baseline.score && JSON.stringify(a.candidates) === JSON.stringify(b.candidates) && distinct);
+    // trimmed parts (an editor's item that starts later in its file or ends early): a part trimmed to after its sound
+    // adds nothing; the body cut at 80 ms has a short tail
+    const alone = P.measureParts([{ doc: dbo, offset: 0.16 }]), withSilent = P.measureParts([{ doc: dbo, offset: 0.16 }, { doc: dc, offset: 0.1, start: 0.5 }]);
+    const cut = P.measureParts([{ doc: dbo, offset: 0.16, end: 0.08 }]);
+    check("arrange: a trimmed part is heard only between its start and end", "tail " + alone.tail + " s, trimmed body " + cut.tail + " s; silent click adds " + (withSilent.peakLufs - alone.peakLufs).toFixed(2) + " LU",
+      Math.abs(withSilent.peakLufs - alone.peakLufs) < 1e-6 && Math.abs(withSilent.tail - alone.tail) < 1e-6 && cut.tail < 0.12 && alone.tail > 0.3);
     // a clip of 34 ms has 3 columns at 100 per second, so its rate is rounded (88 per second): it still combines, on the
     // longer part's grid
     const tiny = await P.analyze({ sampleRate: SR, channels: [click.subarray(0, Math.round(0.034 * SR))] }, o);

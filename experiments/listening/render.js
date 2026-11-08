@@ -3,7 +3,8 @@
 //
 // The stimuli of the listening test (see README.md), from the arrangements of experiments/arrange (results.json):
 //   per session   the rough placement and the search's best candidate for each goal (punch, big, clean), mixed from the
-//                 CC0 Sonic Pi samples exactly as arrange.js mixes them
+//                 CC0 Sonic Pi samples exactly as arrange.js mixes them; 16 sessions (8 drum kits, 8 varied), of
+//                 which each listener hears 8: one of each pair (session k, session k + 8)
 //   two checks    with an answer anyone hears: a clean hit against the same hit with its parts 45 and 90 ms late
 //                 ("cleaner"), and a big hit against the same hit without its sub and tail ("bigger")
 // Every stimulus is set to the same maximum momentary loudness (ITU-R BS.1770, 400 ms), so that level does not decide
@@ -98,7 +99,8 @@ const r3 = v => (v == null ? null : Math.round(v * 1000) / 1000);
       gain: { predicted: r3(byId[c].scores[g].predicted - byId["s" + n + "-rough"].scores[g].predicted), rendered: r3(said(c, g) - said("s" + n + "-rough", g)) } });
   }
   // cross trials, one per session: two goals' best candidates, asked about one of the two goals (rotating)
-  const CROSS = [["punch", "big", "big"], ["big", "clean", "clean"], ["clean", "punch", "punch"], ["punch", "big", "punch"], ["big", "clean", "big"], ["clean", "punch", "clean"], ["punch", "big", "big"], ["big", "clean", "clean"]];
+  const CROSS = [["punch", "big", "big"], ["big", "clean", "clean"], ["clean", "punch", "punch"], ["punch", "big", "punch"], ["big", "clean", "big"], ["clean", "punch", "clean"], ["punch", "big", "big"], ["big", "clean", "clean"],
+    ["clean", "punch", "clean"], ["punch", "big", "big"], ["big", "clean", "big"], ["clean", "punch", "punch"], ["punch", "big", "punch"], ["big", "clean", "clean"], ["clean", "punch", "punch"], ["punch", "big", "big"]];
   for (let n = 1; n <= sessions.length; n++) {
     const [g1, g2, ask] = CROSS[(n - 1) % CROSS.length], a = "s" + n + "-" + g1, b = "s" + n + "-" + g2;
     if (!byId[a] || !byId[b] || JSON.stringify(byId[a].parts) === JSON.stringify(byId[b].parts)) continue;
@@ -111,7 +113,9 @@ const r3 = v => (v == null ? null : Math.round(v * 1000) / 1000);
   for (const t of trials) if (t.type !== "check") { const [a, b] = t.pair, d = said(a, t.goal) - said(b, t.goal); t.favoured = d > 0 ? a : d < 0 ? b : null; }
 
   const manifest = {
-    test: "playhead-listening-goals", version: 1,
+    test: "playhead-listening-goals", version: 2,
+    // each listener hears one session of each pair: [k, k + half]
+    sessionPairs: Array.from({ length: sessions.length / 2 }, (_, k) => [k + 1, k + 1 + sessions.length / 2]),
     generator: "experiments/listening/render.js, Playhead " + P.version + ", from experiments/arrange/results.json (" + RESULTS.generator + ")",
     loudness: { measure: "maximum momentary loudness (ITU-R BS.1770, 400 ms windows)", target: r3(target) },
     goals: GOAL_TEXT,

@@ -111,24 +111,31 @@ let M = null, ctx = null, buffers = {}, state = null, playing = null;
 const store = { get() { try { return JSON.parse(localStorage.getItem(STORE)); } catch (e) { return null; } }, set(v) { try { localStorage.setItem(STORE, JSON.stringify(v)); } catch (e) { /* storage unavailable: the test still runs */ } }, clear() { try { localStorage.removeItem(STORE); } catch (e) { /* nothing kept */ } } };
 const newId = () => { const a = new Uint8Array(6); (self.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach((_, i) => a[i] = Math.floor(Math.random() * 256)); return Array.from(a, v => v.toString(16).padStart(2, "0")).join(""); };
 
+// the listener's id comes first: it decides which sessions they hear, and only those sounds are loaded
 async function load() {
   M = await (await fetch("manifest.json")).json();
   ctx = new (window.AudioContext || window.webkitAudioContext)();
-  let n = 0;
-  await Promise.all(M.stimuli.map(async s => {
-    const data = await (await fetch(s.file)).arrayBuffer();
-    buffers[s.id] = await new Promise((ok, bad) => ctx.decodeAudioData(data, ok, bad));
-    $("loading").textContent = "Loading the sounds… " + (++n) + " of " + M.stimuli.length;
-  }));
-  $("loading").textContent = "";
   const saved = store.get();
   if (saved && saved.manifest === M.generator && saved.answers.length < saved.plan.length) {
     state = saved;
     $("start").textContent = "Continue (" + saved.answers.length + " of " + saved.plan.length + " done)";
     $("device").value = saved.device; $("experience").value = saved.experience;
   }
+  pendingId = state ? state.id : newId();
+  const plan = state ? state.plan : ListeningPlan.plan(M, pendingId), need = new Set();
+  for (const p of plan) { need.add(p.a); need.add(p.b); }
+  need.add(M.trials.find(t => t.type === "main").pair[0]);
+  const list = M.stimuli.filter(s => need.has(s.id));
+  let n = 0;
+  await Promise.all(list.map(async s => {
+    const data = await (await fetch(s.file)).arrayBuffer();
+    buffers[s.id] = await new Promise((ok, bad) => ctx.decodeAudioData(data, ok, bad));
+    $("loading").textContent = "Loading the sounds… " + (++n) + " of " + list.length;
+  }));
+  $("loading").textContent = "";
   checkStart();
 }
+let pendingId = null;
 function checkStart() { $("start").disabled = !M || !$("device").value || !$("experience").value; }
 $("device").onchange = $("experience").onchange = checkStart;
 
@@ -145,13 +152,13 @@ function play(id, side) {
 $("start").onclick = () => {
   if (ctx.state === "suspended") ctx.resume();
   if (!state) {
-    const id = newId();
+    const id = pendingId;
     state = { test: M.test, version: M.version, manifest: M.generator, id, started: new Date().toISOString(), device: $("device").value, experience: $("experience").value, plan: ListeningPlan.plan(M, id), answers: [] };
     store.set(state);
   }
   show("level");
 };
-$("levelPlay").onclick = () => { play(M.trials.find(t => t.type === "main").pair[0], null); $("levelOk").disabled = false; };
+$("levelPlay").onclick = () => { play(M.trials.find(t => t.type === "main").pair[0], null); $("levelOk").disabled = false; };   // (always loaded)
 $("levelOk").onclick = () => { show("trial"); trial(); };
 
 let cur = null;

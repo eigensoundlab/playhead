@@ -44,7 +44,17 @@ const KITS = [
   { sub: "bd_zum", body: "glitch_perc3", transient: "elec_pop", tail: "ambi_dark_woosh" },
   { sub: "bass_hit_c", body: "drum_tom_mid_hard", transient: "drum_snare_hard", tail: "drum_splash_soft" },
   { sub: "bd_gas", body: "glitch_perc1", transient: "hat_tap", tail: "perc_swoosh" },
-  { sub: "elec_hollow_kick", body: "perc_door", transient: "elec_flip", tail: "ride_via" }
+  { sub: "elec_hollow_kick", body: "perc_door", transient: "elec_flip", tail: "ride_via" },
+  // more varied material (added for the listening test): robot, glass and metal, tabla, guitar, cinematic, vinyl,
+  // electronic, choir
+  { sub: "bass_voxy_hit_c", body: "glitch_robot1", transient: "elec_blip2", tail: "mehackit_robot3" },
+  { sub: "bd_pure", body: "perc_bell2", transient: "elec_ping", tail: "ambi_glass_rub" },
+  { sub: "tabla_ghe3", body: "tabla_na_o", transient: "tabla_te1", tail: "tabla_tun2" },
+  { sub: "bass_woodsy_c", body: "guit_e_fifths", transient: "elec_twang", tail: "guit_harmonics" },
+  { sub: "bass_hard_c", body: "bass_drop_c", transient: "hat_metal", tail: "ambi_lunar_land" },
+  { sub: "bd_tek", body: "vinyl_scratch", transient: "hat_noiz", tail: "vinyl_rewind" },
+  { sub: "bd_chip", body: "elec_bong", transient: "elec_twip", tail: "ambi_soft_buzz" },
+  { sub: "bass_thick_c", body: "ambi_choir", transient: "perc_bell", tail: "ambi_drone" }
 ];
 const ROLES = ["sub", "body", "transient", "tail"];
 const OPTS = { profile: "sfx", assetClass: "sfx", curveRate: 100 };

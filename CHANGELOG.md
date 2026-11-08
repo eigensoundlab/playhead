@@ -12,9 +12,11 @@
   lengthened (or shortened) to play them.
 - **A listening test of the arrangement goals** ([experiments/listening](experiments/listening/README.md), on the site
   at `/listening/`): do the search's arrangements sound punchier, bigger or cleaner than the rough placement they start
-  from? 38 blind A/B answers in about 8 minutes, from the arrangement experiment's sessions, loudness matched, with
-  two checks and four repeats. The page sends nothing; listeners save a file and send it through a GitHub form. The
-  analysis treats listeners as the unit; simulations put the aim at 16 listeners. The lab links to it from its
+  from? 36 to 38 blind A/B answers in about 8 minutes, loudness matched, with two checks and four repeats. The
+  sounds come from the arrangement experiment's 16 sessions (8 drum and percussion kits, 8 of varied material:
+  robot, glass and metal, tabla, guitar, cinematic bass, vinyl, electronic, choir); each listener hears one of each
+  pair, 8 sessions, and the page loads only those sounds. The page sends nothing; listeners save a file and send it
+  through a GitHub form. The analysis treats listeners as the unit; simulations put the aim at 24 listeners. The lab links to it from its
   header and footer (in all six languages; the test itself is in English), and `tools/serve.js` serves it at
   `/listening/` as the site does.
 - **REAPER: the views of rhythm and form in the strip window** (package 0.2.0): bar raster, tempogram, repetition,
@@ -32,6 +34,14 @@
     In the REAPER theme the outline keeps REAPER's peak colour and tints run from neutral to a hot yellow. Before, a
     harshness tint in blues met a blue peak colour.
 - **`waveRamp`** (theme): a waveform's tint through several colours instead of the two ends `waveLow` → `waveHigh`.
+- **Trimmed parts** in `arrange` and `measureParts`: a part's `start` and `end` (seconds of its document) keep only
+  that stretch of it, as an item in an editor plays only part of its source.
+- **`playhead arrange --parts parts.json`** on the command line: the search for arrangements from a list of parts
+  (documents or audio files, with offset, gain, start, end and lock), printing the best arrangements as JSON. Options
+  `--goal`, `--range`, `--gains`, `--count` and `--seed`.
+- **`experiments/arrange` with 16 sessions**: 8 kits of varied material (robot, glass and metal, tabla, guitar,
+  cinematic bass, vinyl, electronic, choir) beside the 8 drum kits. Predicted and rendered measures agree as before
+  (r 0.95 to 0.99); where the varied kits gain little, the README says why.
 - **REAPER: installing and removing.**
   - Each release gets `playhead-reaper-<system>.zip`, with the actions, the effect and the command line for that
     system. Run its **Playhead - Install** once from REAPER: it copies everything into the resource folder, adds the
