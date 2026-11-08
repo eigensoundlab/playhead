@@ -13,6 +13,24 @@ module.exports = async function (check) {
     const back = codes.map(c => P.lookCode(P.parseLook(c)));
     check("views: look codes read and written back", back.filter((c, i) => c === codes[i]).length + "/" + codes.length, back.every((c, i) => c === codes[i]));
   }
+  // Playhead tempograms: the tempogram of a curve's rises, and the tempogram weighted by a curve. A document whose
+  // harshness pulses every 0.75 s (80 BPM) in its second half only, and whose loudness is low in its first half
+  {
+    const rate = 20, n = 32 * rate, harsh = [], loud = [];
+    for (let i = 0; i < n; i++) { const t = i / rate; harsh.push(t >= 16 && (t % 0.75) < 0.15 ? 0.9 : 0.3); loud.push(t < 16 ? 0.1 : 0.8); }
+    const doc = { schema: "playhead-analysis", source: { duration: 32 }, curves: { rate, harshness: harsh, loudness: loud }, rhythm: null };
+    const v = P.view(doc, "tempo", { source: "harshness" }), w = P.view(doc, "tempo", { source: "harshness", weight: "loudness" });
+    const bpm = r => 40 * Math.pow(2, (v.rows - 1 - r) / 24), colOf = t => v.colAt(t);
+    const strongest = (c0, c1) => { let best = -1, bv = -1; for (let r = 0; r < v.rows; r++) { let s = 0; for (let c = c0; c < c1; c++) s += v.values[r * v.cols + c]; if (s > bv) { bv = s; best = r; } } return { bpm: bpm(best), sum: bv / (c1 - c0) }; };
+    const late = strongest(colOf(22), colOf(30)), early = strongest(colOf(2), colOf(10));
+    const octave = x => Math.abs(Math.log2(x / 80) - Math.round(Math.log2(x / 80)));
+    const supEarly = w.suppress[colOf(4)], supLate = w.suppress[colOf(26)];
+    const codes = ["spec:tempo~of:harshness", "spec:tempo~cyclic~of:speed~w:loudness"], back = codes.map(c => P.lookCode(P.parseLook(c)));
+    check("views: a curve's tempogram finds the period of its rises where they are; a weight greys the columns where it is low",
+      `${late.bpm.toFixed(1)} BPM late (strength ${late.sum.toFixed(2)}, early ${early.sum.toFixed(2)}); suppressed ${supEarly.toFixed(2)} early, ${supLate.toFixed(2)} late`,
+      octave(late.bpm) < 0.04 && late.sum > 3 * early.sum && supEarly > 0.9 && supLate < 0.1 && w.values.every((x, i) => x === v.values[i])
+        && back.every((c, i) => c === codes[i]) && P.lookFits(doc, "spec:tempo~of:harshness") && !P.lookFits(doc, "spec:tempo") && !P.lookFits(doc, "spec:tempo~of:tension"));
+  }
   // the cue arc: 120 BPM, 4/4, drums from 8 s; the groove (8-20 s) returns at 48-56 s
   const arc = Pr.makeCueArc(SR, WL.kFilterCoeffs), d = await P.analyze(arc, { name: "cue arc", profile: "music" });
   {

@@ -141,7 +141,7 @@ async function build(F, buf, opts, t0, prog) {
   const g = cur.gate;
   const curves = {
     loudness: resample(cur.curves.c1, F, cols, g), activity: resample(cur.curves.c2, F, cols, g), arousal: resample(cur.curves.c3, F, cols, g),
-    harshness: resample(cur.curves.c4, F, cols, g), tension: resample(cur.curves.c5, F, cols, g), harmonicTension: resample(cur.curves.c6, F, cols, g),
+    harshness: resample(cur.curves.c4, F, cols, g), timbreHarshness: resample(cur.colour.harsh, F, cols, g), tension: resample(cur.curves.c5, F, cols, g), harmonicTension: resample(cur.curves.c6, F, cols, g),
     surprise: resample(cur.curves.c7, F, cols, g), lufs: resample(cur.lufs, F, cols, g)
   };
   const ev = WL.eventsOf(F);
@@ -285,7 +285,7 @@ const COMBINE_RULES = {
   lufs: "power sum", loudness: "from the summed LUFS", harshness: "loudness + weighted excess", arousal: "max",
   activity: "max", tension: "max", harmonicTension: "weighted mean", surprise: "max", onsetStrength: "sum", structureNovelty: "max", localPulse: "max",
   n1Kurtosis: "loudest", n2RepetitionHz: "loudest", n4Velocity: "loudest", n5Cpp: "loudest", n5Coherence: "loudest", n6Arrow: "loudest",
-  n7Surprisal: "max", n8Recurrence: "weighted mean"
+  n7Surprisal: "max", n8Recurrence: "weighted mean", timbreHarshness: "weighted mean"
 };
 // how far a part's gain moves its 0..1 curves (fixed scales: loudness is (LUFS + 60) / 60, harshness is loudness plus a
 // factor, arousal half loudness)
@@ -758,7 +758,7 @@ const CURVE_LABELS = {
   loudness: "loudness", activity: "activity", arousal: "arousal", harshness: "harshness", tension: "tension", harmonicTension: "harmonic tension",
   surprise: "novelty (spectral surprise)", lufs: "loudness (LUFS)", structureNovelty: "structural change", localPulse: "local pulse", onsetStrength: "onset strength (hits)",
   n1Kurtosis: "impulsiveness", n2RepetitionHz: "repetition rate", n4Velocity: "spectral motion", n5Cpp: "periodicity", n5Coherence: "phase coherence",
-  n6Arrow: "time arrow", n7Surprisal: "surprisal", n8Recurrence: "recurrence"
+  n6Arrow: "time arrow", n7Surprisal: "surprisal", n8Recurrence: "recurrence", timbreHarshness: "timbre harshness"
 };
 const TICK_KINDS = ["events", "onsets", "beats", "downbeats", "novelty"], FORMS = ["lanes", "overlay"], SHAPES = ["base", "mirror", "horizon", "line"];
 const LOOKS = {
@@ -833,7 +833,12 @@ function parseLook(code) {
     const [main, ...flags] = tok.split("~"), i = main.indexOf(":"), type = i < 0 ? main : main.slice(0, i), arg = i < 0 ? "" : main.slice(i + 1);
     if (type === "wave") out.push({ type, colour: arg || null });
     else if (type === "outline") out.push({ type });
-    else if (type === "spec") { if (!arg || arg === "mel") out.push({ type }); else if (arg === "tempo") out.push({ type, of: "tempo", cyclic: flags.includes("cyclic") }); else if (arg === "lag" || arg === "mod") out.push({ type, of: arg }); }
+    else if (type === "spec") { if (!arg || arg === "mel") out.push({ type }); else if (arg === "tempo") {
+        const src = (flags.find(f => f.startsWith("of:")) || "").slice(3), w = (flags.find(f => f.startsWith("w:")) || "").slice(2), l = { type, of: "tempo", cyclic: flags.includes("cyclic") };
+        if (src && src !== "onsets") l.source = src;
+        if (w) l.weight = w;
+        out.push(l);
+      } else if (arg === "lag" || arg === "mod") out.push({ type, of: arg }); }
     else if (type === "scalogram") out.push({ type: "spec", of: "scale", curve: arg || "onsetStrength" });
     else if (type === "raster") out.push({ type, curve: arg || "onsetStrength", bars: flags.includes("4bars") ? 4 : 1 });
     else if (type === "sculpt" && arg) out.push({ type, curve: arg });
@@ -849,7 +854,7 @@ function parseLook(code) {
 /** Layers -> look code. */
 function lookCode(layers) {
   return (layers || []).map(l => l.type === "wave" ? "wave" + (l.colour ? ":" + l.colour : "") : l.type === "line" ? "line:" + l.curve
-    : l.type === "spec" ? (l.of === "tempo" ? "spec:tempo" + (l.cyclic ? "~cyclic" : "") : l.of === "lag" || l.of === "mod" ? "spec:" + l.of : l.of === "scale" ? "scalogram:" + l.curve : "spec")
+    : l.type === "spec" ? (l.of === "tempo" ? "spec:tempo" + (l.cyclic ? "~cyclic" : "") + (l.source ? "~of:" + l.source : "") + (l.weight ? "~w:" + l.weight : "") : l.of === "lag" || l.of === "mod" ? "spec:" + l.of : l.of === "scale" ? "scalogram:" + l.curve : "spec")
     : l.type === "raster" ? "raster:" + l.curve + (l.bars === 4 ? "~4bars" : "")
     : l.type === "lane" ? "lane:" + l.curve + (l.signed ? "~signed" : "") : l.type === "ticks" ? (l.of && l.of.length ? "ticks:" + l.of.join("+") : "")
     : l.type === "form" || l.type === "shape" ? l.type + ":" + l.value : l.type === "sculpt" ? "sculpt:" + l.curve : l.type).filter(Boolean).join(",");
@@ -864,7 +869,10 @@ function describeLook(layers, doc) {
   for (const l of layers || []) {
     if (l.type === "wave") parts.push(l.colour && has(l.colour) ? L("lib.legend.colour", "colour: {curve}", { curve: lab(l.colour) }) : L("lib.legend.waveform", "waveform"));
     else if (l.type === "spec" && !l.of) parts.push(!doc || doc.spectrum ? L("lib.legend.spectrogram", "spectrogram (mel, low at the bottom)") : L("lib.legend.spectrogramAbsent", "spectrogram (not in this analysis)"));
-    else if (l.type === "spec" && l.of === "tempo") parts.push((l.cyclic ? L("lib.legend.tempogramCyclic", "tempogram, octaves folded (80 to 160 BPM; a tempo, its half and its double share a row)") : L("lib.legend.tempogram", "tempogram (40 to 240 BPM, fast at the top)")) + (!doc || (doc.rhythm && doc.rhythm.tempogram) ? "" : L("lib.legend.musicAbsent", " (music only; not in this analysis)")));
+    else if (l.type === "spec" && l.of === "tempo") parts.push((l.cyclic ? L("lib.legend.tempogramCyclic", "tempogram, octaves folded (80 to 160 BPM; a tempo, its half and its double share a row)") : L("lib.legend.tempogram", "tempogram (40 to 240 BPM, fast at the top)"))
+      + (l.source === "speed" ? L("lib.legend.tempoSpeed", " of how fast the descriptors change together") : l.source ? L("lib.legend.tempoOf", " of the rises in {curve}", { curve: CURVE_LABELS[l.source] || l.source }) : "")
+      + (l.weight ? L("lib.legend.tempoWeight", ", grey where {curve} is low", { curve: CURVE_LABELS[l.weight] || l.weight }) : "")
+      + (!doc || l.source || (doc.rhythm && doc.rhythm.tempogram) ? "" : L("lib.legend.musicAbsent", " (music only; not in this analysis)")));
     else if (l.type === "spec" && l.of === "lag") parts.push(L("lib.legend.lag", "repetition: bright where the music repeats what played a lag earlier (lag going up)") + (!doc || doc.repetition ? "" : L("lib.legend.musicAbsent", " (music only; not in this analysis)")));
     else if (l.type === "spec" && l.of === "mod") parts.push(L("lib.legend.modulation", "modulation: how fast the level pulses (0.5 to 128 Hz, fast at the top): rhythm, then flutter and tremolo, then roughness") + (!doc || doc.modulation ? "" : absent));
     else if (l.type === "spec" && l.of === "scale") parts.push(L("lib.legend.scalogram", "rhythms in {curve}: fast at the top, slow at the bottom", { curve: lab(l.curve) }) + (has(l.curve) ? "" : absent));
@@ -905,7 +913,8 @@ function lookFits(doc, look) {
     if ((l.type === "lane" || l.type === "line" || l.type === "sculpt") && !live(l.curve)) return false;
     if (l.type === "wave" && l.colour && !live(l.colour)) return false;
     if (l.type === "spec" && !l.of && !doc.spectrum) return false;
-    if (l.type === "spec" && l.of === "tempo" && !(doc.rhythm && doc.rhythm.tempogram)) return false;
+    if (l.type === "spec" && l.of === "tempo" && !l.source && !(doc.rhythm && doc.rhythm.tempogram)) return false;
+    if (l.type === "spec" && l.of === "tempo" && l.source && !(doc.source && doc.source.duration >= 8 && (l.source === "speed" ? SPEED_CURVES.some(live) : live(l.source)))) return false;
     if (l.type === "spec" && l.of === "lag" && !doc.repetition) return false;
     if (l.type === "spec" && l.of === "mod" && !doc.modulation) return false;
     if (l.type === "spec" && l.of === "scale" && (!live(l.curve) || curves[l.curve].length < 40)) return false;
@@ -1006,8 +1015,76 @@ function rasterView(doc, curve, per, cols) {
   for (let r = 0; r < R; r++) if (r % (per === 4 ? 2 : 8) === 0) yTicks.push({ row: r + 0.5, text: String(r * br.bars + 1) });
   return { kind: "raster", curve, rows: R, cols, values, yTicks, timeRows: br.rows, beatsPerBar: br.beatsPerBar, bars: br.bars };
 }
-function tempoView(doc, cyclic) {
-  const tg = doc.rhythm && doc.rhythm.tempogram, u8 = tg && specBytes(tg);
+// Playhead tempograms: the tempogram of another curve, and the tempogram weighted by a curve (look codes
+// "spec:tempo~of:<curve>" and "spec:tempo~w:<curve>"; both together work too). A tempogram is the autocorrelation of
+// whatever curve it is fed, so feeding it a descriptor's rises is a new signal with tempo values as true as the
+// original's: "how periodic are the rises in harshness?". of:speed feeds it how fast all the descriptors change
+// together (the length of the step of the vector of robustly normalised descriptors: a multi-descriptor novelty). The
+// weight changes only how strongly a column is drawn: it is the curve's mean over the column's window, from the curve's
+// 5th to 95th percentile in the file, and a weak column is drawn toward grey, not black (a value-suppressing palette),
+// so "little of the curve here" stays apart from "no tempo here". Nothing moves a ridge along the tempo axis: a
+// descriptor that bends or shifts tempi, or warps time before the analysis, would show tempi that are not there.
+const SPEED_CURVES = ["loudness", "timbreHarshness", "tension", "activity", "n1Kurtosis", "n4Velocity", "n5Cpp", "n6Arrow"];
+function curveSamples(doc, name, up) {             // a curve upsampled by linear interpolation (silence as its lowest value)
+  const c = doc.curves, arr = c[name], n0 = arr.length, out = new Float64Array(n0 * up);
+  let lo = Infinity; for (const v of arr) if (v != null && v < lo) lo = v;
+  const at = j => { const v = arr[Math.max(0, Math.min(n0 - 1, j))]; return v == null ? (isFinite(lo) ? lo : 0) : v; };
+  for (let i = 0; i < out.length; i++) { const x = (i + 0.5) / up - 0.5, j = Math.floor(x), f = x - j; out[i] = at(j) * (1 - f) + at(j + 1) * f; }
+  return out;
+}
+function curveTempogram(doc, name) {
+  const c = doc.curves || {}, live = k => Array.isArray(c[k]) && c[k].some(v => v != null);
+  const names = name === "speed" ? SPEED_CURVES.filter(live) : live(name) ? [name] : [];
+  if (!names.length || !(c.rate > 0) || doc.source.duration < 8) return null;
+  const up = Math.max(1, Math.ceil(50 / c.rate)), rate = c.rate * up, n = c[names[0]].length * up, dt = 1 / rate;
+  const sig = new Float64Array(n);
+  for (const k of names) {
+    const x = curveSamples(doc, k, up);
+    let sc = 1;
+    if (name === "speed") { const v = Array.from(x).sort((a, b) => a - b), iqr = v[Math.floor(0.75 * (v.length - 1))] - v[Math.floor(0.25 * (v.length - 1))]; sc = iqr > 1e-9 ? iqr : 1; }
+    for (let i = 1; i < n; i++) { const d = (x[i] - x[i - 1]) / sc; sig[i] += name === "speed" ? d * d : Math.max(0, d); }
+  }
+  if (name === "speed") for (let i = 0; i < n; i++) sig[i] = Math.sqrt(sig[i]);
+  // only what stands above its local mean (0.5 s), as the analysis's onset envelope: a smooth curve's slow drift would
+  // otherwise correlate with itself at every short lag and light up the fastest tempi
+  { const h = Math.max(1, Math.round(0.25 * rate)), cs = new Float64Array(n + 1); for (let i = 0; i < n; i++) cs[i + 1] = cs[i] + sig[i];
+    const loc = Float64Array.from(sig, (_, i) => { const a = Math.max(0, i - h), b = Math.min(n, i + h + 1); return (cs[b] - cs[a]) / (b - a); });
+    for (let i = 0; i < n; i++) sig[i] = Math.max(0, sig[i] - loc[i]); }
+  // light smoothing (30 ms), as the analysis smooths its onset envelope for the tempogram
+  const sg = Math.max(0.6, 0.03 / dt), K = Math.ceil(3 * sg), gk = []; let gs = 0;
+  for (let k = -K; k <= K; k++) { const v = Math.exp(-0.5 * (k / sg) ** 2); gk.push(v); gs += v; }
+  const env = new Float64Array(n);
+  for (let i = 0; i < n; i++) { let v = 0; for (let k = -K; k <= K; k++) { const j = i + k; if (j >= 0 && j < n) v += gk[k + K] * sig[j]; } env[i] = v / gs; }
+  // 8 s windows every 0.5 s; the autocorrelation with the mean removed, 40 to 240 BPM at 24 rows per octave
+  const W = Math.min(n, Math.round(8 * rate)), hop = Math.max(1, Math.round(0.5 * rate)), NF = (() => { let p = 1; while (p < 2 * W) p <<= 1; return p; })();
+  const fft = WL.getFFT(NF), win = Float64Array.from({ length: W }, (_, k) => 0.5 - 0.5 * Math.cos(2 * Math.PI * (k + 0.5) / W));
+  const bpmMin = 40, perOctave = 24, bins = Math.floor(perOctave * Math.log2(240 / bpmMin) + 1e-9) + 1;
+  const cols = []; for (let ctr = 0; ctr < n; ctr += hop) cols.push(ctr);
+  const C = cols.length, data = new Float32Array(C * bins), strength = new Float64Array(C), re = new Float64Array(NF), im = new Float64Array(NF);
+  for (let w = 0; w < C; w++) {
+    const s0 = cols[w] - (W >> 1);
+    let mean = 0, cnt = 0, e = 0; for (let k = 0; k < W; k++) { const m = s0 + k; if (m >= 0 && m < n) { mean += env[m]; cnt++; e += env[m] * env[m]; } }
+    mean = cnt ? mean / cnt : 0; strength[w] = cnt ? Math.sqrt(e / cnt) : 0;
+    re.fill(0); im.fill(0);
+    for (let k = 0; k < W; k++) { const m = s0 + k; re[k] = ((m >= 0 && m < n ? env[m] : mean) - mean) * win[k]; }
+    fft(re, im); for (let k = 0; k < NF; k++) { re[k] = re[k] * re[k] + im[k] * im[k]; im[k] = 0; } fft(re, im);
+    const a0 = re[0]; if (!(a0 > 0)) continue;
+    for (let b = 0; b < bins; b++) {
+      const x = 60 / (bpmMin * Math.pow(2, b / perOctave) * dt), i = Math.floor(x), f = x - i;
+      if (i < 1 || i + 1 >= W) continue;
+      data[w * bins + b] = Math.max(0, (re[i] * (1 - f) + re[i + 1] * f) / a0);
+    }
+  }
+  // faded where the curve hardly changes (relative to its strongest windows), as the analysis fades weak onsets
+  const ref = Array.from(strength).sort((a, b) => a - b)[Math.floor(0.9 * (C - 1))] || 1;
+  let pk = 1e-9;
+  for (let w = 0; w < C; w++) { const fade = 1 - Math.exp(-strength[w] / (0.3 * ref)); for (let b = 0; b < bins; b++) { data[w * bins + b] *= fade; pk = Math.max(pk, data[w * bins + b]); } }
+  const u8 = new Uint8Array(C * bins); for (let i = 0; i < u8.length; i++) u8[i] = Math.round(255 * Math.min(1, data[i] / pk));
+  return { tg: { bpmMin, perOctave, bins, start: cols[0] * dt, hop: hop * dt, columns: C }, u8 };
+}
+function tempoView(doc, cyclic, of, weight) {
+  let tg = doc.rhythm && doc.rhythm.tempogram, u8 = tg && specBytes(tg);
+  if (of && of !== "onsets") { const t = curveTempogram(doc, of); tg = t && t.tg; u8 = t && t.u8; }
   if (!u8) return null;
   const B = tg.bins, C = tg.columns, P = tg.perOctave, FOLD = 80, kf = Math.round(P * Math.log2(FOLD / tg.bpmMin));
   const rows = cyclic ? P : B, values = new Float32Array(rows * C);
@@ -1022,7 +1099,16 @@ function tempoView(doc, cyclic) {
   }
   const rowOf = bpm => cyclic ? P - 1 - P * Math.log2(bpm / FOLD) : B - 1 - P * Math.log2(bpm / tg.bpmMin);
   const yTicks = (cyclic ? [90, 120, 140] : [60, 90, 120, 180]).map(bpm => ({ row: rowOf(bpm) + 0.5, text: String(bpm) })).filter(t => t.row > 0.5 && t.row < rows - 0.5);
-  return { kind: "tempo", cyclic: !!cyclic, rows, cols: C, values, yTicks, colAt: t => Math.max(0, Math.min(C - 1, Math.round((t - tg.start) / tg.hop))) };
+  const out = { kind: "tempo", cyclic: !!cyclic, of: of && of !== "onsets" ? of : null, weight: null, rows, cols: C, values, yTicks, colAt: t => Math.max(0, Math.min(C - 1, Math.round((t - tg.start) / tg.hop))) };
+  const wc = weight && doc.curves && doc.curves[weight];
+  if (Array.isArray(wc) && wc.some(v => v != null)) {
+    // per column, the weight curve's mean over the column's 8 s window, on its 5th to 95th percentile in the file;
+    // suppress = 1 - weight, used by the strip to draw the column toward grey
+    const v = wc.filter(x => x != null).sort((a, b) => a - b), lo = v[Math.floor(0.05 * (v.length - 1))], hi = Math.max(lo + 1e-9, v[Math.floor(0.95 * (v.length - 1))]);
+    out.weight = weight; out.suppress = new Float32Array(C);
+    for (let c = 0; c < C; c++) { const t = tg.start + c * tg.hop, m = curveValue(wc, doc.curves.rate, Math.max(0, t - 4), Math.min(doc.source.duration, t + 4)); out.suppress[c] = m == null ? 1 : 1 - Math.max(0, Math.min(1, (m - lo) / (hi - lo))); }
+  }
+  return out;
 }
 function lagView(doc) {
   const rp = doc.repetition, u8 = rp && specBytes(rp);
@@ -1111,13 +1197,15 @@ function scaleView(doc, curve) {
   return { kind: "scale", curve, rows, cols: n, values, faint, yTicks, periods, colAt: t => Math.max(0, Math.min(n - 1, Math.floor(t * rate))) };
 }
 /** The image of a view as numbers (see above); null when the document cannot give it. kind: "raster" (opts.curve,
- *  opts.bars 1 or 4, opts.cols), "tempo" (opts.cyclic), "lag", "scale" (opts.curve). Built once per document and options. */
+ *  opts.bars 1 or 4, opts.cols), "tempo" (opts.cyclic; opts.source: a curve, or "speed", whose rises the tempogram is
+ *  of; opts.weight: a curve that weights its columns, given back as suppress), "lag", "scale" (opts.curve). Built once
+ *  per document and options. */
 function view(doc, kind, opts) {
   opts = opts || {};
   if (!doc || !VIEW_KINDS.includes(kind)) return null;
   const curve = opts.curve || "onsetStrength", bars = opts.bars === 4 ? 4 : 1, cols = Math.max(8, Math.min(512, opts.cols || (bars === 4 ? 192 : 96)));
-  const key = kind + "|" + (kind === "raster" ? curve + "|" + bars + "|" + cols : kind === "scale" ? curve : kind === "tempo" ? !!opts.cyclic : "");
-  return cachedView(doc, key, () => kind === "raster" ? rasterView(doc, curve, bars, cols) : kind === "tempo" ? tempoView(doc, opts.cyclic) : kind === "lag" ? lagView(doc) : kind === "mod" ? modView(doc) : scaleView(doc, curve));
+  const key = kind + "|" + (kind === "raster" ? curve + "|" + bars + "|" + cols : kind === "scale" ? curve : kind === "tempo" ? !!opts.cyclic + "|" + (opts.source || "") + "|" + (opts.weight || "") : "");
+  return cachedView(doc, key, () => kind === "raster" ? rasterView(doc, curve, bars, cols) : kind === "tempo" ? tempoView(doc, opts.cyclic, opts.source, opts.weight) : kind === "lag" ? lagView(doc) : kind === "mod" ? modView(doc) : scaleView(doc, curve));
 }
 const makeCanvas = (w, h) => typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(w, h) : typeof document !== "undefined" && document.createElement ? Object.assign(document.createElement("canvas"), { width: w, height: h }) : null;
 // an image of rows x cols cells, cell(r, c) -> [r, g, b, a] or null (left clear), drawn into the box dx, dy, dw, dh
@@ -1298,11 +1386,16 @@ function drawStrip(ctx, doc, opts) {
         if (!v || !mainH) return;
         const PW = Math.max(1, Math.ceil(W)), at = new Int32Array(PW);      // hosts may pass a fractional width
         for (let x = 0; x < PW; x++) { const t = t0 + (x + 0.5) / PW * span; at[x] = t > dur ? -1 : v.colAt(t); }
-        const ramp = th.specRamp;
+        const ramp = th.specRamp, mid = rampAt(ramp, 0.45), grey = Math.round(0.2126 * mid[0] + 0.7152 * mid[1] + 0.0722 * mid[2]);
         paintCells(ctx, v.rows, PW, (r, x) => {
           if (at[x] < 0) return null;
           const k = r * v.cols + at[x], u = v.values[k];
-          return !(u >= 0) ? null : rampAt(ramp, u).concat(v.faint && v.faint[k] ? 110 : 255);
+          if (!(u >= 0)) return null;
+          let c = rampAt(ramp, u);
+          // a weighted tempogram: a weak column toward one grey (value-suppressing), not toward the ramp's black
+          const sup = v.suppress ? v.suppress[at[x]] : 0;
+          if (sup > 0) c = c.map(ch => Math.round(ch * (1 - sup) + grey * sup));
+          return c.concat(v.faint && v.faint[k] ? 110 : 255);
         }, 0, 0, W, mainH, true);
         axisLabels(ctx, v, mainH, W, th, "right");
         items.push({ label: l.of === "tempo" ? L("lib.item.tempo", "tempo strength") : l.of === "lag" ? L("lib.item.repeat", "likeness to earlier") : l.of === "mod" ? L("lib.item.mod", "modulation depth") : L("lib.item.rhythms", "rhythms in {curve}", { curve: CURVE_LABELS[l.curve] || l.curve }), ramp });

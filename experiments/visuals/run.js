@@ -296,12 +296,12 @@ function rangeUse(a) {
     let pk = 0; for (const v of S.y) pk = Math.max(pk, Math.abs(v)); const g = Math.pow(10, -1 / 20) / pk; for (let i = 0; i < S.y.length; i++) S.y[i] *= g;
     const n = Math.ceil(S.dur * FPS);
     const doc = await Playhead.analyze(IO.makeBuffer(SR, [S.y]), { name: S.name + ".wav", curveRate: 100 });
-    const fr = Playhead.frames(doc, { fps: FPS, scale: "file", curves: ["loudness", "onsetStrength", "harshness", "tension", "activity", "arousal"] });
+    const fr = Playhead.frames(doc, { fps: FPS, scale: "file", curves: ["loudness", "onsetStrength", "harshness", "timbreHarshness", "tension", "activity", "arousal"] });
     const usual = usualDrivers(S.y, n);
     // the continuous curves scaled to their range in the file (as a VJ sets a gain); onset strength as the strip
     // draws it, whose peaks the file's range would clip
     const fixed = Playhead.frames(doc, { fps: FPS, curves: ["onsetStrength"] });
-    const ph = { ph_loudness: fr.curves.loudness, ph_onset: fixed.curves.onsetStrength, ph_harsh: fr.curves.harshness, ph_tension: fr.curves.tension,
+    const ph = { ph_loudness: fr.curves.loudness, ph_onset: fixed.curves.onsetStrength, ph_harsh: fr.curves.harshness, ph_timbre: fr.curves.timbreHarshness, ph_tension: fr.curves.tension,
       ph_activity: fr.curves.activity, ph_arousal: fr.curves.arousal, ph_hits: decayTrigger(n, fr.onsets, 0.15) };
     // the control: shifted by half the stimulus and 0.19 s more, off any beat grid here
     const shift = a => { const k = Math.floor(a.length / 2) + Math.round(0.19 * FPS); return Array.from(a, (_, i) => a[(i + k) % a.length]); };
@@ -347,12 +347,12 @@ function rangeUse(a) {
   const accentDrivers = ["rms", "bass", "hits", "hits_offline", "rms_offline", "ph_onset", "ph_hits", "shift_hits"];
   console.log("\nAccents hit (F1; a peak from 125 ms early to 45 ms late): groove, riser, swell, sfx, dense; median latency in groove");
   for (const k of accentDrivers) console.log(row(k, ["groove", "riser", "swell", "sfx", "dense"].map(s => f(S[s].measures[k].accents.f1)).concat([f(S.groove.measures[k].accents.latency * 1000) + " ms"])));
-  const slow = ["rms", "bass_att", "rms_offline", "centroid", "ph_loudness", "ph_arousal", "ph_activity", "ph_tension", "shift_loudness", "shift_tension"];
+  const slow = ["rms", "bass_att", "rms_offline", "centroid", "ph_loudness", "ph_arousal", "ph_activity", "ph_tension", "ph_timbre", "shift_loudness", "shift_tension"];
   console.log("\nStructure and builds: groove eta2, riser rho, swell rho; jitter (share above 8 Hz, mean); flashes/s (worst); seconds over 3 flashes (share, worst); level correlation");
   for (const k of slow) {
     const hf = stimuli.map(s => S[s.name].measures[k].hf), fl = Math.max(...stimuli.map(s => S[s.name].measures[k].flashes.max)), ov = Math.max(...stimuli.map(s => S[s.name].measures[k].flashes.over));
     console.log(row(k, [f(S.groove.measures[k].eta2), f(S.riser.measures[k].build) + " (" + f(S.riser.measures[k].buildRise) + ")", f(S.swell.measures[k].build) + " (" + f(S.swell.measures[k].buildRise) + ")", f(hf.reduce((a, b) => a + b, 0) / hf.length), fl.toFixed(1), f(ov), f(results.redundancy[k])]));
   }
   console.log("\nTimbre at equal loudness: AUC harsh (rough, clipped) vs smooth (dark, bright); AUC bright vs dark; mean per kind");
-  for (const k of ["rms", "treb", "centroid", "rms_offline", "ph_harsh", "ph_loudness", "ph_arousal", "shift_harsh"]) { const T = S.timbre.measures[k]; console.log(row(k, [f(T.timbre), f(T.brightness), ...["dark", "bright", "rough", "clipped"].map(kd => kd + " " + f(T.kinds[kd]))])); }
+  for (const k of ["rms", "treb", "centroid", "rms_offline", "ph_harsh", "ph_timbre", "ph_loudness", "ph_arousal", "shift_harsh"]) { const T = S.timbre.measures[k]; console.log(row(k, [f(T.timbre), f(T.brightness), ...["dark", "bright", "rough", "clipped"].map(kd => kd + " " + f(T.kinds[kd]))])); }
 })().catch(e => { console.error(e); process.exit(1); });

@@ -96,7 +96,7 @@ any mix it is placed in.
 | `source` | `name`, `sampleRate`, `channels`, `duration` (s); the command line adds `path` |
 | `profile`, `assetClass`, `guessedClass` | what was computed; the class used for the curves (`sfx`, `rhythmic`, `orchestral`, `ambience`…) |
 | `summary` | `peakLufs`, `loudnessRange`, `soundStart`, `soundEnd`; with events also `peakDb`, `attack` |
-| `curves` | `rate` (samples per second), `start` (0), then one array per curve, `null` where silent. 0–1 on fixed library-wide scales: `loudness`, `activity`, `arousal`, `harshness`, `tension`, `harmonicTension`, `surprise`; in LUFS: `lufs`; with descriptors also `n1Kurtosis`, `n2RepetitionHz`, `n4Velocity` (oct/s), `n5Cpp` (dB), `n5Coherence`, `n6Arrow`, `n7Surprisal`, `n8Recurrence`; `onsetStrength` (spectral flux, the beat tracker's input, 0–1 to its 99th percentile: where the hits and attacks are); music profile also `structureNovelty` (Foote novelty, 0–1, values in silence too) and `localPulse` (PLP scaled by its clarity, 0–1). `n1Kurtosis` is drawn where the impulses are (each 0.5 s window's value given to its frames in proportion to their power), so it no longer rises half a window before an impulse; the descriptor summaries keep the window values. New curves are added without changing the schema version: read the ones you know and ignore the rest |
+| `curves` | `rate` (samples per second), `start` (0), then one array per curve, `null` where silent. 0–1 on fixed library-wide scales: `loudness`, `activity`, `arousal`, `harshness`, `tension`, `harmonicTension`, `surprise`, and `timbreHarshness` (the psychoacoustic annoyance factor behind `harshness`, from sharpness, fluctuation and roughness, without the loudness that `harshness` adds it to: harsh at any level, for a tint, a jagged shape or a tempogram of harsh hits); in LUFS: `lufs`; with descriptors also `n1Kurtosis`, `n2RepetitionHz`, `n4Velocity` (oct/s), `n5Cpp` (dB), `n5Coherence`, `n6Arrow`, `n7Surprisal`, `n8Recurrence`; `onsetStrength` (spectral flux, the beat tracker's input, 0–1 to its 99th percentile: where the hits and attacks are); music profile also `structureNovelty` (Foote novelty, 0–1, values in silence too) and `localPulse` (PLP scaled by its clarity, 0–1). `n1Kurtosis` is drawn where the impulses are (each 0.5 s window's value given to its frames in proportion to their power), so it no longer rises half a window before an impulse; the descriptor summaries keep the window values. New curves are added without changing the schema version: read the ones you know and ignore the rest |
 | `noveltyTicks` | times (s) of the strongest spectral surprises, the lab's novelty ticks (music and ambience; empty for sound effects) |
 | `modulation` | `sfx` and `music` profiles: the modulation spectrogram, how strongly the level pulses at each rate over time. `rows` rates from `rateMin` (0.5 Hz) up, `perOctave` (6) to an octave, to 128 Hz; `columns` every `hop` s; `data` base64 of one byte per rate and column, column after column, slowest rate first: 0 for no data (silence, or a rate too slow for the sound's length), else 1 + 254 × the square root of the modulation depth (`scale: "sqrt"`; depth 1 is a level swinging fully at that rate). From the band envelopes (12 pairs of Bark bands at about 345 per second), each band's envelope spectrum over its mean, averaged over the bands by power, at three resolutions (windows of 3, 0.75 and 0.19 s for rates below 4 Hz, 4 to 24 Hz and above). At most 400 columns: up to about 26 KB |
 | `spectrum` | `sfx` and `music` profiles: a mel spectrogram for drawing. `bands` (40), `fmin`, `fmax` (Hz), `columns` (as the curves), `dbTop` and `dbRange` (80 dB mapped to 0–255), `data`: base64 of one byte per band and column, column after column, lowest band first |
@@ -173,6 +173,27 @@ give one (a beat view of a sound effect), the plain waveform is drawn instead an
   moment's position in its bar (the Playhead app does both).
 - **Tempogram** (`spec:tempo`): drawn from `rhythm.tempogram`. A steady beat is a bright line, a tempo change bends it,
   double and half tempo are fainter lines.
+- **Playhead tempograms** (`spec:tempo~of:<curve>`, `spec:tempo~of:speed`, `spec:tempo~w:<curve>`; they combine, and
+  work with `~cyclic`): a tempogram is the autocorrelation of whatever curve it is fed, so it can be fed a descriptor.
+  - `of:<curve>`: the tempogram of the curve's rises (above their 0.5 s local mean), computed when drawn by the same
+    method as the analysis's (8 s windows every 0.5 s, the mean removed, 40 to 240 BPM, 24 rows an octave). It answers
+    "how periodic are the rises in timbre harshness (or loudness, tension, impulsiveness)?": harsh hits on the off-beats, a
+    tension that swells every two bars, a layer with its own period beside the beat. Any profile, for sounds of 8 s or
+    more.
+  - `of:speed`: the tempogram of how fast all the descriptors change together. The curves (loudness, timbre harshness,
+    tension, activity and four of the n-descriptors) are each divided by their interquartile range, and the length of
+    their joint step is a novelty curve for every kind of change at once: the descriptors seen as one curve in feature
+    space, whose speed is a multi-descriptor flux.
+  - `w:<curve>`: the tempogram drawn weaker where the curve is low (its mean over each 8 s window, from its 5th to its
+    95th percentile in the file). A weak column goes toward one grey, not toward the ramp's black (a value-suppressing
+    palette, Correll, Moritz and Heer 2018), so "little of the curve here" stays apart from "no beat here".
+  - What they never do: move a ridge along the tempo axis. Multiplying the onsets by a fast descriptor before the
+    analysis makes false ridges at the descriptor's own rates (a product is a convolution of spectra: a 7 Hz harshness
+    tremolo under 100 BPM puts ridges near 320 and 520 BPM); warping time by a descriptor before the analysis makes a
+    steady tempo drift; bending the tempo axis overwrites the most exact channel, position, with something that is not
+    tempo. Background: Foote's beat spectrum of any feature, Pampalk's fluctuation patterns, joint time-frequency
+    scattering (Andén, Lostanlen and Mallat) as the general theory. A display-only warp of time by a descriptor (with
+    ticks in real seconds) is a further option, not drawn yet.
 - **Lag view** (`spec:lag`): drawn from `repetition`, with the median likeness set to black so repeats stand out. A
   bright horizontal line from some moment on means the music now repeats what played that lag before; its height says
   how long before (in bars, with a beat).
@@ -190,7 +211,8 @@ give one (a beat view of a sound effect), the plain waveform is drawn instead an
   shows flutter, tremolo and other modulation of the curve. A research view: what it shows best is still to be learnt.
 
 `Playhead.view(doc, kind, opts)` gives the same images as numbers (row 0 at the top, values 0 to 1, -1 where there is
-no data). The tests check them on signals with a known answer: the raster's rows are the cue arc's 2 s bars with its
+no data; for the tempogram `opts.source` and `opts.weight` as above, the weight given back as `suppress`, one value per
+column). The tests check them on signals with a known answer: the raster's rows are the cue arc's 2 s bars with its
 hits on the beats, the tempogram peaks at its 120 BPM and follows the tempo ramp from 96 to 144 BPM, the lag view lights
 up 40 s back where the groove returns, the scalogram of a tremolo finds 0.125 s and 0.333 s, and the modulation
 spectrogram of noise swinging at 4, 16 and 60 Hz finds each rate within a row while steady noise stays dark.

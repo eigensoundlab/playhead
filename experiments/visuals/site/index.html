@@ -71,13 +71,13 @@
 const NAMES = {
   rms: "RMS envelope follower (live)", bass: "Bass band, MilkDrop-style", bass_att: "Bass band, damped (_att)", mid: "Mid band", treb: "Treble band",
   centroid: "Spectral centroid", hits: "Onset trigger (live)", rms_offline: "RMS, offline (zero-phase)", hits_offline: "Onset trigger, offline",
-  ph_loudness: "Playhead loudness", ph_onset: "Playhead onset strength", ph_harsh: "Playhead harshness", ph_tension: "Playhead tension",
+  ph_loudness: "Playhead loudness", ph_onset: "Playhead onset strength", ph_harsh: "Playhead harshness", ph_timbre: "Playhead timbre harshness", ph_tension: "Playhead tension",
   ph_activity: "Playhead activity", ph_arousal: "Playhead arousal", ph_hits: "Playhead onsets (trigger)",
   shift_loudness: "Control: loudness, time-shifted", shift_tension: "Control: tension, time-shifted", shift_harsh: "Control: harshness, time-shifted", shift_hits: "Control: onsets, time-shifted"
 };
 const STIMULI = { groove: "Groove in four sections", riser: "Riser at constant loudness, then a drop", swell: "Build by density at constant loudness",
   timbre: "Timbres at equal loudness", sfx: "Sound effects over an ambience", dense: "Dense steady pattern" };
-const DEFAULTS = { disc: ["rms", "ph_loudness"], loom: ["rms_offline", "ph_tension"], spiky: ["centroid", "ph_harsh"], shake: ["hits", "ph_onset"] };
+const DEFAULTS = { disc: ["rms", "ph_loudness"], loom: ["rms_offline", "ph_tension"], spiky: ["centroid", "ph_timbre"], shake: ["hits", "ph_onset"] };
 const $ = id => document.getElementById(id);
 const audio = new Audio();
 let data = null, swap = false, trauma = [0, 0];

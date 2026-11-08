@@ -269,13 +269,14 @@ end
 -- readable names of the curves, in menu order (as Playhead.curveLabels)
 M.CURVE_ORDER = { "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "lufs",
   "onsetStrength", "structureNovelty", "localPulse", "n1Kurtosis", "n2RepetitionHz", "n4Velocity", "n5Cpp",
-  "n5Coherence", "n6Arrow", "n7Surprisal", "n8Recurrence" }
+  "n5Coherence", "n6Arrow", "n7Surprisal", "n8Recurrence", "timbreHarshness" }
 M.CURVE_LABELS = {
   loudness = "loudness", activity = "activity", arousal = "arousal", harshness = "harshness", tension = "tension",
   harmonicTension = "harmonic tension", surprise = "novelty (spectral surprise)", lufs = "loudness (LUFS)",
   structureNovelty = "structural change", localPulse = "local pulse", onsetStrength = "onset strength (hits)",
   n1Kurtosis = "impulsiveness", n2RepetitionHz = "repetition rate", n4Velocity = "spectral motion", n5Cpp = "periodicity",
-  n5Coherence = "phase coherence", n6Arrow = "time arrow", n7Surprisal = "surprisal", n8Recurrence = "recurrence"
+  n5Coherence = "phase coherence", n6Arrow = "time arrow", n7Surprisal = "surprisal", n8Recurrence = "recurrence",
+  timbreHarshness = "timbre harshness"
 }
 -- the number each curve is known by in Playhead Control.jsfx (its hidden "source" sliders); 0 = another curve
 M.CURVE_CODES = {}

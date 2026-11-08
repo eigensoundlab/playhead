@@ -45,7 +45,7 @@ All at 60 frames per second, on 0..1:
 | `centroid` | spectral centroid, 100 Hz to 10 kHz on a log scale |
 | `hits` | an onset trigger (spectral flux over its running median), decaying over 150 ms |
 | `rms_offline`, `hits_offline` | the same computed offline: zero-phase smoothing, centred windows, the 5th to 95th percentile of the sound. They separate what Playhead gains from its analysis from what it gains from seeing the whole file |
-| `ph_loudness`, `ph_tension`, `ph_arousal`, `ph_activity`, `ph_harsh` | Playhead's curves (`Playhead.frames`, analysed at 100 curve points per second), each scaled from its 5th to 95th percentile in the sound (`--scale file`), as a VJ sets a gain |
+| `ph_loudness`, `ph_tension`, `ph_arousal`, `ph_activity`, `ph_harsh`, `ph_timbre` | Playhead's curves (`ph_timbre` is the new `timbreHarshness`: the harshness factor without the loudness `harshness` adds it to) (`Playhead.frames`, analysed at 100 curve points per second), each scaled from its 5th to 95th percentile in the sound (`--scale file`), as a VJ sets a gain |
 | `ph_onset` | Playhead's onset strength as the strip draws it (`--scale fixed`; the file's range clips its peaks) |
 | `ph_hits` | Playhead's onsets as a trigger, decaying over 150 ms |
 | `shift_*` | Playhead's curves shifted by half the sound plus 0.19 s (off every beat grid here): a control that should score at chance |
@@ -94,6 +94,7 @@ All at 60 frames per second, on 0..1:
 | `ph_arousal` | 0.93 | -0.72 (-0.38) | -0.94 (-0.80) | 2.5 | 0 | 0.04 |
 | `ph_tension` | 0.93 | 0.45 (0.41) | -0.85 (-0.47) | 1.5 | 0 | 0.24 |
 | `ph_activity` | 0.21 | -0.53 (-0.29) | 0.03 (0.12) | 6.5 | 1.00 | -0.02 |
+| `ph_timbre` | 0.42 | 0.58 (0.10) | -0.71 (-0.37) | 12.5 | 1.00 | -0.22 |
 | `shift_loudness` (control) | 0.40 | | | 1.5 | 0 | |
 | `shift_tension` (control) | 0.44 | | | 1.5 | 0 | |
 
@@ -105,6 +106,7 @@ All at 60 frames per second, on 0..1:
 | `treb` | 0.38 | 1.00 | 0.07 | 0.82 | 0.04 | 0.28 |
 | `centroid` | 0.50 | 1.00 | 0.09 | 0.79 | 0.32 | 0.32 |
 | `ph_harsh` | 0.50 | 1.00 | 0.34 | 0.83 | **0.99** | 0.00 |
+| `ph_timbre` | 0.50 | 1.00 | 0.32 | 0.81 | 0.97 | 0.01 |
 | `ph_loudness` | 0.62 | 0.17 | 0.86 | 0.85 | 0.95 | 0.86 |
 | `ph_arousal` | 0.69 | 0.67 | 0.15 | 0.24 | 0.35 | 0.36 |
 | `shift_harsh` (control) | 0.41 | 0.43 | 0.61 | 0.66 | 0.77 | 0.12 |
@@ -134,8 +136,9 @@ The hypothesis holds for three of the five things a visual does with a sound, an
    Playhead's harshness puts the rough tone first (0.99) and the bright, smooth one second (0.83), but the clipped
    sawtooth last (0.00); the centroid ranks by brightness only. Playhead's harshness curve is a harshness-weighted
    loudness: at equal loudness it moves little (0.81 to 0.85 on the strip's scale), so for visuals it has to be scaled
-   per file, and it does not see the buzz of a clipped tone. A loudness-independent harshness, with a distortion cue,
-   would be the curve for a jagged contour.
+   per file, and it does not see the buzz of a clipped tone. The document now has the factor on its own,
+   `timbreHarshness` (harsh at any level); it ranks these blocks the same way, and it moves with every hit (12.5 flashes a
+   second), so a contour driven by it needs smoothing. A distortion cue is still missing.
 
 In short: Playhead's curves are the better drivers for visuals that follow form and must not flicker, and its onset
 strength for accents; for builds and timbre at equal loudness they are not, yet.

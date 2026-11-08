@@ -690,17 +690,21 @@ function drawStripFor(cv, spec, f, cols, h, P, opts) {
    The same renderer and look codes are used by SFX Workbench and kurator, so a combination found here can be
    pasted there, and sent with feedback. */
 const PHAPI = window.Playhead || null;
-const CMP_COLOURS = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise"];
+const CMP_COLOURS = ["", "loudness", "activity", "arousal", "harshness", "timbreHarshness", "tension", "harmonicTension", "surprise"];
 const CMP_LINES = ["", "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "structureNovelty", "localPulse", "onsetStrength", "n1Kurtosis", "n4Velocity", "n6Arrow", "n7Surprisal"];
-const CMP_LANES = ["structureNovelty", "localPulse", "onsetStrength", "loudness", "activity", "arousal", "harshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
+const CMP_LANES = ["structureNovelty", "localPulse", "onsetStrength", "loudness", "activity", "arousal", "harshness", "timbreHarshness", "tension", "surprise", "n1Kurtosis", "n6Arrow", "n7Surprisal", "n8Recurrence"];
 const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Bar lines"], ["beats", "Beats"], ["onsets", "Onsets"], ["events", "Events"], ["novelty", "Novelty (top)"]];
 const CMP_SCULPT = ["", "loudness", "arousal", "activity", "harshness", "tension", "onsetStrength", "localPulse"];
 const CMP_MAX_LANES = 3, CMP_HEIGHTS = [64, 96, 128, 160, 192];
 const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), h: store.get("lookHeight", 128), refs: store.get("lookRefs", true) };
 const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"], ["raster", "Bar raster: a row per bar"], ["raster4", "Phrase raster: a row per 4 bars"], ["tempo", "Tempogram"], ["tempocyc", "Tempogram, octaves folded"], ["lag", "Repetition (lag view)"], ["mod", "Modulation spectrogram"], ["scale", "Curve rhythms (scalogram)"]];
 // the views that show one chosen curve (the raster and the scalogram), and the curves offered for them
-const CMP_VIEW_CURVES = ["onsetStrength", "loudness", "activity", "localPulse", "harshness", "arousal", "tension", "surprise", "structureNovelty", "n1Kurtosis", "n7Surprisal"];
+const CMP_VIEW_CURVES = ["onsetStrength", "loudness", "activity", "localPulse", "harshness", "timbreHarshness", "arousal", "tension", "surprise", "structureNovelty", "n1Kurtosis", "n7Surprisal"];
 const cmpRaster = bg => bg === "raster" || bg === "raster4", cmpCurveView = bg => cmpRaster(bg) || bg === "scale";
+// Playhead tempograms: the tempogram of a curve's rises (or of how fast all descriptors change), and a weighting curve
+const CMP_TEMPO_OF = ["", "speed", "timbreHarshness", "harshness", "loudness", "tension", "activity", "n1Kurtosis"];
+const CMP_TEMPO_W = ["", "loudness", "timbreHarshness", "harshness", "tension", "activity", "arousal"];
+const cmpTempo = bg => bg === "tempo" || bg === "tempocyc";
 const CMP_FORMS = [["lanes", "Separate, each in its own band"], ["overlay", "Overlaid on the waveform"]];
 const CMP_SHAPES = [["base", "From the baseline"], ["mirror", "Mirrored, like a waveform"], ["horizon", "Horizon (folded bands)"], ["line", "Line"]];
 const cmpLabel = k => k ? (PHAPI && PHAPI.curveLabels[k]) || k : T("cmp.none", "None");
@@ -708,11 +712,11 @@ const cmpOpts = (group, list) => list.map(([v, t]) => [v, T("cmp." + group + "."
 let cmpShow = null;
 // look code <-> control state
 function cmpState(code) {
-  const st = { bg: "none", colour: "", line: "", lanes: [], signed: true, marks: new Set(), form: "lanes", shape: "base", sculpt: "", outline: false, vcurve: "onsetStrength" };
+  const st = { bg: "none", colour: "", line: "", lanes: [], signed: true, marks: new Set(), form: "lanes", shape: "base", sculpt: "", outline: false, vcurve: "onsetStrength", tof: "", tw: "" };
   let wave = false, spec = false, viewBg = "";
   for (const l of (PHAPI && PHAPI.parseLook(code)) || []) {
     if (l.type === "wave") { wave = true; st.colour = l.colour || ""; }
-    else if (l.type === "spec" && l.of) { viewBg = l.of === "tempo" ? (l.cyclic ? "tempocyc" : "tempo") : l.of; if (l.curve) st.vcurve = l.curve; }
+    else if (l.type === "spec" && l.of) { viewBg = l.of === "tempo" ? (l.cyclic ? "tempocyc" : "tempo") : l.of; if (l.curve) st.vcurve = l.curve; if (l.of === "tempo") { st.tof = l.source || ""; st.tw = l.weight || ""; } }
     else if (l.type === "raster") { viewBg = l.bars === 4 ? "raster4" : "raster"; st.vcurve = l.curve; }
     else if (l.type === "spec") spec = true;
     else if (l.type === "form") st.form = l.value;
@@ -740,7 +744,7 @@ function cmpCode(st) {
   if (st.sculpt) parts.push("sculpt:" + st.sculpt);
   if (st.shape !== "base") parts.push("shape:" + st.shape);
   if (st.bg === "spec" || st.bg === "specwave") parts.push("spec");
-  else if (st.bg === "tempo" || st.bg === "tempocyc") parts.push("spec:tempo" + (st.bg === "tempocyc" ? "~cyclic" : ""));
+  else if (st.bg === "tempo" || st.bg === "tempocyc") parts.push("spec:tempo" + (st.bg === "tempocyc" ? "~cyclic" : "") + (st.tof ? "~of:" + st.tof : "") + (st.tw ? "~w:" + st.tw : ""));
   else if (st.bg === "lag" || st.bg === "mod") parts.push("spec:" + st.bg);
   else if (st.bg === "scale") parts.push("scalogram:" + st.vcurve);
   if (st.bg === "wave" || st.bg === "specwave") parts.push("wave" + (st.bg === "wave" && st.colour ? ":" + st.colour : ""));
@@ -816,6 +820,10 @@ function buildComposer() {
   const [lBg, sBg] = sel("cmp-bg", T("cmp.bg", "Behind"), cmpOpts("bg", CMP_BG), T("cmp.bg.title", "What the strip shows behind the curves: the waveform, a spectrogram, or nothing so the curves take the whole strip"));
   const [lCol, sCol] = sel("cmp-colour", T("cmp.colour", "Waveform colour"), CMP_COLOURS.map(k => [k, cmpLabel(k)]), T("cmp.colour.title", "A curve that tints the waveform, from the low to the high end of the colour ramp"));
   const [lVc, sVc] = sel("cmp-vcurve", T("cmp.vcurve", "Curve shown"), CMP_VIEW_CURVES.map(k => [k, cmpLabel(k)]), T("cmp.vcurve.title", "The curve the bar raster colours its rows with, or whose rhythms the scalogram shows"));
+  const [lTof, sTof] = sel("cmp-tempo-of", T("cmp.tempoOf", "Tempogram of"), CMP_TEMPO_OF.map(k => [k, !k ? T("cmp.tempoOf.onsets", "Onsets (the usual)") : k === "speed" ? T("cmp.tempoOf.speed", "Change in all descriptors") : T("cmp.tempoOf.rises", "Rises in {curve}", { curve: cmpLabel(k) })]),
+    T("cmp.tempoOf.title", "What the tempogram finds periods in: the onsets, as usual, or the rises of one curve, or how fast all the descriptors change together. Tempi stay true: only what is analysed changes."));
+  const [lTw, sTw] = sel("cmp-tempo-w", T("cmp.tempoW", "Weighted by"), CMP_TEMPO_W.map(k => [k, !k ? T("cmp.tempoW.none", "Nothing") : cmpLabel(k)]),
+    T("cmp.tempoW.title", "A curve that sets how strongly each moment of the tempogram is drawn: where it is low, the tempogram fades to grey, not black, so a quiet passage stays apart from one without a beat."));
   const [lForm, sForm] = sel("cmp-form", T("cmp.form", "Lanes"), cmpOpts("forms", CMP_FORMS), T("cmp.form.title", "Separate: each curve in its own band, like a stack of waveforms. Overlaid: the curves drawn on the waveform itself, to compare their shapes with it"));
   const [lShape, sShape] = sel("cmp-shape", T("cmp.shape", "Shape"), cmpOpts("shapes", CMP_SHAPES), T("cmp.shape.title", "How each lane's curve is drawn: filled from the baseline, mirrored around the middle like a waveform, folded into a horizon chart (compact), or as a line"));
   const [lH, sH] = sel("cmp-height", T("cmp.height", "Height"), CMP_HEIGHTS.map(v => [String(v), v + " px"]), T("cmp.height.title", "Height of the strips in this section"));
@@ -840,7 +848,7 @@ function buildComposer() {
   const fb = el("a", "", T("cmp.feedback", "Tell us if this helps")); fb.target = "_blank"; fb.rel = "noopener";
   codeRow.append(cl, copy, fb);
   const row1 = el("div", "cmp-row"), row2 = el("div", "cmp-row");
-  row1.append(lLook, lBg, lVc, lCol, lSc, lLine, olL);
+  row1.append(lLook, lBg, lVc, lTof, lTw, lCol, lSc, lLine, olL);
   row2.append(lForm, lShape, lH, refL);
   box.append(row1, lanes, row2, marks, codeRow);
 
@@ -848,6 +856,7 @@ function buildComposer() {
     const st = cmpState(CMP.code), raster = cmpRaster(st.bg);
     sBg.value = st.bg; sCol.value = st.colour; sCol.disabled = st.bg !== "wave"; sLine.value = st.line; signed.checked = st.signed;
     sVc.value = st.vcurve; lVc.hidden = !cmpCurveView(st.bg);
+    sTof.value = st.tof; sTw.value = st.tw; lTof.hidden = lTw.hidden = !cmpTempo(st.bg);
     sSc.value = st.sculpt; sSc.disabled = st.bg !== "wave" && st.bg !== "specwave"; outl.checked = !!S.ghost;
     sForm.value = st.form; sShape.value = st.shape; sH.value = String(CMP.h); refs.checked = CMP.refs;
     // on the raster, time runs in rows: curves, lines and the beat marks have no place there
@@ -868,7 +877,7 @@ function buildComposer() {
     CMP.code = c; store.set("look", c); show(); render();
   };
   const fromControls = () => {
-    const st = { bg: sBg.value, colour: sCol.value, line: sLine.value, signed: signed.checked, form: sForm.value, shape: sShape.value, sculpt: sSc.value, vcurve: sVc.value,
+    const st = { bg: sBg.value, colour: sCol.value, line: sLine.value, signed: signed.checked, form: sForm.value, shape: sShape.value, sculpt: sSc.value, vcurve: sVc.value, tof: cmpTempo(sBg.value) ? sTof.value : "", tw: cmpTempo(sBg.value) ? sTw.value : "",
       lanes: CMP_LANES.filter(k => laneBoxes.find(c => c.value === k).checked).slice(0, CMP_MAX_LANES), marks: new Set(markBoxes.filter(c => c.checked).map(c => c.value)) };
     set(cmpCode(st));
   };
@@ -879,7 +888,7 @@ function buildComposer() {
     const f = S.sel, ent = f && f.F && f.phDocs && f.phDocs[effClass(f)];
     set(L.code || PHAPI.lookCode(PHAPI.parseLook(ent && ent.doc && (ent.doc.profile === "sfx") ? "wave:harshness,line:activity,ticks:events" : "wave:activity,sections,line:tension,ticks:downbeats+events")));
   });
-  [sBg, sVc, sCol, sLine, sSc, sForm, sShape, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
+  [sBg, sVc, sTof, sTw, sCol, sLine, sSc, sForm, sShape, signed, ...laneBoxes, ...markBoxes].forEach(c => c.addEventListener("change", fromControls));
   outl.addEventListener("change", () => { S.ghost = outl.checked; store.set("ghost", S.ghost); $("ghost").checked = S.ghost; show(); render(); });
   cmpShow = show;   // the top bar's outline switch (hooked once, at start) updates this composer
   sH.addEventListener("change", () => { CMP.h = parseInt(sH.value, 10) || 128; store.set("lookHeight", CMP.h); redrawCompose(); });

@@ -39,6 +39,14 @@
 - **`playhead arrange --parts parts.json`** on the command line: the search for arrangements from a list of parts
   (documents or audio files, with offset, gain, start, end and lock), printing the best arrangements as JSON. Options
   `--goal`, `--range`, `--gains`, `--count` and `--seed`.
+- **`timbreHarshness` curve**: the psychoacoustic annoyance factor behind `harshness` (sharpness, fluctuation, roughness)
+  without the loudness that `harshness` adds it to, so a quiet harsh sound reads as harsh. In the lab's composer (tint,
+  lanes, views), in REAPER's curves and Playhead Control, and combined across layers as a power-weighted mean.
+- **Playhead tempograms** (look codes `spec:tempo~of:<curve>`, `~of:speed`, `~w:<curve>`; in the lab's composer as
+  "Tempogram of" and "Weighted by", Czech included): the tempogram of a descriptor's rises, of how fast all the
+  descriptors change together, or the tempogram weighted by a curve, drawn toward grey where the curve is low. Tempi
+  stay true: nothing moves a ridge along the tempo axis. On a groove at 120 BPM the harshness and change tempograms
+  peak at 120 BPM; a curve pulsing at 80 BPM in half a sound shows 80 BPM there only.
 - **Frames for visuals, engines and 3D tools**: `Playhead.frames(doc, { fps, curves, scale })` and
   `playhead frames <file> --fps 60 [--curves ...] [--format csv|json|blender]`: the curves once per video frame, each
   value the curve's mean over its frame, on 0..1 as the strip draws it (or `--scale file`: from each curve's 5th to

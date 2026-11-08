@@ -785,5 +785,17 @@
  "lib.tool.stretch.param.from": "Náběhy",
  "lib.tool.stretch.opt.from.onsets": "Každý nástup",
  "lib.tool.stretch.opt.from.events": "Jen začátky událostí",
- "lib.tool.stretch.param.plain": "Renderovat i prosté natažení"
+ "lib.tool.stretch.param.plain": "Renderovat i prosté natažení",
+ "cmp.tempoOf": "Tempogram z",
+ "cmp.tempoOf.onsets": "nástupů (běžný)",
+ "cmp.tempoOf.speed": "změny všech deskriptorů",
+ "cmp.tempoOf.rises": "nárůstů křivky {curve}",
+ "cmp.tempoOf.title": "V čem tempogram hledá periody: v nástupech jako obvykle, v nárůstech jedné křivky, nebo v tom, jak rychle se mění všechny deskriptory společně. Tempa zůstávají pravdivá: mění se jen to, co se analyzuje.",
+ "cmp.tempoW": "Váženo křivkou",
+ "cmp.tempoW.none": "žádnou",
+ "cmp.tempoW.title": "Křivka, která určuje, jak silně se každé místo tempogramu vykreslí: kde je nízko, tempogram bledne do šedé, ne do černé, takže tichá pasáž se liší od pasáže bez rytmu.",
+ "lib.legend.tempoSpeed": " změny všech deskriptorů najednou",
+ "lib.legend.tempoOf": " nárůstů křivky {curve}",
+ "lib.legend.tempoWeight": ", šedě tam, kde je {curve} nízko",
+ "lib.curve.timbreHarshness": "tvrdost barvy"
 }
