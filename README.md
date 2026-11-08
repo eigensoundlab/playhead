@@ -132,6 +132,11 @@ grid: the **bar spectrum** (a row per bar, a column per 16th, low red, mid green
 band and bar, whether its attacks keep to the bar, the beat, 8ths or 16ths: which part of the spectrum carries which
 level, and when that changes). `Playhead.view` gives them to other hosts as numbers.
 
+**Audiovisual Playhead.** [experiments/av](experiments/av/README.md) draws one scene twice from the same sound, with
+WebGPU or WebGL 2: once from the usual audio-reactive signals (level, analyser bands, band beats), once from Playhead's
+analysis (attacks, the bar, the spectrum on the grid, sections, builds and drops, distortion, pass-bys), each with a
+timeline of what it detected.
+
 **Tracks in a folder.** Documents combine: `Playhead.combine([{ doc, offset, gain }, ...])` returns a document for the
 sum of several sounds without the audio or a new analysis, so a folder track, a group of layered effects or a set of
 stems can show the whole as the parts move. The app's **Tracks in a folder** section tries it hands-on: up to three

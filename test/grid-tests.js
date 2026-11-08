@@ -67,4 +67,13 @@ module.exports = async function (check) {
     `${rs && rs.rows} rows of ${rs && rs.cols}; groove's first step ${kickCell && Array.from(kickCell).join(",")}, its first hat ${hatCell && Array.from(hatCell).join(",")}; ${JSON.stringify(doc.rhythm.spectral).length} bytes`,
     !!rs && !!ra && rs.cols === 16 && rs.rows === doc.rhythm.bars.length && kickCell[0] > kickCell[2] && hatCell[2] > hatCell[0] && hatCell[2] > hatCell[1]
       && JSON.stringify(doc.rhythm.spectral).length < 400 * doc.rhythm.bars.length && P.lookFits(doc, "metrical") && P.lookFits(doc, "spectralGroove") && !P.lookFits(D.riser, "metrical") === !D.riser.rhythm.spectral);
+
+  // the audiovisual comparison (experiments/av): what the usual signals and Playhead find in the arrangement
+  const AV = require("../experiments/av/site/drivers.js"), std = AV.standardDrivers(S.y, S.sr), rows = Object.fromEntries(AV.compare(S.truth, std, doc).map(r => [r.what, r]));
+  const k = rows.Kicks, sn = rows.Snares, dr = rows.Drop, pv = rows["Pass-by"], fb = rows["Fill and break"];
+  const drive = AV.playheadDriver(doc).drive(S.truth.passBy.closest), sdrive = AV.standardDrive(std, 10, 0);
+  check("av: Playhead's drive finds every kick and snare on time, the drop, the fill and break, and the pass-by, which the usual signals cannot",
+    `kicks ${k.ph.found}/${k.ph.of} at ${k.ph.latencyMs} ms (usual ${k.std.found}/${k.std.of}, +${k.std.latencyMs} ms); snares ${sn.ph.found}/${sn.ph.of} (usual ${sn.std.found}); drop ${dr.ph.found ? Math.round(1000 * dr.ph.err) + " ms off" : "missed"} (usual ${dr.std.found ? "found" : "none"}); pass-by ${pv.ph ? Math.round(1000 * pv.ph.err) + " ms off" : "missed"}`,
+    k.ph.found === k.ph.of && Math.abs(k.ph.latencyMs) <= 2 && sn.ph.found >= 0.95 * sn.ph.of && sn.ph.found > sn.std.found && dr.ph.found && Math.abs(dr.ph.err) < 0.2
+      && fb.ph.fill && fb.ph.brk && pv.ph && Math.abs(pv.ph.err) < 0.2 && drive.passOn === 1 && Math.abs(drive.passX) < 0.1 && sdrive.phase === -1 && sdrive.bands.length === 8);
 };

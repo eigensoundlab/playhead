@@ -46,7 +46,7 @@ snare on 2 and 4, off-beat hats, bass), a fill, a break (pad and a source passin
 from quarters to 16ths under a riser, not louder), a drop (four-on-the-floor, 16th hats, an off-beat bass, a clipped
 stab in its second half) and an outro. It runs in Node and in the browser, for the spectral views (`test/grid-tests.js`
 checks the metrical spectrogram on it) and for the audiovisual comparison
-([experiments/visuals](../visuals/README.md)). Analysed, its pass-by is placed within 0.03 s at 24.3 m/s, the fill and
+([experiments/av](../av/README.md)). Analysed, its pass-by is placed within 0.03 s at 24.3 m/s, the fill and
 the break are found, and the build is found from 29 to 37 s (true 31 to 39 s).
 
 ## What is measured

@@ -3,6 +3,14 @@
 ## Unreleased
 
 ### Added
+- **Audiovisual Playhead** ([experiments/av](experiments/av/README.md), on the site at `/av/`): one scene drawn twice
+  from the same sound, with WebGPU or WebGL 2. The left side reacts the usual way (level, WebAudio analyser octaves,
+  MilkDrop-style band beats, centroid colour, worked out frame by frame without looking ahead), the right side from
+  Playhead (attacks to the sample, the spectrum on the grid, the bar, sections, builds and drops, fills and breaks,
+  distortion, pass-bys). A timeline of what each side detected under each, and for the demo arrangement what each side
+  found: every kick and snare at 0 ms against 79 kicks at +9 ms and 34 of 81 snares, the drop 14 ms off and the pass-by
+  23 ms off where the usual signals have none; the usual treble beats find more of the synthetic hats (185 of 190
+  against 123). Open your own file to compare.
 - **Spectral playheads**: views of the spectrum on the beat grid, for what a tempogram cannot show (where in the bar
   the onsets fall, and which part of the spectrum makes them). `rhythm.spectral` keeps, per bar, 16th step and octave
   group, the level and the attack strength (about 350 bytes a bar). Three looks: **Bar spectrum** (`raster:spectrum`, a

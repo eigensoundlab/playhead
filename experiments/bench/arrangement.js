@@ -56,7 +56,7 @@
         for (let st = 0; st < 16; st++) play("hat", hat(st % 4 === 2), at(st), st % 2 ? 0.45 : 0.7);
         for (const st of [2, 6, 10, 14]) play("bass", saw(hz(ch[0] + 12), 1.6 * STEP, 700, 3), at(st), 0.55);   // the off-beat bass
         // a distorted stab in the second half of the drop: a chord of sawtooths clipped hard
-        if (bar >= 24) for (const st of [0, 3, 6]) { const x = saw(hz(ch[1] + 12), 2 * STEP, 5000, 2); for (const m of ch.slice(2)) { const z = saw(hz(m + 12), 2 * STEP, 5000, 2); for (let i = 0; i < x.length; i++) x[i] += z[i]; } for (let i = 0; i < x.length; i++) x[i] = Math.max(-0.25, Math.min(0.25, 3 * x[i])); play("stab", x, at(st), 0.9); }
+        if (bar >= 24) for (const st of [0, 3, 6]) { const x = saw(hz(ch[1] + 12), 2 * STEP, 5000, 2); for (const m of ch.slice(2)) { const z = saw(hz(m + 12), 2 * STEP, 5000, 2); for (let i = 0; i < x.length; i++) x[i] += z[i]; } for (let i = 0; i < x.length; i++) x[i] = Math.max(-0.25, Math.min(0.25, 3 * x[i])); play("stab", x, at(st), 1.6); }
       }
     }
     // the build: a riser (noise swept up from 300 Hz to 8 kHz), held at one level
