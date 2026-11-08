@@ -429,8 +429,8 @@ return function(T)
     for _, which in ipairs({ { "robot", robot, ref.robot }, { "arc", arc, ref.arc } }) do
       for _, jv in ipairs(which[3].views) do
         local o = jv.opts or {}
-        local v = M.view(which[2], jv.kind, { curve = o.curve, bars = o.bars, cyclic = o.cyclic })
-        local name = which[1] .. " " .. jv.kind .. (o.curve and (" " .. o.curve) or "") .. (o.bars and " 4 bars" or "") .. (o.cyclic and " cyclic" or "")
+        local v = M.view(which[2], jv.kind, { curve = o.curve, bars = o.bars, cyclic = o.cyclic, attacks = o.attacks })
+        local name = which[1] .. " " .. jv.kind .. (o.curve and (" " .. o.curve) or "") .. (o.attacks and " attacks" or "") .. (o.bars and " 4 bars" or "") .. (o.cyclic and " cyclic" or "")
         local err
         if jv.none == "view" then if v then err = "a view where drawStrip has none" end
         elseif not v then err = "no view"
@@ -444,14 +444,15 @@ return function(T)
           for i, t in ipairs(jv.yTicks) do if not err and not (near(v.yTicks[i].row, t[1], 2e-4) and v.yTicks[i].text == t[2]) then err = "axis " .. v.yTicks[i].text .. " vs " .. t[2] end end
           for _, c in ipairs(jv.colAt or {}) do if not err and v.colAt(c[1]) ~= c[2] then err = string.format("column at %.3f s: %d vs %d", c[1], v.colAt(c[1]), c[2]) end end
           if not err and jv.timeRows and not (same_rows(v.timeRows, jv.timeRows) and v.beatsPerBar == jv.beatsPerBar) then err = "raster rows" end
+          if not err and jv.rgb then local t = 0; for i = 1, 3 * v.rows * v.cols do t = t + v.rgb[i] end; if t ~= jv.rgb then err = "colours " .. t .. " vs " .. jv.rgb end end
           if not err and jv.faint then local f = 0; for i = 1, v.rows * v.cols do if v.faint[i] then f = f + 1 end end; if f ~= jv.faint then err = "faint " .. f .. " vs " .. jv.faint end end
         end
         vn_n = vn_n + 1
         if err then vn_bad[#vn_bad + 1] = name .. ": " .. err end
       end
     end
-    check("views: bar raster, tempogram (and folded), lag view, modulation and scalogram as numbers equal Playhead.view's",
-      #vn_bad == 0 and vn_n == 16, vn_n .. " views; " .. (vn_bad[1] or "all equal"))
+    check("views: bar raster, tempogram (and folded), lag view, modulation, scalogram, bar spectrum and metrical spectrogram as numbers equal Playhead.view's",
+      #vn_bad == 0 and vn_n == 22, vn_n .. " views; " .. (vn_bad[1] or "all equal"))
     -- zooming a strip (as the strip window does): around a point, scrolling, paging after the play cursor
     do
       local v = M.zoom_view({ 0, 1 }, 0.25, 2, 0.01)

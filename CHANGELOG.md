@@ -3,6 +3,17 @@
 ## Unreleased
 
 ### Added
+- **Spectral playheads**: views of the spectrum on the beat grid, for what a tempogram cannot show (where in the bar
+  the onsets fall, and which part of the spectrum makes them). `rhythm.spectral` keeps, per bar, 16th step and octave
+  group, the level and the attack strength (about 350 bytes a bar). Three looks: **Bar spectrum** (`raster:spectrum`, a
+  row per bar, a column per 16th, low red, mid green, high blue), **Spectral groove** (`raster:spectrum~attacks`, the
+  same in attacks: each bar's drum pattern from the mix) and **Metrical spectrogram** (`spec:metric`, per octave group
+  and bar the finest metrical level its attacks keep to, bar to 16ths). In the app's look composer, `Playhead.view`
+  (kinds `raster` with curve `spectrum`, and `metric`), and REAPER's strip window (the Lua port equals the library's
+  drawing at every point). On the new bench arrangement (`experiments/bench/arrangement.js`: intro, groove, break with
+  a pass-by, build, drop, outro, synthesized with its form known) the metrical spectrogram reads the kick band as the
+  half bar in the groove and the beat in the drop, the off-beat bass and the hats as 8ths, and the build's snare band
+  going from the beat to 8ths to 16ths.
 - **Rhythm changes, builds and sound motion** (descriptors from the research report, each tested on the bench first):
   - Per bar on the beat grid: `swing`, the drum `pattern` (per band, 16 steps), `surprise` against the four bars
     before, and `change` (`fill` or `break`); `rhythm.template`, the groove (per band and step the median strength and

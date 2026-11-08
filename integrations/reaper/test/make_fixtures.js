@@ -100,6 +100,7 @@ function viewNumbers(doc, kind, opts) {
   if (v.colAt) out.colAt = [0, 0.37, d / 3, d / 2, d - 0.01, d + 1].map(t => [t, v.colAt(t)]);
   if (v.timeRows) { out.timeRows = v.timeRows.map(r => r.map(r4)); out.beatsPerBar = v.beatsPerBar; }
   if (v.faint) { let f = 0; for (const x of v.faint) f += x; out.faint = f; }
+  if (v.rgb) { let t = 0; for (const x of v.rgb) t += x; out.rgb = t; }
   return out;
 }
 
@@ -133,7 +134,8 @@ function reference(doc) {
     Playhead.drawStrip(ctx, doc, { look: "wave:harshness,lane:activity~signed,lane:loudness,ticks:events+onsets+novelty", width: 200, height: 70, from: d / 3, to: 2 * d / 3 }); return ops; })() };
   // the views as numbers, and zoomed and folded
   ref.views = [["raster", {}], ["raster", { curve: "loudness", bars: 4 }], ["tempo", {}], ["tempo", { cyclic: true }], ["lag", {}], ["mod", {}],
-    ["scale", { curve: "loudness" }], ["scale", { curve: "onsetStrength" }]].map(([k, o]) => viewNumbers(doc, k, o) || { kind: k, opts: o, none: "view" });
+    ["scale", { curve: "loudness" }], ["scale", { curve: "onsetStrength" }], ["raster", { curve: "spectrum" }], ["raster", { curve: "spectrum", attacks: true, bars: 4 }],
+    ["metric", {}]].map(([k, o]) => viewNumbers(doc, k, o) || { kind: k, opts: o, none: "view" });
   ref.viewZoom = ["raster:onsetStrength~4bars,sections,ticks:onsets+events+novelty", "spec:tempo~cyclic,lane:localPulse,ticks:downbeats", "scalogram:loudness,sections"]
     .map(look => ({ look, ...viewOps(doc, look, 220, 90, d / 3, 2 * d / 3) }));
   return ref;

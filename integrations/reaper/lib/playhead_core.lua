@@ -946,7 +946,7 @@ end
 -- (time-based views) or timeRows (the raster) }; values[r * cols + c + 1] is row r (0 at the top), column c, 0..1,
 -- or -1 where there is no data. Built once per document and options; nil when the document cannot give the view.
 ------------------------------------------------------------------------------------------------------------------------
-M.VIEW_KINDS = { raster = true, tempo = true, lag = true, scale = true, mod = true }
+M.VIEW_KINDS = { raster = true, tempo = true, lag = true, scale = true, mod = true, metric = true }
 
 --- A curve's value over [ta, tb) (document seconds): the mean of its samples there, or linear interpolation when a
 --- sample spans more (as the JavaScript curveValue).
@@ -976,6 +976,8 @@ local function view_range(name, arr)
   local lo, hi
   if name:find("^n%d") then lo, hi = pct(v, 0.05), pct(v, 0.95)
   elseif name == "structureNovelty" or name == "localPulse" then lo, hi = 0, max(0.05, pct(v, 0.99))
+  elseif name == "pitchSlope" then lo, hi = -12, 12
+  elseif name == "lufs" then lo, hi = -60, 0
   else return 0, 1 end
   if hi - lo < 1e-9 then lo, hi = lo - 1, lo + 1 end
   return lo, hi
@@ -1073,6 +1075,177 @@ local function raster_view(doc, curve, per, ncols)
   for r = 0, R - 1 do if r % (per == 4 and 2 or 8) == 0 then ticks[#ticks + 1] = { row = r + 0.5, text = tostring(r * br.bars + 1) } end end
   return { kind = "raster", curve = curve, rows = R, cols = ncols, values = values, yTicks = ticks, timeRows = br.rows,
     beatsPerBar = br.beatsPerBar, bars = br.bars }
+end
+
+
+-- Spectral playheads (as Playhead's spectralOf, spectrumRaster and metricView): views of rhythm.spectral, the spectrum
+-- on the beat grid. The bar spectrum ("raster:spectrum", "~attacks" for attack strength): a row per bar, a column per
+-- 16th, red the low octave groups, green the middle, blue the high. The metrical spectrogram ("spec:metric"): per
+-- octave group and bar, the finest metrical level its attacks keep to, coloured by level, brighter where it hits harder.
+M.METRIC_LEVELS = { { "bar", { 232, 69, 60 } }, { "half bar", { 243, 154, 43 } }, { "beat", { 239, 213, 74 } }, { "8ths", { 76, 199, 106 } }, { "16ths", { 63, 159, 242 } } }
+local SPEC_CHANNELS = { { 0, 1 }, { 2, 3, 4 }, { 5, 6, 7 } }
+local spectral_cache = setmetatable({}, { __mode = "k" })
+local function spectral_of(doc)
+  local r = type(doc) == "table" and doc.rhythm
+  if type(r) ~= "table" or r == NULL then return nil end
+  local sp = r.spectral
+  if type(sp) ~= "table" or sp == NULL or type(sp.levels) ~= "string" or type(sp.attacks) ~= "string" or type(r.bars) ~= "table"
+    or not sp.bars or sp.bars == 0 or #r.bars ~= sp.bars then return nil end
+  if spectral_cache[sp] then return spectral_cache[sp] end
+  local bars, bpb = r.bars, sp.steps // 4
+  local gaps = {}
+  for k = 2, #bars do gaps[#gaps + 1] = bars[k].start - bars[k - 1].start end
+  sort(gaps)
+  local med = #gaps > 0 and gaps[(#gaps >> 1) + 1] or bars[1].beat * bpb
+  local span = {}
+  for k, b in ipairs(bars) do
+    local nx = bars[k + 1]
+    span[k] = { b.start, (nx and nx.start - b.start < 1.5 * med) and nx.start or b.start + b.beat * bpb }
+  end
+  local out = { S = sp.steps, NG = sp.groups, nb = sp.bars, bpb = bpb, edges = sp.edges, lev = M.from_base64(sp.levels),
+    att = M.from_base64(sp.attacks), dbTop = sp.dbTop, dbRange = sp.dbRange, span = span, med = med }
+  spectral_cache[sp] = out
+  return out
+end
+M.spectral_of = spectral_of
+
+local function spectrum_raster(doc, per, attacks)
+  local sg = spectral_of(doc)
+  if not sg then return nil end
+  local S, NG, nb = sg.S, sg.NG, sg.nb
+  local cells, ch = nb * S, {}
+  for i = 0, cells - 1 do
+    for c = 1, 3 do
+      local gs = SPEC_CHANNELS[c]
+      if attacks then
+        local v = 0
+        for _, g in ipairs(gs) do v = max(v, byte(sg.att, i * NG + g + 1) / 255) end
+        ch[i * 3 + c] = v
+      else
+        local p, ok = 0, false
+        for _, g in ipairs(gs) do
+          local b = byte(sg.lev, i * NG + g + 1)
+          if b ~= 0 then ok = true; p = p + 10 ^ ((sg.dbTop - sg.dbRange + (b - 1) / 254 * sg.dbRange) / 10) end
+        end
+        ch[i * 3 + c] = ok and 10 * math.log(max(1e-12, p / #gs), 10) or false
+      end
+    end
+  end
+  -- levels: each channel from its 20th percentile in the file (black) to its 99th (full)
+  local rng = {}
+  for c = 1, 3 do
+    if attacks then rng[c] = { 0, 1 }
+    else
+      local v = {}
+      for i = 0, cells - 1 do if ch[i * 3 + c] then v[#v + 1] = ch[i * 3 + c] end end
+      sort(v)
+      if #v > 0 then
+        local lo = v[floor(0.2 * (#v - 1)) + 1]
+        rng[c] = { lo, max(lo + 6, v[floor(0.99 * (#v - 1)) + 1]) }
+      else rng[c] = { 0, 1 } end
+    end
+  end
+  local R, cols = ceil(nb / per), S * per
+  local values, rgb = {}, {}
+  local W3 = { 0.2126, 0.7152, 0.0722 }
+  for r = 0, R - 1 do
+    for c = 0, cols - 1 do
+      local o = r * cols + c
+      local k = r * per + c // S
+      local i = k * S + c % S
+      values[o + 1] = -1; rgb[3 * o + 1], rgb[3 * o + 2], rgb[3 * o + 3] = 0, 0, 0
+      if k < nb and ch[i * 3 + 1] then
+        local lum = 0
+        for q = 1, 3 do
+          local u = clamp((ch[i * 3 + q] - rng[q][1]) / (rng[q][2] - rng[q][1]), 0, 1)
+          rgb[3 * o + q] = round(255 * u ^ 1.2)
+          lum = lum + W3[q] * u
+        end
+        values[o + 1] = lum
+      end
+    end
+  end
+  local rows, ticks = {}, {}
+  for r = 0, R - 1 do
+    local k = r * per
+    local last = min(nb - 1, k + per - 1)
+    rows[r + 1] = { sg.span[k + 1][1], sg.span[last + 1][2] + (k + per - 1 - last) * sg.med }
+    if r % (per == 4 and 2 or 8) == 0 then ticks[#ticks + 1] = { row = r + 0.5, text = tostring(r * per + 1) } end
+  end
+  return { kind = "raster", curve = "spectrum", attacks = attacks and true or false, rows = R, cols = cols, values = values, rgb = rgb,
+    yTicks = ticks, timeRows = rows, beatsPerBar = sg.bpb, bars = per }
+end
+
+-- the metrical level of each step: 0 the downbeat, 1 the half bar (4/4), 2 the other beats, 3 the off-beat 8ths, 4 16ths
+local function metric_level(s, bpb)
+  if s == 0 then return 0 elseif bpb == 4 and s == 8 then return 1 elseif s % 4 == 0 then return 2 elseif s % 2 == 0 then return 3 end
+  return 4
+end
+local function metric_view(doc)
+  local sg = spectral_of(doc)
+  if not sg then return nil end
+  local S, NG, nb, bpb = sg.S, sg.NG, sg.nb, sg.bpb
+  local strength, level = {}, {}
+  for k = 0, nb - 1 do
+    for g = 0, NG - 1 do
+      local sum, n, tot = { 0, 0, 0, 0, 0 }, { 0, 0, 0, 0, 0 }, 0
+      for s0 = 0, S - 1 do
+        local v = byte(sg.att, (k * S + s0) * NG + g + 1) / 255
+        local c = metric_level(s0, bpb) + 1
+        sum[c] = sum[c] + v; n[c] = n[c] + 1; tot = tot + v
+      end
+      local o = k * NG + g + 1
+      strength[o] = tot / S
+      level[o] = -1
+      -- the finest level whose steps hit at least half as hard as the steps of the coarser levels on average
+      if tot / S > 0.01 then
+        level[o] = 0
+        for c = 4, 1, -1 do
+          local rs, rn = 0, 0
+          for d = 0, c - 1 do rs = rs + sum[d + 1]; rn = rn + n[d + 1] end
+          if n[c + 1] > 0 and rn > 0 and sum[c + 1] / n[c + 1] >= 0.5 * rs / rn then level[o] = c; break end
+        end
+      end
+    end
+  end
+  -- brightness: each group's strength from 0 to its 95th percentile over the bars
+  local ref = {}
+  for g = 0, NG - 1 do
+    local v = {}
+    for k = 0, nb - 1 do v[#v + 1] = strength[k * NG + g + 1] end
+    sort(v)
+    ref[g + 1] = max(0.03, v[floor(0.95 * (#v - 1)) + 1])
+  end
+  local values, rgb, levels = {}, {}, {}
+  for r = 0, NG - 1 do
+    for k = 0, nb - 1 do
+      local g = NG - 1 - r
+      local u = min(1, strength[k * NG + g + 1] / ref[g + 1])
+      local lv = level[k * NG + g + 1]
+      local o = r * nb + k
+      values[o + 1], levels[o + 1] = u, lv
+      local c = lv >= 0 and M.METRIC_LEVELS[lv + 1][2] or { 90, 90, 90 }
+      local w = u ^ 0.8
+      for q = 1, 3 do rgb[3 * o + q] = round(c[q] * w) end
+    end
+  end
+  local ticks = {}
+  for r = 0, NG - 1 do
+    local g = NG - 1 - r
+    local e = g > 0 and sg.edges[g] or nil
+    local text = e == nil and ("< " .. tostring(math.tointeger(sg.edges[1]) or sg.edges[1])) or e >= 1000 and fmt("%.1fk", e / 1000) or tostring(math.tointeger(e) or e)
+    ticks[#ticks + 1] = { row = r + 0.5, text = text }
+  end
+  local span = sg.span
+  local names = {}
+  for i, l in ipairs(M.METRIC_LEVELS) do names[i] = l[1] end
+  return { kind = "metric", rows = NG, cols = nb, values = values, rgb = rgb, levels = levels, levelNames = names, yTicks = ticks, bars = span,
+    colAt = function(t)
+      if t < span[1][1] or t >= span[nb][2] then return -1 end
+      local lo, hi = 0, nb - 1
+      while lo < hi do local m = (lo + hi + 1) >> 1; if span[m + 1][1] <= t then lo = m else hi = m - 1 end end
+      return lo
+    end }
 end
 
 local function log2(x) return math.log(x, 2) end
@@ -1291,11 +1464,12 @@ local function view_key(kind, opts)
   local curve = opts.curve or "onsetStrength"
   local bars = opts.bars == 4 and 4 or 1
   local ncols = max(8, min(512, opts.cols or (bars == 4 and 192 or 96)))
-  return kind .. "|" .. (kind == "raster" and (curve .. "|" .. bars .. "|" .. ncols) or kind == "scale" and curve
+  return kind .. "|" .. (kind == "raster" and (curve .. "|" .. bars .. "|" .. ncols .. "|" .. tostring(opts.attacks and true or false)) or kind == "scale" and curve
     or kind == "tempo" and tostring(opts.cyclic and true or false) or ""), curve, bars, ncols
 end
 --- The image of a view as numbers (see above); nil when the document cannot give it. kind: "raster" (opts.curve,
---- opts.bars 1 or 4, opts.cols), "tempo" (opts.cyclic), "lag", "mod", "scale" (opts.curve).
+--- opts.bars 1 or 4, opts.cols; curve "spectrum" with opts.attacks for the bar spectrum), "tempo" (opts.cyclic), "lag",
+--- "mod", "scale" (opts.curve), "metric". The bar spectrum and the metrical view also give rgb (3 numbers per cell).
 function M.view(doc, kind, opts)
   opts = opts or {}
   if type(doc) ~= "table" or not M.VIEW_KINDS[kind] then return nil end
@@ -1304,7 +1478,8 @@ function M.view(doc, kind, opts)
   if not m then m = {}; view_cache[doc] = m end
   if m[key] == nil then
     local v
-    if kind == "raster" then v = raster_view(doc, curve, bars, ncols)
+    if kind == "raster" then v = curve == "spectrum" and spectrum_raster(doc, bars, opts.attacks) or curve ~= "spectrum" and raster_view(doc, curve, bars, ncols) or nil
+    elseif kind == "metric" then v = metric_view(doc)
     elseif kind == "tempo" then v = tempo_view(doc, opts.cyclic)
     elseif kind == "lag" then v = lag_view(doc)
     elseif kind == "mod" then v = mod_view(doc)
@@ -1353,7 +1528,7 @@ M.FORMS = { lanes = true, overlay = true }
 M.SHAPES = { base = true, mirror = true, horizon = true, line = true }
 M.LOOK_ORDER = { "auto", "plain", "spectrum", "structure", "rhythm", "tension", "events", "lanes", "shapes", "overlay",
   "horizon", "specstructure", "overview", "character", "surprise", "hits", "raster", "tempogram", "repetition", "modulation",
-  "rhythms", "sculpted" }
+  "spectralRaster", "spectralGroove", "metrical", "rhythms", "sculpted" }
 M.LOOKS = {
   auto = { name = "Automatic", desc = "Sound effects: harshness as colour, activity as the line, events. Music: activity as colour, tension as the line, sections, downbeats.", code = nil },
   plain = { name = "Waveform only", desc = "The waveform without analysis, for comparison.", code = "wave" },
@@ -1374,6 +1549,9 @@ M.LOOKS = {
   tempogram = { name = "Tempogram", desc = "For music. How strongly each tempo (30 to 590 BPM, fast at the top) is present over time. A steady beat is a bright line, a tempo change bends it, double and half tempo show as fainter lines. With bar lines.", code = "spec:tempo,ticks:downbeats" },
   repetition = { name = "Repetition (lag view)", desc = "For music. How alike each moment is to the moment a given time before (that time, the lag, going up). A bright horizontal line means the music repeats what played that long ago. With sections.", code = "spec:lag,sections" },
   modulation = { name = "Modulation spectrogram", desc = "For any sound. How fast its level pulses, and how strongly, over time: rhythm below about 4 Hz, fluctuation, tremolo and flutter from 4 to 20 Hz, roughness above (fast at the top). Engines, rotors, tremolo, growls and buzzes show as bright rows at their rate; steady tones and plain noise stay dark.", code = "spec:mod" },
+  spectralRaster = { name = "Bar spectrum", desc = "For music. A row per bar, a column per 16th, coloured by the spectrum: red where the low end (below 260 Hz) is strong, green the middle, blue the top (above 2 kHz), white all of them. The arrangement bar by bar: where the bass comes in, the hats drop out, a break thins to blue. With sections.", code = "raster:spectrum,sections" },
+  spectralGroove = { name = "Spectral groove", desc = "For music. As Bar spectrum, but coloured by what hits on each 16th rather than what sounds: kick red, snare and body green, hats and cymbals blue, together in mixed colours. The drum pattern of every bar, read from the mix.", code = "raster:spectrum~attacks,sections" },
+  metrical = { name = "Metrical spectrogram", desc = "For music. For each octave band (low at the bottom) and bar, the finest metrical level its attacks keep to: the bar (red), the half bar (orange), the beat (yellow), 8ths (green), 16ths (blue); brighter where the band hits harder. Which part of the spectrum carries the bar, the beat and the subdivisions, and how that changes. With sections.", code = "spec:metric,sections" },
   rhythms = { name = "Curve rhythms (scalogram)", desc = "Research view, for any sound. The periodic patterns in onset strength, from fast (top) to slow (bottom): beat, bar and phrase in music, flutter and tremolo in effects. Fainter near the ends, where the sound is too short to be sure of a period.", code = "scalogram:onsetStrength" },
   hits = { name = "Hits and pulse", desc = "The waveform with onset strength (where the hits are) and the local pulse as lanes, beats and bar lines.", code = "wave,lane:onsetStrength,lane:localPulse,ticks:beats+downbeats" },
   sculpted = { name = "Waveform as loud as it sounds", desc = "The waveform's envelope follows perceived loudness (a dB-like scale) while its detail stays; colour shows harshness, with the ordinary peak outline for comparison.", code = "sculpt:loudness,wave:harshness,outline,ticks:events+novelty" }
@@ -1412,9 +1590,12 @@ function M.parse_look(code)
       elseif ty == "spec" then
         if arg == "" or arg == "mel" then out[#out + 1] = { type = ty }
         elseif arg == "tempo" then out[#out + 1] = { type = ty, of = "tempo", cyclic = flags.cyclic or false }
-        elseif arg == "lag" or arg == "mod" then out[#out + 1] = { type = ty, of = arg } end
+        elseif arg == "lag" or arg == "mod" or arg == "metric" then out[#out + 1] = { type = ty, of = arg } end
       elseif ty == "scalogram" then out[#out + 1] = { type = "spec", of = "scale", curve = arg ~= "" and arg or "onsetStrength" }
-      elseif ty == "raster" then out[#out + 1] = { type = ty, curve = arg ~= "" and arg or "onsetStrength", bars = flags["4bars"] and 4 or 1 }
+      elseif ty == "raster" then
+        local l = { type = ty, curve = arg ~= "" and arg or "onsetStrength", bars = flags["4bars"] and 4 or 1 }
+        if l.curve == "spectrum" and flags.attacks then l.attacks = true end
+        out[#out + 1] = l
       elseif ty == "sculpt" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg }
       elseif ty == "line" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg }
       elseif ty == "lane" and arg ~= "" then out[#out + 1] = { type = ty, curve = arg, signed = flags.signed or false }
@@ -1446,7 +1627,7 @@ function M.look_code(layers)
       if l.of == "tempo" then s = "spec:tempo" .. (l.cyclic and "~cyclic" or "")
       elseif l.of == "scale" then s = "scalogram:" .. l.curve
       else s = "spec:" .. l.of end
-    elseif l.type == "raster" then s = "raster:" .. l.curve .. (l.bars == 4 and "~4bars" or "")
+    elseif l.type == "raster" then s = "raster:" .. l.curve .. (l.attacks and "~attacks" or "") .. (l.bars == 4 and "~4bars" or "")
     else s = l.type end
     if s ~= "" then out[#out + 1] = s end
   end
@@ -1493,6 +1674,13 @@ function M.describe_look(layers, doc)
       parts[#parts + 1] = "modulation: how fast the level pulses (0.5 to 128 Hz, fast at the top): rhythm, then flutter and tremolo, then roughness" .. ((not doc or doc.modulation) and "" or " (not in this analysis)")
     elseif t == "spec" and l.of == "scale" then
       parts[#parts + 1] = "rhythms in " .. lab(l.curve) .. ": fast at the top, slow at the bottom" .. (has(l.curve) and "" or " (not in this analysis)")
+    elseif t == "spec" and l.of == "metric" then
+      parts[#parts + 1] = "metrical spectrogram: per octave band (low at the bottom), the finest level its attacks keep to: bar red, half bar orange, beat yellow, 8ths green, 16ths blue; brighter where it hits harder"
+        .. ((not doc or spectral_of(doc)) and "" or " (needs a beat: music only)")
+    elseif t == "raster" and l.curve == "spectrum" then
+      parts[#parts + 1] = (l.attacks and (l.bars == 4 and "spectral groove: attacks per 16th, a row per 4 bars" or "spectral groove: attacks per 16th, a row per bar")
+        or (l.bars == 4 and "bar spectrum: a row per 4 bars, a column per 16th" or "bar spectrum: a row per bar, a column per 16th"))
+        .. "; red low (below 260 Hz), green mid, blue high (above 2 kHz)" .. ((not doc or spectral_of(doc)) and "" or " (needs a beat: music only)")
     elseif t == "raster" then
       parts[#parts + 1] = (l.bars == 4 and ("phrase raster: " .. lab(l.curve) .. ", a row per 4 bars, top to bottom") or ("bar raster: " .. lab(l.curve) .. ", a row per bar, top to bottom"))
         .. ((not doc or M.bar_rows(doc, 1)) and (has(l.curve) and "" or " (not in this analysis)") or " (needs a beat: music only)")
@@ -1544,7 +1732,10 @@ function M.look_fits(doc, look)
     if l.type == "spec" and l.of == "lag" and not doc.repetition then return false end
     if l.type == "spec" and l.of == "mod" and not doc.modulation then return false end
     if l.type == "spec" and l.of == "scale" and (not M.curve_live(doc, l.curve) or #doc.curves[l.curve] < 40) then return false end
-    if l.type == "raster" and (not M.curve_live(doc, l.curve) or not M.bar_rows(doc, 1)) then return false end
+    if l.type == "spec" and l.of == "metric" and not spectral_of(doc) then return false end
+    if l.type == "raster" and l.curve == "spectrum" then
+      if not spectral_of(doc) then return false end
+    elseif l.type == "raster" and (not M.curve_live(doc, l.curve) or not M.bar_rows(doc, 1)) then return false end
   end
   return true
 end
@@ -1953,7 +2144,7 @@ function M.render_strip(doc, g, opts)
     if not v or mainH <= 0 then return end
     local at = {}
     for x = 0, W - 1 do local c = cols[x]; at[x] = (c and c[4] <= dur) and v.colAt(c[4]) or -1 end
-    local ramp, rows, vc, vals, faint = th.specRamp, v.rows, v.cols, v.values, v.faint
+    local ramp, rows, vc, vals, faint, rgb = th.specRamp, v.rows, v.cols, v.values, v.faint, v.rgb
     local rh = mainH / rows
     local x = 0
     while x < W do
@@ -1964,12 +2155,19 @@ function M.render_strip(doc, g, opts)
         for r = 0, rows - 1 do
           local k = r * vc + col + 1
           local u = vals[k]
-          if u >= 0 then g.rect(x, r * rh, x2 - x, rh + 0.5, ramp_at(ramp, u), (faint and faint[k]) and 110 / 255 or 1) end
+          if u >= 0 then
+            if rgb then g.rect(x, r * rh, x2 - x, rh + 0.5, { rgb[3 * k - 2], rgb[3 * k - 1], rgb[3 * k] }, 1)
+            else g.rect(x, r * rh, x2 - x, rh + 0.5, ramp_at(ramp, u), (faint and faint[k]) and 110 / 255 or 1) end
+          end
         end
       end
       x = x2
     end
     M.axis_labels(g, v.yTicks, rows, mainH, W, th)
+    if v.kind == "metric" then
+      for _, lv in ipairs(M.METRIC_LEVELS) do items[#items + 1] = { label = lv[1], colour = lv[2] } end
+      return
+    end
     local label = l.of == "tempo" and "tempo strength" or l.of == "lag" and "likeness to earlier" or l.of == "mod" and "modulation depth"
       or ("rhythms in " .. M.curve_label(l.curve))
     items[#items + 1] = { label = label, ramp = ramp }
@@ -2137,18 +2335,28 @@ function M.draw_raster(doc, g, layers, l, W, H, t0, t1, th, items)
   local nr = r1 - r0 + 1
   local rowH, cw = H / nr, W / v.cols
   local ramp, grid = th.specRamp, th.grid or { 255, 255, 255 }
+  local rgb = v.rgb
+  local function same(a, b)                               -- two cells drawn alike
+    if v.values[a] ~= v.values[b] then return false end
+    return not rgb or (rgb[3 * a - 2] == rgb[3 * b - 2] and rgb[3 * a - 1] == rgb[3 * b - 1] and rgb[3 * a] == rgb[3 * b])
+  end
   for r = 0, nr - 1 do                                    -- runs of equal cells in each row
     local base = (r0 + r) * v.cols
     local c = 0
     while c < v.cols do
-      local u = v.values[base + c + 1]
+      local k = base + c + 1
+      local u = v.values[k]
       local c2 = c + 1
-      while c2 < v.cols and v.values[base + c2 + 1] == u do c2 = c2 + 1 end
-      if u >= 0 then g.rect(c * cw, r * rowH, (c2 - c) * cw + 0.5, rowH + 0.5, ramp_at(ramp, u), 1) end
+      while c2 < v.cols and same(base + c2 + 1, k) do c2 = c2 + 1 end
+      if u >= 0 then g.rect(c * cw, r * rowH, (c2 - c) * cw + 0.5, rowH + 0.5, rgb and { rgb[3 * k - 2], rgb[3 * k - 1], rgb[3 * k] } or ramp_at(ramp, u), 1) end
       c = c2
     end
   end
-  items[#items + 1] = { label = M.curve_label(l.curve), ramp = ramp }
+  if rgb then
+    items[#items + 1] = { label = "low", colour = { 232, 69, 60 } }
+    items[#items + 1] = { label = "mid", colour = { 76, 199, 106 } }
+    items[#items + 1] = { label = "high", colour = { 63, 127, 242 } }
+  else items[#items + 1] = { label = M.curve_label(l.curve), ramp = ramp } end
   local per = v.bars * v.beatsPerBar
   for k = 1, per - 1 do
     local x = round(k / per * W) + 0.5

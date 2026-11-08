@@ -295,6 +295,58 @@ function gridOf(attacks, beats, downbeats, bpb) {
   // within 15 % of 1 the off-beats are straight (the beat tracker's own frames move them that much)
   return { grid, bars, template, swing: swing == null ? null : swing > 0.87 && swing < 1.15 ? 1 : rnd(swing, 3) };
 }
+/* ---------------- the spectrum on the beat grid (spectral playheads) ---------------- */
+// The mel bands in eight octave groups by centre frequency (below 130 Hz, 130 to 260 ... 4.2 to 8.3 kHz, above), and per
+// bar and 16th step of the beat grid each group's level and attack strength. A beat-synchronous spectrum: what sounds
+// on each step and where in the spectrum it hits, at the grid's resolution whatever the curves' rate. Steps follow the
+// swing (the off-beat 8th sits where the bar's swing puts it) and each step's window reaches halfway to its neighbours.
+// Levels in dB as bytes (0 none, else 1 + 254 x (dB - (dbTop - dbRange)) / dbRange); attacks per group 0..255 of the
+// group's 99th percentile (floored at a tenth of the strongest group's, so a group with only noise stays dark).
+const SG_EDGES = [130, 260, 520, 1040, 2080, 4160, 8320];
+function spectralGridOf(F, bars, bpb, swing, gate) {
+  if (!bars || !bars.length || !F.melDb) return null;
+  const n = F.nF, dt = F.dt, B = Math.round(F.melDb.length / n), NG = SG_EDGES.length + 1, S = 4 * bpb;
+  const ml = 2595 * Math.log10(1 + 40 / 700), mh = 2595 * Math.log10(1 + Math.min(16000, F.sr * 0.475) / 700);
+  const grp = new Int8Array(B), cnt = new Float64Array(NG);
+  for (let b = 0; b < B; b++) { const f = 700 * (Math.pow(10, (ml + (mh - ml) * (b + 1) / (B + 1)) / 2595) - 1); let g = 0; while (g < SG_EDGES.length && f >= SG_EDGES[g]) g++; grp[b] = g; cnt[g]++; }
+  // per frame and group: power, and attack strength (rises of the log-compressed band energies over 23 ms, against the
+  // neighbouring bands as SuperFlux does, so vibrato and glides add little; quiet bands count little)
+  const P = new Float32Array(n * NG), O = new Float32Array(n * NG), E = new Float32Array(n * B);
+  const loud = []; for (let m = 0; m < n; m++) { let mx = 0; for (let b = 0; b < B; b++) { const e = Math.pow(10, F.melDb[m * B + b] / 10); E[m * B + b] = e; P[m * NG + grp[b]] += e; if (e > mx) mx = e; } if (!gate || gate[m]) loud.push(mx); }
+  loud.sort((a, b) => a - b);
+  const eRef = Math.max(1e-12, loud.length ? loud[Math.floor(0.95 * (loud.length - 1))] : 1), C = Float32Array.from(E, e => Math.log1p(300 * e / eRef));
+  const lag = Math.max(1, Math.round(0.023 / dt));
+  for (let m = lag; m < n; m++) {
+    if (gate && !gate[m]) continue;
+    for (let b = 0; b < B; b++) {
+      let ref = C[(m - lag) * B + b]; if (b > 0) ref = Math.max(ref, C[(m - lag) * B + b - 1]); if (b < B - 1) ref = Math.max(ref, C[(m - lag) * B + b + 1]);
+      const d = C[m * B + b] - ref; if (d > 0) O[m * NG + grp[b]] += d / cnt[grp[b]];
+    }
+  }
+  // the steps' times, bar by bar (the swung off-beat 8th where the bar swings), each window from halfway to the step
+  // before to halfway to the step after
+  const nb = bars.length, lev = new Float64Array(nb * S * NG).fill(NaN), ons = new Float64Array(nb * S * NG);
+  bars.forEach((bar, k) => {
+    const sw = bar.swing || swing || 1, q = sw / (1 + sw), warp = u => (u <= 0.5 ? u / 0.5 * q : q + (u - 0.5) / 0.5 * (1 - q));
+    const T = []; for (let s = -1; s <= S; s++) { const j = Math.floor(s / 4), u = (s - 4 * j) / 4; T.push(bar.start + (j + warp(u)) * bar.beat); }
+    for (let s = 0; s < S; s++) {
+      const a = Math.max(0, Math.floor((T[s] + T[s + 1]) / 2 / dt)), e = Math.min(n, Math.max(a + 1, Math.ceil((T[s + 1] + T[s + 2]) / 2 / dt)));
+      if (a >= n) continue;
+      for (let g = 0; g < NG; g++) {
+        let p = 0, o = 0; for (let m = a; m < e; m++) { p += P[m * NG + g]; if (O[m * NG + g] > o) o = O[m * NG + g]; }
+        const i = (k * S + s) * NG + g; lev[i] = 10 * Math.log10(Math.max(1e-12, p / (e - a) / cnt[g])); ons[i] = o;
+      }
+    }
+  });
+  const fin = Array.from(lev).filter(v => isFinite(v)).sort((a, b) => a - b);
+  if (!fin.length) return null;
+  const top = fin[Math.floor(0.999 * (fin.length - 1))], range = 80, lo = top - range;
+  const lev8 = Uint8Array.from(lev, v => (isFinite(v) ? 1 + Math.max(0, Math.min(254, Math.round((v - lo) / range * 254))) : 0));
+  const p99 = []; for (let g = 0; g < NG; g++) { const v = []; for (let i = g; i < ons.length; i += NG) if (ons[i] > 0) v.push(ons[i]); v.sort((a, b) => a - b); p99.push(v.length ? v[Math.floor(0.99 * (v.length - 1))] : 0); }
+  const big = Math.max(1e-9, ...p99), scale = p99.map(v => Math.max(v, 0.1 * big));
+  const ons8 = Uint8Array.from(ons, (v, i) => Math.round(255 * Math.min(1, v / scale[i % NG])));
+  return { edges: SG_EDGES.slice(), groups: NG, steps: S, bars: nb, dbTop: rnd(top, 2), dbRange: range, encoding: "base64-u8", levels: toB64(lev8), attacks: toB64(ons8) };
+}
 /* ---------------- motion and texture: glides, pass-bys, vibrato, builds, distortion, rhythm signature ---------------- */
 // The strongest partial, frame by frame (on the analysis's frames): a 4096-point spectrum (Hann), its highest peak from
 // 60 Hz to 5 kHz with parabolic interpolation on the log magnitude, kept where it stands 20 dB over the spectrum's
@@ -633,6 +685,8 @@ async function build(F, buf, opts, t0, prog) {
       const barCurve = val => { const a = new Float32Array(F.nF).fill(NaN); G.bars.forEach((bar, k) => { const v = val(bar); if (v == null) return; const t1 = k + 1 < G.bars.length ? G.bars[k + 1].start : bar.start + bar.beat * R.beatsPerBar; for (let m = Math.max(0, Math.floor(bar.start / F.dt)); m < Math.min(F.nF, Math.ceil(t1 / F.dt)); m++) a[m] = v; }); return resample(a, F, cols, null).map(v => (v == null || isNaN(v) ? null : v)); };
       doc.curves.patternSurprise = barCurve(bar => bar.surprise);
       doc.curves.swing = barCurve(bar => (bar.swing == null ? null : Math.max(0, Math.min(1, (bar.swing - 1) / 2))));
+      // the spectrum on the grid: per bar, step and octave group, its level and attack strength (spectral playheads)
+      doc.rhythm.spectral = spectralGridOf(F, G.bars, R.beatsPerBar, G.swing, g);
       Object.assign(doc.rhythm, { grid: G.grid, bars: G.bars, swing: G.swing, template: G.template,
         timing: { tightness: med(G.bars.map(b => b.tightness)), offsets: { low: med(G.bars.map(b => b.offsets.low)), mid: med(G.bars.map(b => b.offsets.mid)), high: med(G.bars.map(b => b.offsets.high)) } } });
     }
@@ -1230,6 +1284,9 @@ const LOOKS = {
   tempogram: { name: "Tempogram", desc: "For music. How strongly each tempo (30 to 590 BPM, fast at the top) is present over time. A steady beat is a bright line, a tempo change bends it, double and half tempo show as fainter lines. With bar lines.", code: "spec:tempo,ticks:downbeats" },
   repetition: { name: "Repetition (lag view)", desc: "For music. How alike each moment is to the moment a given time before (that time, the lag, going up). A bright horizontal line means the music repeats what played that long ago. With sections.", code: "spec:lag,sections" },
   modulation: { name: "Modulation spectrogram", desc: "For any sound. How fast its level pulses, and how strongly, over time: rhythm below about 4 Hz, fluctuation, tremolo and flutter from 4 to 20 Hz, roughness above (fast at the top). Engines, rotors, tremolo, growls and buzzes show as bright rows at their rate; steady tones and plain noise stay dark.", code: "spec:mod" },
+  spectralRaster: { name: "Bar spectrum", desc: "For music. A row per bar, a column per 16th, coloured by the spectrum: red where the low end (below 260 Hz) is strong, green the middle, blue the top (above 2 kHz), white all of them. The arrangement bar by bar: where the bass comes in, the hats drop out, a break thins to blue. With sections.", code: "raster:spectrum,sections" },
+  spectralGroove: { name: "Spectral groove", desc: "For music. As Bar spectrum, but coloured by what hits on each 16th rather than what sounds: kick red, snare and body green, hats and cymbals blue, together in mixed colours. The drum pattern of every bar, read from the mix.", code: "raster:spectrum~attacks,sections" },
+  metrical: { name: "Metrical spectrogram", desc: "For music. For each octave band (low at the bottom) and bar, the finest metrical level its attacks keep to: the bar (red), the half bar (orange), the beat (yellow), 8ths (green), 16ths (blue); brighter where the band hits harder. Which part of the spectrum carries the bar, the beat and the subdivisions, and how that changes. With sections.", code: "spec:metric,sections" },
   rhythms: { name: "Curve rhythms (scalogram)", desc: "Research view, for any sound. The periodic patterns in onset strength, from fast (top) to slow (bottom): beat, bar and phrase in music, flutter and tremolo in effects. Fainter near the ends, where the sound is too short to be sure of a period.", code: "scalogram:onsetStrength" },
   sculpted: { name: "Waveform as loud as it sounds", desc: "The waveform's envelope follows perceived loudness (a dB-like scale) while its detail stays; colour shows harshness, with the ordinary peak outline for comparison.", code: "sculpt:loudness,wave:harshness,outline,ticks:events+novelty" }
 };
@@ -1286,9 +1343,9 @@ function parseLook(code) {
         if (src && src !== "onsets") l.source = src;
         if (w) l.weight = w;
         out.push(l);
-      } else if (arg === "lag" || arg === "mod") out.push({ type, of: arg }); }
+      } else if (arg === "lag" || arg === "mod" || arg === "metric") out.push({ type, of: arg }); }
     else if (type === "scalogram") out.push({ type: "spec", of: "scale", curve: arg || "onsetStrength" });
-    else if (type === "raster") out.push({ type, curve: arg || "onsetStrength", bars: flags.includes("4bars") ? 4 : 1 });
+    else if (type === "raster") { const l = { type, curve: arg || "onsetStrength", bars: flags.includes("4bars") ? 4 : 1 }; if (l.curve === "spectrum" && flags.includes("attacks")) l.attacks = true; out.push(l); }
     else if (type === "sculpt" && arg) out.push({ type, curve: arg });
     else if (type === "line" && arg) out.push({ type, curve: arg });
     else if (type === "lane" && arg) out.push({ type, curve: arg, signed: flags.includes("signed") });
@@ -1302,8 +1359,8 @@ function parseLook(code) {
 /** Layers -> look code. */
 function lookCode(layers) {
   return (layers || []).map(l => l.type === "wave" ? "wave" + (l.colour ? ":" + l.colour : "") : l.type === "line" ? "line:" + l.curve
-    : l.type === "spec" ? (l.of === "tempo" ? "spec:tempo" + (l.cyclic ? "~cyclic" : "") + (l.source ? "~of:" + l.source : "") + (l.weight ? "~w:" + l.weight : "") : l.of === "lag" || l.of === "mod" ? "spec:" + l.of : l.of === "scale" ? "scalogram:" + l.curve : "spec")
-    : l.type === "raster" ? "raster:" + l.curve + (l.bars === 4 ? "~4bars" : "")
+    : l.type === "spec" ? (l.of === "tempo" ? "spec:tempo" + (l.cyclic ? "~cyclic" : "") + (l.source ? "~of:" + l.source : "") + (l.weight ? "~w:" + l.weight : "") : l.of === "lag" || l.of === "mod" || l.of === "metric" ? "spec:" + l.of : l.of === "scale" ? "scalogram:" + l.curve : "spec")
+    : l.type === "raster" ? "raster:" + l.curve + (l.attacks ? "~attacks" : "") + (l.bars === 4 ? "~4bars" : "")
     : l.type === "lane" ? "lane:" + l.curve + (l.signed ? "~signed" : "") : l.type === "ticks" ? (l.of && l.of.length ? "ticks:" + l.of.join("+") : "")
     : l.type === "form" || l.type === "shape" ? l.type + ":" + l.value : l.type === "sculpt" ? "sculpt:" + l.curve : l.type).filter(Boolean).join(",");
 }
@@ -1324,6 +1381,9 @@ function describeLook(layers, doc) {
     else if (l.type === "spec" && l.of === "lag") parts.push(L("lib.legend.lag", "repetition: bright where the music repeats what played a lag earlier (lag going up)") + (!doc || doc.repetition ? "" : L("lib.legend.musicAbsent", " (music only; not in this analysis)")));
     else if (l.type === "spec" && l.of === "mod") parts.push(L("lib.legend.modulation", "modulation: how fast the level pulses (0.5 to 128 Hz, fast at the top): rhythm, then flutter and tremolo, then roughness") + (!doc || doc.modulation ? "" : absent));
     else if (l.type === "spec" && l.of === "scale") parts.push(L("lib.legend.scalogram", "rhythms in {curve}: fast at the top, slow at the bottom", { curve: lab(l.curve) }) + (has(l.curve) ? "" : absent));
+    else if (l.type === "spec" && l.of === "metric") parts.push(L("lib.legend.metric", "metrical spectrogram: per octave band (low at the bottom), the finest level its attacks keep to: bar red, half bar orange, beat yellow, 8ths green, 16ths blue; brighter where it hits harder") + (!doc || spectralOf(doc) ? "" : L("lib.legend.needsBeat", " (needs a beat: music only)")));
+    else if (l.type === "raster" && l.curve === "spectrum") parts.push((l.attacks ? (l.bars === 4 ? L("lib.legend.grooveRaster4", "spectral groove: attacks per 16th, a row per 4 bars") : L("lib.legend.grooveRaster", "spectral groove: attacks per 16th, a row per bar")) : (l.bars === 4 ? L("lib.legend.specRaster4", "bar spectrum: a row per 4 bars, a column per 16th") : L("lib.legend.specRaster", "bar spectrum: a row per bar, a column per 16th")))
+      + L("lib.legend.rgb", "; red low (below 260 Hz), green mid, blue high (above 2 kHz)") + (!doc || spectralOf(doc) ? "" : L("lib.legend.needsBeat", " (needs a beat: music only)")));
     else if (l.type === "raster") parts.push((l.bars === 4 ? L("lib.legend.raster4", "phrase raster: {curve}, a row per 4 bars, top to bottom", { curve: lab(l.curve) }) : L("lib.legend.raster", "bar raster: {curve}, a row per bar, top to bottom", { curve: lab(l.curve) })) + (!doc || barRows(doc, 1) ? (has(l.curve) ? "" : absent) : L("lib.legend.needsBeat", " (needs a beat: music only)")));
     else if (l.type === "outline") parts.push(L("lib.legend.outline", "outline: peak waveform"));
     else if (l.type === "sculpt") parts.push(L("lib.legend.height", "height: {curve}", { curve: lab(l.curve) }) + (!(layers || []).some(x => x.type === "wave") ? L("lib.legend.heightNoWave", " (shapes the waveform; add it to see)") : has(l.curve) ? "" : absent));
@@ -1368,6 +1428,8 @@ function lookFits(doc, look) {
     if (l.type === "spec" && l.of === "lag" && !doc.repetition) return false;
     if (l.type === "spec" && l.of === "mod" && !doc.modulation) return false;
     if (l.type === "spec" && l.of === "scale" && (!live(l.curve) || curves[l.curve].length < 40)) return false;
+    if (l.type === "spec" && l.of === "metric" && !spectralOf(doc)) return false;
+    if (l.type === "raster" && l.curve === "spectrum") { if (!spectralOf(doc)) return false; continue; }
     if (l.type === "raster" && (!live(l.curve) || !barRows(doc, 1))) return false;
   }
   return true;
@@ -1411,7 +1473,7 @@ function curveValue(arr, rate, ta, tb) {
 // Playhead.view(doc, kind, opts) gives the image as numbers, for hosts that draw it themselves or measure it:
 //   { kind, rows, cols, values (Float32Array, row-major, row 0 at the top, 0..1, -1 where there is no data),
 //     yTicks: [{ row, text }], and colAt(t) (time-based views) or rows of [start, end] seconds (the raster) }
-const VIEW_KINDS = ["raster", "tempo", "lag", "scale", "mod"];
+const VIEW_KINDS = ["raster", "tempo", "lag", "scale", "mod", "metric"];
 const viewCache = typeof WeakMap !== "undefined" ? new WeakMap() : null;
 function cachedView(doc, key, make) {
   if (!viewCache) return make();
@@ -1654,16 +1716,112 @@ function scaleView(doc, curve) {
   for (const [p, text] of marks) { const row = perOct * Math.log2(p / pMin); if (row >= 0 && row <= rows - 1) yTicks.push({ row: row + 0.5, text }); }
   return { kind: "scale", curve, rows, cols: n, values, faint, yTicks, periods, colAt: t => Math.max(0, Math.min(n - 1, Math.floor(t * rate))) };
 }
+// Spectral playheads: views of rhythm.spectral, the spectrum on the beat grid (music profile, with a steady beat).
+//   bar spectrum  ("raster:spectrum") a row per bar, a column per 16th step; red the low groups (below 260 Hz), green
+//                 the middle (to 2.1 kHz), blue the high (above), each from its 20th percentile in the file (black) to its
+//                 99th: a bass note reads red, a full mix white, hats alone blue. "~attacks": the same in attack
+//                 strength, so the colour is what hits on that step (kick red, snare green or yellow, hats blue)
+//   metrical spectrogram ("spec:metric") per octave group (low at the bottom) and bar, the finest metrical level its
+//                 attacks keep to: the bar (red), the half bar (orange), the beat (yellow), 8ths (green), 16ths (blue),
+//                 brighter where the group hits harder. Which part of the spectrum carries which level, and how that
+//                 changes: hats moving to 16ths in a build, the bass taking the beat in a drop
+const METRIC_LEVELS = [["bar", "#e8453c"], ["half bar", "#f39a2b"], ["beat", "#efd54a"], ["8ths", "#4cc76a"], ["16ths", "#3f9ff2"]];
+const metricNames = () => [L("lib.item.metricBar", "bar"), L("lib.item.metricHalf", "half bar"), L("lib.item.metricBeat", "beat"), L("lib.item.metric8", "8ths"), L("lib.item.metric16", "16ths")];
+const hexRgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16));
+const SPEC_CHANNELS = [[0, 1], [2, 3, 4], [5, 6, 7]];
+const spectralCache = typeof WeakMap !== "undefined" ? new WeakMap() : null;
+function spectralOf(doc) {
+  const r = doc && doc.rhythm, sp = r && r.spectral;
+  if (!sp || !sp.levels || !sp.attacks || !Array.isArray(r.bars) || r.bars.length !== sp.bars || !sp.bars) return null;
+  if (spectralCache && spectralCache.has(sp)) return spectralCache.get(sp);
+  const bpb = sp.steps / 4, bars = r.bars, gaps = bars.slice(1).map((b, k) => b.start - bars[k].start).sort((a, b) => a - b);
+  const med = gaps.length ? gaps[gaps.length >> 1] : bars[0].beat * bpb;
+  const span = bars.map((b, k) => [b.start, k + 1 < bars.length && bars[k + 1].start - b.start < 1.5 * med ? bars[k + 1].start : b.start + b.beat * bpb]);
+  const out = { S: sp.steps, NG: sp.groups, nb: sp.bars, bpb, edges: sp.edges, lev: fromB64(sp.levels), att: fromB64(sp.attacks), dbTop: sp.dbTop, dbRange: sp.dbRange, span, med };
+  if (spectralCache) spectralCache.set(sp, out);
+  return out;
+}
+function spectrumRaster(doc, per, attacks) {
+  const sg = spectralOf(doc);
+  if (!sg) return null;
+  const { S, NG, nb } = sg, cells = nb * S, ch = new Float64Array(cells * 3).fill(NaN);
+  for (let i = 0; i < cells; i++) SPEC_CHANNELS.forEach((gs, c) => {
+    if (attacks) { let v = 0; for (const g of gs) v = Math.max(v, sg.att[i * NG + g] / 255); ch[i * 3 + c] = v; return; }
+    let p = 0, ok = false; for (const g of gs) { const b = sg.lev[i * NG + g]; if (b) { ok = true; p += Math.pow(10, (sg.dbTop - sg.dbRange + (b - 1) / 254 * sg.dbRange) / 10); } }
+    if (ok) ch[i * 3 + c] = 10 * Math.log10(Math.max(1e-12, p / gs.length));
+  });
+  // levels: each channel from its 20th percentile in the file (black) to its 99th (full)
+  const rng = [0, 1, 2].map(c => {
+    if (attacks) return [0, 1];
+    const v = []; for (let i = 0; i < cells; i++) if (isFinite(ch[i * 3 + c])) v.push(ch[i * 3 + c]);
+    v.sort((a, b) => a - b);
+    return v.length ? [v[Math.floor(0.2 * (v.length - 1))], Math.max(v[Math.floor(0.2 * (v.length - 1))] + 6, v[Math.floor(0.99 * (v.length - 1))])] : [0, 1];
+  });
+  const R = Math.ceil(nb / per), cols = S * per, rgb = new Uint8ClampedArray(R * cols * 3), values = new Float32Array(R * cols).fill(-1);
+  for (let r = 0; r < R; r++) for (let c = 0; c < cols; c++) {
+    const k = r * per + Math.floor(c / S), i = k * S + (c % S);
+    if (k >= nb || !isFinite(ch[i * 3])) continue;
+    let lum = 0;
+    for (let q = 0; q < 3; q++) { const u = Math.max(0, Math.min(1, (ch[i * 3 + q] - rng[q][0]) / (rng[q][1] - rng[q][0]))); rgb[(r * cols + c) * 3 + q] = Math.round(255 * Math.pow(u, 1.2)); lum += [0.2126, 0.7152, 0.0722][q] * u; }
+    values[r * cols + c] = lum;
+  }
+  const timeRows = [];
+  for (let r = 0; r < R; r++) { const k = r * per, last = Math.min(nb - 1, k + per - 1); timeRows.push([sg.span[k][0], sg.span[last][1] + (k + per - 1 - last) * sg.med]); }
+  const yTicks = [];
+  for (let r = 0; r < R; r++) if (r % (per === 4 ? 2 : 8) === 0) yTicks.push({ row: r + 0.5, text: String(r * per + 1) });
+  return { kind: "raster", curve: "spectrum", attacks: !!attacks, rows: R, cols, values, rgb, yTicks, timeRows, beatsPerBar: sg.bpb, bars: per };
+}
+// the metrical level of each step: 0 the downbeat, 1 the half bar (4/4), 2 the other beats, 3 the off-beat 8ths, 4 16ths
+const metricLevel = (s, bpb) => (s === 0 ? 0 : bpb === 4 && s === 8 ? 1 : s % 4 === 0 ? 2 : s % 2 === 0 ? 3 : 4);
+function metricView(doc) {
+  const sg = spectralOf(doc);
+  if (!sg) return null;
+  const { S, NG, nb, bpb } = sg, cls = Array.from({ length: S }, (_, s) => metricLevel(s, bpb));
+  const strength = new Float64Array(nb * NG), level = new Int8Array(nb * NG).fill(-1);
+  for (let k = 0; k < nb; k++) for (let g = 0; g < NG; g++) {
+    const sum = [0, 0, 0, 0, 0], n = [0, 0, 0, 0, 0];
+    let tot = 0;
+    for (let s = 0; s < S; s++) { const v = sg.att[(k * S + s) * NG + g] / 255; sum[cls[s]] += v; n[cls[s]]++; tot += v; }
+    strength[k * NG + g] = tot / S;
+    // the finest level whose steps hit at least half as hard as the steps of the coarser levels on average: 16ths where
+    // the odd steps hit half as hard as the even ones, 8ths where the off-beats hit half as hard as the beats (or
+    // alone), and so on (a kick on 1 and 3 with a snare's low rumble on 2 and 4 is the half bar; a roll of even 16ths
+    // is 16ths whatever one step does)
+    if (tot / S > 0.01) {
+      level[k * NG + g] = 0;
+      for (let c = 4; c >= 1; c--) {
+        let rs = 0, rn = 0; for (let d = 0; d < c; d++) { rs += sum[d]; rn += n[d]; }
+        if (n[c] && rn && sum[c] / n[c] >= 0.5 * rs / rn) { level[k * NG + g] = c; break; }
+      }
+    }
+  }
+  // brightness: each group's strength from 0 to its 95th percentile over the bars
+  const ref = [];
+  for (let g = 0; g < NG; g++) { const v = []; for (let k = 0; k < nb; k++) v.push(strength[k * NG + g]); v.sort((a, b) => a - b); ref.push(Math.max(0.03, v[Math.floor(0.95 * (v.length - 1))])); }
+  const cols8 = METRIC_LEVELS.map(l => hexRgb(l[1])), values = new Float32Array(NG * nb), rgb = new Uint8ClampedArray(NG * nb * 3), levels = new Int8Array(NG * nb).fill(-1);
+  for (let r = 0; r < NG; r++) for (let k = 0; k < nb; k++) {
+    const g = NG - 1 - r, u = Math.min(1, strength[k * NG + g] / ref[g]), lv = level[k * NG + g], o = r * nb + k;
+    values[o] = u; levels[o] = lv;
+    const c = lv >= 0 ? cols8[lv] : [90, 90, 90], w = Math.pow(u, 0.8);
+    for (let q = 0; q < 3; q++) rgb[o * 3 + q] = Math.round(c[q] * w);
+  }
+  const yTicks = [];
+  for (let r = 0; r < NG; r++) { const g = NG - 1 - r, e = g === 0 ? null : sg.edges[g - 1]; yTicks.push({ row: r + 0.5, text: e == null ? "< " + sg.edges[0] : e >= 1000 ? (e / 1000).toFixed(1) + "k" : String(e) }); }
+  const colAt = t => { if (t < sg.span[0][0] || t >= sg.span[nb - 1][1]) return -1; let lo = 0, hi = nb - 1; while (lo < hi) { const m = (lo + hi + 1) >> 1; if (sg.span[m][0] <= t) lo = m; else hi = m - 1; } return lo; };
+  return { kind: "metric", rows: NG, cols: nb, values, rgb, levels, levelNames: METRIC_LEVELS.map(l => l[0]), yTicks, colAt, bars: sg.span };
+}
 /** The image of a view as numbers (see above); null when the document cannot give it. kind: "raster" (opts.curve,
  *  opts.bars 1 or 4, opts.cols), "tempo" (opts.cyclic; opts.source: a curve, or "speed", whose rises the tempogram is
- *  of; opts.weight: a curve that weights its columns, given back as suppress), "lag", "scale" (opts.curve). Built once
- *  per document and options. */
+ *  of; opts.weight: a curve that weights its columns, given back as suppress), "lag", "scale" (opts.curve), "mod",
+ *  "metric". The raster of opts.curve "spectrum" (opts.attacks for attack strength) and the metrical view also give
+ *  rgb (3 bytes per cell) and their values as brightness. Built once per document and options. */
 function view(doc, kind, opts) {
   opts = opts || {};
   if (!doc || !VIEW_KINDS.includes(kind)) return null;
   const curve = opts.curve || "onsetStrength", bars = opts.bars === 4 ? 4 : 1, cols = Math.max(8, Math.min(512, opts.cols || (bars === 4 ? 192 : 96)));
-  const key = kind + "|" + (kind === "raster" ? curve + "|" + bars + "|" + cols : kind === "scale" ? curve : kind === "tempo" ? !!opts.cyclic + "|" + (opts.source || "") + "|" + (opts.weight || "") : "");
-  return cachedView(doc, key, () => kind === "raster" ? rasterView(doc, curve, bars, cols) : kind === "tempo" ? tempoView(doc, opts.cyclic, opts.source, opts.weight) : kind === "lag" ? lagView(doc) : kind === "mod" ? modView(doc) : scaleView(doc, curve));
+  const key = kind + "|" + (kind === "raster" ? curve + "|" + bars + "|" + cols + "|" + !!opts.attacks : kind === "scale" ? curve : kind === "tempo" ? !!opts.cyclic + "|" + (opts.source || "") + "|" + (opts.weight || "") : "");
+  return cachedView(doc, key, () => kind === "raster" ? (curve === "spectrum" ? spectrumRaster(doc, bars, opts.attacks) : rasterView(doc, curve, bars, cols)) : kind === "tempo" ? tempoView(doc, opts.cyclic, opts.source, opts.weight)
+    : kind === "lag" ? lagView(doc) : kind === "mod" ? modView(doc) : kind === "metric" ? metricView(doc) : scaleView(doc, curve));
 }
 const makeCanvas = (w, h) => typeof OffscreenCanvas !== "undefined" ? new OffscreenCanvas(w, h) : typeof document !== "undefined" && document.createElement ? Object.assign(document.createElement("canvas"), { width: w, height: h }) : null;
 // an image of rows x cols cells, cell(r, c) -> [r, g, b, a] or null (left clear), drawn into the box dx, dy, dw, dh
@@ -1695,14 +1853,19 @@ function axisLabels(ctx, v, h, W, th) {
 // letters, and onsets, events and novelty as dots where they fall in the bar. Other layers have no place on it.
 function drawRaster(ctx, doc, layers, rl, W, H, t0, t1, th, items) {
   const out = { code: lookCode(layers), layers, legend: describeLook(layers, doc), items, raster: null };
-  const v = view(doc, "raster", { curve: rl.curve, bars: rl.bars });
+  const v = view(doc, "raster", { curve: rl.curve, bars: rl.bars, attacks: rl.attacks });
   if (!v) return out;
   let r0 = 0, r1 = v.rows - 1;                  // the rows that overlap the shown time (all of them unless zoomed)
   while (r0 < r1 && v.timeRows[r0][1] <= t0) r0++;
   while (r1 > r0 && v.timeRows[r1][0] >= t1) r1--;
   const nr = r1 - r0 + 1, rowH = H / nr, ramp = th.specRamp, grid = th.grid || "#ffffff";
-  paintCells(ctx, nr, v.cols, (r, c) => { const u = v.values[(r0 + r) * v.cols + c]; return u < 0 ? null : rampAt(ramp, u).concat(255); }, 0, 0, W, H, nr > H);
-  items.push({ label: CURVE_LABELS[rl.curve] || rl.curve, ramp });
+  if (v.rgb) {
+    paintCells(ctx, nr, v.cols, (r, c) => { const k = (r0 + r) * v.cols + c; return v.values[k] < 0 ? null : [v.rgb[3 * k], v.rgb[3 * k + 1], v.rgb[3 * k + 2], 255]; }, 0, 0, W, H, nr > H);
+    items.push({ label: L("lib.item.low", "low"), colour: "#e8453c" }, { label: L("lib.item.mid", "mid"), colour: "#4cc76a" }, { label: L("lib.item.high", "high"), colour: "#3f7ff2" });
+  } else {
+    paintCells(ctx, nr, v.cols, (r, c) => { const u = v.values[(r0 + r) * v.cols + c]; return u < 0 ? null : rampAt(ramp, u).concat(255); }, 0, 0, W, H, nr > H);
+    items.push({ label: CURVE_LABELS[rl.curve] || rl.curve, ramp });
+  }
   const per = v.bars * v.beatsPerBar;
   ctx.strokeStyle = grid; ctx.lineWidth = 1;
   for (let k = 1; k < per; k++) { const x = Math.round(k / per * W) + 0.5; ctx.globalAlpha = k % v.beatsPerBar === 0 ? 0.5 : 0.18; ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
@@ -1849,13 +2012,15 @@ function drawStrip(ctx, doc, opts) {
           if (at[x] < 0) return null;
           const k = r * v.cols + at[x], u = v.values[k];
           if (!(u >= 0)) return null;
+          if (v.rgb) return [v.rgb[3 * k], v.rgb[3 * k + 1], v.rgb[3 * k + 2], 255];
           let c = rampAt(ramp, u);
           // a weighted tempogram: a weak column toward one grey (value-suppressing), not toward the ramp's black
           const sup = v.suppress ? v.suppress[at[x]] : 0;
           if (sup > 0) c = c.map(ch => Math.round(ch * (1 - sup) + grey * sup));
           return c.concat(v.faint && v.faint[k] ? 110 : 255);
-        }, 0, 0, W, mainH, true);
+        }, 0, 0, W, mainH, !v.rgb);
         axisLabels(ctx, v, mainH, W, th, "right");
+        if (v.kind === "metric") { metricNames().forEach((label, i) => items.push({ label, colour: METRIC_LEVELS[i][1] })); return; }
         items.push({ label: l.of === "tempo" ? L("lib.item.tempo", "tempo strength") : l.of === "lag" ? L("lib.item.repeat", "likeness to earlier") : l.of === "mod" ? L("lib.item.mod", "modulation depth") : L("lib.item.rhythms", "rhythms in {curve}", { curve: CURVE_LABELS[l.curve] || l.curve }), ramp });
         return;
       }

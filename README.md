@@ -23,7 +23,7 @@ Playhead is a research prototype. It runs entirely in the browser: audio you dro
 | Rhythm | Tempo, beats, downbeats, pulse clarity | Autocorrelation tempogram, Ellis dynamic-programming beats, predominant local pulse |
 | Structure | Sections and repeats (A B A …) | Foote checkerboard novelty on a self-similarity matrix |
 | Sound effects | Events, Schaeffer-style tags (impulse / iterative / sustained), layers, pitch, attack, QA problems | YIN, Timbre Toolbox descriptors, KL-NMF, Peeters–Deruty profiles |
-| Views of rhythm and form | Bar raster, tempogram, lag view, modulation spectrogram, curve scalogram | Beat-synchronous folding; autocorrelation tempogram (Grosche & Müller); time-lag self-similarity (Goto); modulation spectrum (Atlas & Shamma); Morlet wavelet with cone of influence (Torrence & Compo) |
+| Views of rhythm and form | Bar raster, tempogram, lag view, modulation spectrogram, curve scalogram; spectral playheads (bar spectrum, spectral groove, metrical spectrogram) | Beat-synchronous folding, of curves and of the spectrum in octave groups; autocorrelation tempogram (Grosche & Müller); time-lag self-similarity (Goto); modulation spectrum (Atlas & Shamma); Morlet wavelet with cone of influence (Torrence & Compo) |
 
 Five combined preview designs (D1–D5) put the most useful of these onto one strip. The library view uses D5 for sound effects and D4 for music.
 
@@ -121,12 +121,16 @@ ordinary waveform and spectrogram of the same file; the same code works in every
 the feedback link sends it with your notes. Structural change is drawn signed: up for an entry, down for a fall in
 level or a break into silence.
 
-**Views of rhythm and form.** Five looks put something other than amplitude on the strip. The **bar raster** folds time
+**Views of rhythm and form.** Several looks put something other than amplitude on the strip. The **bar raster** folds time
 into bars, a row per bar like a drum pattern, so bars that hit alike line up and fills and drops stand out (click a row
 to play from there). The **tempogram** shows which tempi are present over time, the **lag view** where the music repeats
 what played some bars before, the **modulation spectrogram** (for any sound) how fast the level pulses, from the beat
 through tremolo and flutter to roughness, and the **scalogram** (a research view) the periodic patterns in a curve:
-beat, bar and phrase in music, flutter and tremolo in effects. `Playhead.view` gives them to other hosts as numbers.
+beat, bar and phrase in music, flutter and tremolo in effects. Three **spectral playheads** put the spectrum on the beat
+grid: the **bar spectrum** (a row per bar, a column per 16th, low red, mid green, high blue), the **spectral groove**
+(the same in attacks: the drum pattern of every bar, read from the mix) and the **metrical spectrogram** (per octave
+band and bar, whether its attacks keep to the bar, the beat, 8ths or 16ths: which part of the spectrum carries which
+level, and when that changes). `Playhead.view` gives them to other hosts as numbers.
 
 **Tracks in a folder.** Documents combine: `Playhead.combine([{ doc, offset, gain }, ...])` returns a document for the
 sum of several sounds without the audio or a new analysis, so a folder track, a group of layered effects or a set of

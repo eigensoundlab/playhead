@@ -697,10 +697,10 @@ const CMP_MARKS = [["sections", "Sections"], ["downbeats", "Bar lines"], ["beats
 const CMP_SCULPT = ["", "loudness", "arousal", "activity", "harshness", "tension", "onsetStrength", "localPulse"];
 const CMP_MAX_LANES = 3, CMP_HEIGHTS = [64, 96, 128, 160, 192];
 const CMP = { code: store.get("look", PHAPI ? PHAPI.looks.structure.code : ""), h: store.get("lookHeight", 128), refs: store.get("lookRefs", true) };
-const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"], ["raster", "Bar raster: a row per bar"], ["raster4", "Phrase raster: a row per 4 bars"], ["tempo", "Tempogram"], ["tempocyc", "Tempogram, octaves folded"], ["lag", "Repetition (lag view)"], ["mod", "Modulation spectrogram"], ["scale", "Curve rhythms (scalogram)"]];
+const CMP_BG = [["wave", "Waveform"], ["spec", "Spectrogram"], ["specwave", "Spectrogram with the waveform's outline"], ["none", "Nothing (curves only)"], ["raster", "Bar raster: a row per bar"], ["raster4", "Phrase raster: a row per 4 bars"], ["tempo", "Tempogram"], ["tempocyc", "Tempogram, octaves folded"], ["lag", "Repetition (lag view)"], ["mod", "Modulation spectrogram"], ["scale", "Curve rhythms (scalogram)"], ["specraster", "Bar spectrum: the spectrum per 16th"], ["specgroove", "Spectral groove: attacks per 16th"], ["metric", "Metrical spectrogram"]];
 // the views that show one chosen curve (the raster and the scalogram), and the curves offered for them
 const CMP_VIEW_CURVES = ["onsetStrength", "onsetLow", "onsetMid", "onsetHigh", "loudness", "activity", "localPulse", "harshness", "timbreHarshness", "arousal", "tension", "surprise", "structureNovelty", "n1Kurtosis", "n7Surprisal"];
-const cmpRaster = bg => bg === "raster" || bg === "raster4", cmpCurveView = bg => cmpRaster(bg) || bg === "scale";
+const cmpRaster = bg => bg === "raster" || bg === "raster4" || bg === "specraster" || bg === "specgroove", cmpCurveView = bg => bg === "raster" || bg === "raster4" || bg === "scale";
 // Playhead tempograms: the tempogram of a curve's rises (or of how fast all descriptors change), and a weighting curve
 const CMP_TEMPO_OF = ["", "speed", "timbreHarshness", "harshness", "loudness", "tension", "activity", "n1Kurtosis"];
 const CMP_TEMPO_W = ["", "loudness", "timbreHarshness", "harshness", "tension", "activity", "arousal"];
@@ -717,6 +717,7 @@ function cmpState(code) {
   for (const l of (PHAPI && PHAPI.parseLook(code)) || []) {
     if (l.type === "wave") { wave = true; st.colour = l.colour || ""; }
     else if (l.type === "spec" && l.of) { viewBg = l.of === "tempo" ? (l.cyclic ? "tempocyc" : "tempo") : l.of; if (l.curve) st.vcurve = l.curve; if (l.of === "tempo") { st.tof = l.source || ""; st.tw = l.weight || ""; } }
+    else if (l.type === "raster" && l.curve === "spectrum") viewBg = l.attacks ? "specgroove" : "specraster";
     else if (l.type === "raster") { viewBg = l.bars === 4 ? "raster4" : "raster"; st.vcurve = l.curve; }
     else if (l.type === "spec") spec = true;
     else if (l.type === "form") st.form = l.value;
@@ -734,7 +735,7 @@ function cmpState(code) {
 function cmpCode(st) {
   const parts = [];
   if (cmpRaster(st.bg)) {      // the raster takes the whole strip: sections and the marks that fall inside bars
-    parts.push("raster:" + st.vcurve + (st.bg === "raster4" ? "~4bars" : ""));
+    parts.push(st.bg === "specraster" ? "raster:spectrum" : st.bg === "specgroove" ? "raster:spectrum~attacks" : "raster:" + st.vcurve + (st.bg === "raster4" ? "~4bars" : ""));
     if (st.marks.has("sections")) parts.push("sections");
     const dots = ["onsets", "events", "novelty"].filter(k => st.marks.has(k));
     if (dots.length) parts.push("ticks:" + dots.join("+"));
@@ -745,7 +746,7 @@ function cmpCode(st) {
   if (st.shape !== "base") parts.push("shape:" + st.shape);
   if (st.bg === "spec" || st.bg === "specwave") parts.push("spec");
   else if (st.bg === "tempo" || st.bg === "tempocyc") parts.push("spec:tempo" + (st.bg === "tempocyc" ? "~cyclic" : "") + (st.tof ? "~of:" + st.tof : "") + (st.tw ? "~w:" + st.tw : ""));
-  else if (st.bg === "lag" || st.bg === "mod") parts.push("spec:" + st.bg);
+  else if (st.bg === "lag" || st.bg === "mod" || st.bg === "metric") parts.push("spec:" + st.bg);
   else if (st.bg === "scale") parts.push("scalogram:" + st.vcurve);
   if (st.bg === "wave" || st.bg === "specwave") parts.push("wave" + (st.bg === "wave" && st.colour ? ":" + st.colour : ""));
   if (st.marks.has("sections")) parts.push("sections");

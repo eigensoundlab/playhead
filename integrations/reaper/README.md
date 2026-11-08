@@ -184,6 +184,10 @@ The views of rhythm and form are drawn here as in the Playhead app:
   the bar they are in, and a click moves the edit cursor to that point of that bar.
 - **Tempogram** (`spec:tempo`, `~cyclic` folds the octaves), **repetition** (`spec:lag`) (both music) and the
   **modulation spectrogram** (`spec:mod`, any profile but fast), from the analysis.
+- **Spectral playheads** (music): the **bar spectrum** (`raster:spectrum`) and the **spectral groove**
+  (`raster:spectrum~attacks`), a row per bar and a column per 16th coloured low red, mid green, high blue by level or by
+  attack, and the **metrical spectrogram** (`spec:metric`), per octave band and bar the finest level its attacks keep
+  to (bar, half bar, beat, 8ths, 16ths). From analyses of Playhead 0.4 and later.
 - **Curve rhythms** (`scalogram:<curve>`), computed in the window from the curve. On a long item this takes a moment
   the first time the look is shown.
 

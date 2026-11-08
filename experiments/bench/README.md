@@ -39,6 +39,16 @@ the fills, the builds, the distortion cue, the pass-by or the rhythm signature f
 The hats sit off the beats so that no hit hides another; where hits coincide in music (a kick and a hat on the
 beat), Playhead sees one attack, in the band that rises most.
 
+## The arrangement (`arrangement.js`)
+
+A 64 s dance arrangement at 124 BPM, synthesized with its form known: intro (pad, hats), groove (kick on 1 and 3,
+snare on 2 and 4, off-beat hats, bass), a fill, a break (pad and a source passing by at 25 m/s), a build (a snare roll
+from quarters to 16ths under a riser, not louder), a drop (four-on-the-floor, 16th hats, an off-beat bass, a clipped
+stab in its second half) and an outro. It runs in Node and in the browser, for the spectral views (`test/grid-tests.js`
+checks the metrical spectrogram on it) and for the audiovisual comparison
+([experiments/visuals](../visuals/README.md)). Analysed, its pass-by is placed within 0.03 s at 24.3 m/s, the fill and
+the break are found, and the build is found from 29 to 37 s (true 31 to 39 s).
+
 ## What is measured
 
 - **Onsets**: the share of hits found within 50 ms; the error of the analysis's onsets (11.6 ms frames) and of the new

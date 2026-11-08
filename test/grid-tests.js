@@ -48,4 +48,23 @@ module.exports = async function (check) {
   check("motion: the rhythm signature finds the same beat alike at another tempo, other rhythms less so",
     `110 against 140 BPM ${sim("straight-140")}; waltz ${sim("waltz")}, 16ths ${sim("sixteenths")}`,
     sim("straight-140") > 0.95 && sim("straight-140") - Math.max(sim("waltz"), sim("sixteenths")) > 0.04);
+
+  // spectral playheads on the arrangement (experiments/bench/arrangement.js), whose form and parts are known: per octave
+  // group and bar the metrical level the attacks keep to, and the bar spectrum
+  const A = require("../experiments/bench/arrangement.js"), IO = require("../tools/audio-io.js"), S = A.render(44100);
+  const doc = await P.analyze(IO.makeBuffer(S.sr, [S.y]), { profile: "music", name: "arrangement" });
+  const mv = P.view(doc, "metric"), bar = S.truth.bar;
+  // the levels of one group over the arrangement's bars a..b (the grid's bars matched by their start)
+  const lv = (g, a, b) => { const out = []; for (let k = 0; k < mv.cols; k++) { const t = mv.bars[k][0], ab = Math.round(t / bar); if (Math.abs(t - ab * bar) < 0.1 && ab >= a && ab < b) out.push(mv.levels[(mv.rows - 1 - g) * mv.cols + k]); } return out; };
+  const mostly = (v, want) => v.length > 0 && v.filter(x => x === want).length >= 0.75 * v.length;
+  const names = v => v.map(x => (x < 0 ? "-" : "BHb8x"[x])).join("");
+  check("spectral: the metrical spectrogram tells which band carries which level (kick at the half bar, then on every beat; off-beat bass and hats on 8ths; a snare roll reaching 16ths)",
+    `kick ${names(lv(0, 4, 11))} | ${names(lv(0, 20, 28))}; bass ${names(lv(1, 20, 28))}; hats ${names(lv(7, 4, 11))}; roll ${names(lv(3, 16, 20))}`,
+    mostly(lv(0, 4, 11), 1) && mostly(lv(0, 20, 28), 2) && mostly(lv(1, 20, 28), 3) && mostly(lv(7, 4, 11), 3) && lv(3, 18, 20).every(x => x === 4) && lv(3, 16, 17).every(x => x < 3));
+  const rs = P.view(doc, "raster", { curve: "spectrum" }), ra = P.view(doc, "raster", { curve: "spectrum", attacks: true });
+  const kickCell = rs && rs.rgb.slice(0, 3), hatCell = ra && ra.rgb.slice(6, 9);
+  check("spectral: the bar spectrum and the spectral groove (a row per bar, a column per 16th, low red, mid green, high blue); small in the document",
+    `${rs && rs.rows} rows of ${rs && rs.cols}; groove's first step ${kickCell && Array.from(kickCell).join(",")}, its first hat ${hatCell && Array.from(hatCell).join(",")}; ${JSON.stringify(doc.rhythm.spectral).length} bytes`,
+    !!rs && !!ra && rs.cols === 16 && rs.rows === doc.rhythm.bars.length && kickCell[0] > kickCell[2] && hatCell[2] > hatCell[0] && hatCell[2] > hatCell[1]
+      && JSON.stringify(doc.rhythm.spectral).length < 400 * doc.rhythm.bars.length && P.lookFits(doc, "metrical") && P.lookFits(doc, "spectralGroove") && !P.lookFits(D.riser, "metrical") === !D.riser.rhythm.spectral);
 };
