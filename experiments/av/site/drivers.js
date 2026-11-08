@@ -10,7 +10,7 @@
 //                            (each band's power against its 4 s running average) and their beats (above 1.5 times the
 //                            average and rising, 120 ms apart); the spectral centroid for colour; an energy trend (the
 //                            level over 2 s against its 16 s average) and level jumps for builds and drops
-//   playheadDriver(doc)      the same slots from a Playhead document: attacks by band, the spectrum on the beat grid,
+//   playheadDriver(doc)      the same slots from a Playhead document: each band's hits, the spectrum on the beat grid,
 //                            the bar's phase, sections, builds and drops, fills and breaks, distortion, pass-bys
 //   compare(truth, std, doc) for a sound whose parts are known (the demo arrangement): what each side found
 //
@@ -101,10 +101,16 @@
   function playheadDriver(doc) {
     const c = doc.curves || {}, rate = c.rate || 20, dur = doc.source.duration;
     const at = (name, t) => { const a = c[name]; if (!Array.isArray(a) || !a.length) return 0; const x = Math.max(0, Math.min(a.length - 1, t * rate - 0.5)), i = Math.floor(x), f = x - i, u = a[i], v = a[Math.min(a.length - 1, i + 1)]; return u == null ? (v == null ? 0 : v) : v == null ? u : u + (v - u) * f; };
-    // attacks by band: an attack drives every band it rises in by a fifth or more (a kick and a hat struck together are
-    // one attack, labelled by the band that rises most), more strongly the larger its share
+    // kick, snare and hat layers from each band's own hits (doc.hits): every hat, also one struck with a kick; in the low
+    // and mid bands a hit is left out where the attack at that moment rises mostly elsewhere and here by less than a fifth
+    // (a snare's body in the low band, a kick's click in the mid band). Documents without hits: the attacks, each
+    // driving every band it rises in by a fifth or more.
     const attacks = (doc.attacks || []).slice().sort((a, b) => a.t - b.t), byBand = { low: [], mid: [], high: [] };
-    for (const a of attacks) ["low", "mid", "high"].forEach((b, i) => { const sh = Array.isArray(a.bands) ? a.bands[i] : a.band === b ? 1 : 0; if (sh >= 0.2 || a.band === b) byBand[b].push({ t: a.t, strength: Math.max(0.35, a.strength == null ? 1 : a.strength) * Math.min(1, sh / 0.5) }); });
+    const attackAt = t => { let lo = 0, hi = attacks.length - 1; while (lo < hi) { const m = (lo + hi) >> 1; if (attacks[m].t < t) lo = m + 1; else hi = m; } let b = null; for (const k of [lo - 1, lo]) { const a = attacks[k]; if (a && Math.abs(a.t - t) < 0.025 && (!b || Math.abs(a.t - t) < Math.abs(b.t - t))) b = a; } return b; };
+    if (doc.hits) ["low", "mid", "high"].forEach((b, i) => {
+      for (const [t, st] of doc.hits[b] || []) { const a = i < 2 ? attackAt(t) : null; if (!a || a.band === b || !Array.isArray(a.bands) || a.bands[i] >= 0.2) byBand[b].push({ t, strength: Math.max(0.35, st) }); }
+    });
+    else for (const a of attacks) ["low", "mid", "high"].forEach((b, i) => { const sh = Array.isArray(a.bands) ? a.bands[i] : a.band === b ? 1 : 0; if (sh >= 0.2 || a.band === b) byBand[b].push({ t: a.t, strength: Math.max(0.35, a.strength == null ? 1 : a.strength) * Math.min(1, sh / 0.5) }); });
     const r = doc.rhythm || {}, beats = r.reliable ? r.beats || [] : [], downs = r.reliable ? r.downbeats || [] : [], bars = r.bars || [];
     // the spectrum on the grid: per bar, step and octave, the attack strength
     const sp = r.spectral, att = sp && sp.attacks ? b64(sp.attacks) : null, S = sp ? sp.steps : 16, NG = sp ? sp.groups : 8;
@@ -117,10 +123,12 @@
     const barStarts = bars.map(b => b.start);
     const lastOf = (list, t, tau) => { let lo = 0, hi = list.length - 1, k = -1; while (lo <= hi) { const m = (lo + hi) >> 1; if (list[m].t <= t) { k = m; lo = m + 1; } else hi = m - 1; } return k < 0 ? { v: 0, age: 9, k: 0 } : { v: list[k].strength * Math.exp(-(t - list[k].t) / tau), age: t - list[k].t, k }; };
     const sections = doc.sections || [], passes = (doc.glides || []).filter(g => g.passBy);
-    // a build's drop: where the next section starts, from a second before the build ends to four seconds after it (a
-    // build that stops rising before its last bars ends early); else the build's end where Playhead marks a drop
-    const builds = (doc.builds || []).map(b => { const sc = sections.find(s => s.start >= b.end - 1 && s.start <= b.end + 4 && s.start > b.start); return Object.assign({}, b, { dropAt: sc ? sc.start : b.drop ? b.end : null }); });
-    const hueOf = t => { const k = sections.findIndex(s => t >= s.start && t < s.end); if (k < 0) return 0.58; const h = SECTION_HUES[String(sections[k].label)[0]] ?? 0.58, s = sections[k]; if (k > 0 && t - s.start < 1) { const h0 = SECTION_HUES[String(sections[k - 1].label)[0]] ?? 0.58, u = (t - s.start); return h0 + (h - h0) * u; } return h; };
+    // a build's drop: Playhead ends a build at the section it arrives at and marks it as a drop
+    const builds = (doc.builds || []).map(b => Object.assign({}, b, { dropAt: b.drop ? b.end : null }));
+    // colour: a hue per section letter, crossfaded over a second; a new section with the same letter turns the second hue
+    const hueOfLabel = l => { const h = SECTION_HUES[String(l)[0]]; return h == null ? 0.58 : h; };
+    const sectionAt = t => sections.findIndex(s => t >= s.start && t < s.end);
+    const hueOf = t => { const k = sectionAt(t); if (k < 0) return 0.58; const h = hueOfLabel(sections[k].label), s = sections[k]; if (k > 0 && t - s.start < 1) { const h0 = hueOfLabel(sections[k - 1].label); return h0 + (h - h0) * (t - s.start); } return h; };
     function drive(t) {
       const kk = lastOf(byBand.low, t, 0.12), sn = lastOf(byBand.mid, t, 0.16), ht = lastOf(byBand.high, t, 0.07);
       // the bar and the beat
@@ -145,9 +153,9 @@
       for (const b of builds) if (b.dropAt != null && t >= b.dropAt && t - b.dropAt < 2) flash = Math.max(flash, Math.exp(-(t - b.dropAt) / 0.5));
       let passX = 0, passOn = 0;
       for (const g of passes) if (t >= g.start && t <= g.end) { const h = Math.max(g.closest - g.start, g.end - g.closest, 0.1); passX = Math.max(-1, Math.min(1, (t - g.closest) / h)); passOn = 1; }
-      const hue = hueOf(t), tension = at("tension", t);
+      const hue = hueOf(t), tension = at("tension", t), turn = Math.max(0, sectionAt(t)) % 2 ? 0.08 : 0;
       return { level: at("loudness", t), bands, kick: kk.v, snare: sn.v, snareAge: sn.age, hat: ht.v, hatSeed: ht.k % 97, phase, beatPhase, spin: 0,
-        hueA: hue, hueB: hue + 0.1 + 0.12 * tension, build: at("buildup", t), rough: clamp01(1.4 * at("distortion", t) + 0.25 * at("timbreHarshness", t)), flash, passX, passOn, fill, brk, bg: tension, grid: phase >= 0 ? 1 : 0 };
+        hueA: hue, hueB: hue + 0.1 + turn + 0.12 * tension, build: at("buildup", t), rough: clamp01(1.4 * at("distortion", t) + 0.25 * at("timbreHarshness", t)), flash, passX, passOn, fill, brk, bg: tension, grid: phase >= 0 ? 1 : 0 };
     }
     // the strongest attack per octave from t0 to t1 on the grid, or what sounds there off the grid (for timelines)
     function octaves(t0, t1) {
@@ -170,10 +178,14 @@
   /* ---------------- what each side found, against the parts the sound was built with ---------------- */
   // A trigger counts for a hit from 125 ms before it to 45 ms after (ITU-R BT.1359: a picture that early or that late
   // goes unnoticed); the latency is the trigger's time minus the hit's, median over the hits found.
+  // One trigger counts for one hit at most: the pairs closest in time first (so with 16th hats 121 ms apart a trigger
+  // does not count for the hat after it as well).
   function hitsFound(hits, trig) {
-    const ts = trig.map(x => x.t).sort((a, b) => a - b), lat = [];
-    let found = 0;
-    for (const h of hits) { let best = null; for (const t of ts) { const d = t - h; if (d >= -0.125 && d <= 0.045 && (best == null || Math.abs(d) < Math.abs(best))) best = d; } if (best != null) { found++; lat.push(best); } }
+    const ts = trig.map(x => x.t).sort((a, b) => a - b), pairs = [], lat = [], usedH = new Set(), usedT = new Set();
+    hits.forEach((h, i) => ts.forEach((t, j) => { const d = t - h; if (d >= -0.125 && d <= 0.045) pairs.push([Math.abs(d), i, j, d]); }));
+    pairs.sort((a, b) => a[0] - b[0]);
+    for (const [, i, j, d] of pairs) if (!usedH.has(i) && !usedT.has(j)) { usedH.add(i); usedT.add(j); lat.push(d); }
+    const found = usedH.size;
     lat.sort((a, b) => a - b);
     return { found, of: hits.length, triggers: ts.length, latencyMs: lat.length ? Math.round(1000 * lat[lat.length >> 1]) : null };
   }
@@ -185,9 +197,9 @@
       rows.push({ what: name, std: a, ph: b });
     }
     // sections: the changes the arrangement was built with, found within a bar
-    const cuts = truth.sections.slice(1).map(s => s.start), phCuts = P.sections.slice(1).filter((s, k) => s.label !== P.sections[k].label).map(s => s.start);
+    const cuts = truth.sections.slice(1).map(s => s.start), phCuts = P.sections.slice(1).map(s => s.start);
     const near = (a, list, w) => list.some(b => Math.abs(a - b) <= w);
-    rows.push({ what: "Section changes", std: null, ph: { found: cuts.filter(c => near(c, phCuts, truth.bar)).length, of: cuts.length, extra: phCuts.filter(c => !near(c, cuts, truth.bar)).length } });
+    rows.push({ what: "Section boundaries", std: null, ph: { found: cuts.filter(c => near(c, phCuts, truth.bar)).length, of: cuts.length, extra: phCuts.filter(c => !near(c, cuts, truth.bar)).length } });
     // the fill and the break, by bar
     const barAt = t => Math.round(t / truth.bar), phFills = P.bars.filter(b => b.change === "fill").map(b => barAt(b.start)), phBreaks = P.bars.filter(b => b.change === "break").map(b => barAt(b.start));
     rows.push({ what: "Fill and break", std: null, ph: { fill: phFills.includes(truth.fills[0]), brk: truth.breaks.some(b => phBreaks.includes(b)), fills: phFills, breaks: phBreaks } });

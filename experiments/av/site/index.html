@@ -41,11 +41,12 @@
 </head>
 <body>
 <main>
+  <p class="mute" style="margin:0 0 6px"><a href="../">← Playhead</a></p>
   <h1>Audiovisual Playhead</h1>
   <p class="sub">One scene drawn twice from the same sound. On the left it reacts the usual way: the level, the spectrum
     as an analyser gives it, and beats from the bass, mid and treble bands jumping over their average, each worked out
     frame by frame without looking ahead, as a live visualiser does. On the right it reacts to what
-    <a href="https://github.com/eigensoundlab/playhead">Playhead</a> found in the sound: the kick, snare and hat attacks
+    <a href="https://github.com/eigensoundlab/playhead">Playhead</a> found in the sound: the kick, snare and hat hits
     to the sample, which octave hits on which 16th of the bar, the bar itself, sections, builds and drops, distortion and
     a source passing by. Under each, what that side detected over the whole sound.</p>
 
@@ -71,7 +72,7 @@
         <div class="tl" id="tlS"><canvas></canvas><div class="cursor"></div></div>
       </div>
       <div class="side">
-        <h2>Playhead <small>attacks, the bar, sections, builds, motion</small></h2>
+        <h2>Playhead <small>hits, the bar, sections, builds, motion</small></h2>
         <canvas class="stage" id="stageP"></canvas>
         <div class="tl" id="tlP"><canvas></canvas><div class="cursor"></div></div>
       </div>

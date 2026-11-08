@@ -21,7 +21,7 @@ recipes.
 | `pitchSlope` | the strongest partial's motion (glides, sirens, Doppler), written from -12 to 12 semitones a second |
 | `onsetStrength` | where the hits and attacks are; `onsetLow`, `onsetMid`, `onsetHigh` the same for kick, snare and hats |
 | `structureNovelty`, `localPulse`, `pulseClarity` | (music) where a section changes; how clear and strong the beat is; how clearly a beat is felt |
-| `buildup` | (music) how strongly the sound is building (denser, brighter or louder second by second), 0 elsewhere |
+| `buildup` | (music) how far into a build the music is: a ramp from the build's start to its drop, 0 elsewhere |
 | `patternSurprise`, `swing` | (music, per bar) how far the bar's drum pattern is from the bars before (fills and breaks); the bar's swing |
 | `n1Kurtosis` ... `n8Recurrence` | descriptors: impulsiveness (clicks, crackle), repetition rate, spectral motion, periodicity, phase coherence, time arrow, surprisal, recurrence |
 

@@ -161,7 +161,7 @@
     timeline("tlP", [
       { label: "loudness", h: 18, draw: withBars(area(c.loudness || [], rate, "#8fa1ad")) },
       { label: "octaves: attacks on the grid", h: 28, draw: withBars(heat(px => { const W = timelineW("tlP"), o = P.octaves(px / W * st.dur, (px + 1) / W * st.dur); return o.values; })) },
-      { label: "attacks: low, mid, high", h: 21, draw: withBars(ticks([[P.byBand.low, "#e8453c"], [P.byBand.mid, "#4cc76a"], [P.byBand.high, "#3f9ff2"]])) },
+      { label: "hits: low, mid, high", h: 21, draw: withBars(ticks([[P.byBand.low, "#e8453c"], [P.byBand.mid, "#4cc76a"], [P.byBand.high, "#3f9ff2"]])) },
       { label: "sections", h: 12, draw: (g, y, h, W, x) => { for (const s of P.sections) { const h0 = ({ A: 0.58, B: 0.92, C: 0.08, D: 0.33, E: 0.75, F: 0.15, G: 0.48, H: 0 })[String(s.label)[0]] ?? 0.58; g.fillStyle = hsl(h0, 0.6, 0.32); g.fillRect(x(s.start), y, x(s.end) - x(s.start) - 1, h); g.fillStyle = "#e4e8ea"; g.font = "9px system-ui"; g.fillText(s.label, x(s.start) + 2, y + 1); } } },
       { label: "build-up and drops", h: 16, draw: withBars((g, y, h, W, x, T) => { area(c.buildup || [], rate, "#c08bd8")(g, y, h, W, x, T); g.fillStyle = "#ffffff"; for (const b of P.builds) if (b.dropAt != null) g.fillRect(Math.round(x(b.dropAt)) - 1, y, 3, h); }) },
       { label: "fills, breaks, pass-bys", h: 12, draw: withBars((g, y, h, W, x) => {
@@ -180,7 +180,7 @@
     const hit = r => r.found + " of " + r.of + " (" + r.triggers + " triggers), " + (r.latencyMs == null ? "–" : (r.latencyMs > 0 ? "+" : "") + r.latencyMs + " ms");
     const cells = {
       Kicks: r => [hit(r.std), hit(r.ph)], Snares: r => [hit(r.std), hit(r.ph)], Hats: r => [hit(r.std), hit(r.ph)],
-      "Section changes": r => [null, r.ph.found + " of " + r.ph.of + (r.ph.extra ? ", " + r.ph.extra + " others" : ", none other")],
+      "Section boundaries": r => [null, r.ph.found + " of " + r.ph.of + (r.ph.extra ? ", " + r.ph.extra + " others" : ", none other")],
       "Fill and break": r => [null, (r.ph.fill ? "the fill in bar " + barNo(st.truth.fills[0]) : "the fill missed") + "; " + (r.ph.brk ? "the break from bar " + barNo(st.truth.breaks[0]) : "the break missed")
         + (r.ph.fills.filter(b => b !== st.truth.fills[0]).length ? "; also a fill in bar " + r.ph.fills.filter(b => b !== st.truth.fills[0]).map(barNo).join(" and ") : "")],
       "Build (not louder)": r => ["energy trend " + fmt(r.std.trendIn) + " inside it, " + fmt(r.std.trendOut) + " elsewhere",
@@ -196,7 +196,7 @@
       for (const [v, cls] of [[r.what, ""], [a == null ? "no such signal" : a, a == null ? "na" : ""], [b, ""]]) { const td = document.createElement(tr.children.length ? "td" : "th"); td.textContent = v; if (cls) td.className = cls; tr.appendChild(td); }
       body.appendChild(tr);
     }
-    $("cmpNote").textContent = "Against the parts the demo was built with. A beat or an attack counts for a hit from 125 ms before it to 45 ms after (ITU-R BT.1359: a picture that early or that late goes unnoticed); the latency is the median over the hits found. Where hits fall together, Playhead has one attack, which drives every band it rises in.";
+    $("cmpNote").textContent = "Against the parts the demo was built with. A beat or an attack counts for a hit from 125 ms before it to 45 ms after (ITU-R BT.1359: a picture that early or that late goes unnoticed); the latency is the median over the hits found. Playhead's kick, snare and hat layers are its hits per band (low, mid, high), so a hat struck with a kick counts as both.";
     $("cmp").hidden = false;
   }
 

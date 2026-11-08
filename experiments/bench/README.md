@@ -47,7 +47,8 @@ from quarters to 16ths under a riser, not louder), a drop (four-on-the-floor, 16
 stab in its second half) and an outro. It runs in Node and in the browser, for the spectral views (`test/grid-tests.js`
 checks the metrical spectrogram on it) and for the audiovisual comparison
 ([experiments/av](../av/README.md)). Analysed, its pass-by is placed within 0.03 s at 24.3 m/s, the fill and
-the break are found, and the build is found from 29 to 37 s (true 31 to 39 s).
+the break are found, and the build from 30.96 to 38.70 s (built 30.97 to 38.71 s). `render(sr, { clip: false })`
+renders the stab clean, to test a distortion cue against the same part undistorted.
 
 ## What is measured
 
@@ -92,13 +93,32 @@ the break are found, and the build is found from 29 to 37 s (true 31 to 39 s).
 | straight, laid-back, pushed, loose, swing 1.5 to 3, waltz, sixteenths, pulses, no-beat, straight-140 | – | – | **none** | – | – | – | – |
 | fills | bars 3, 7, 11 fill, 12 break (**1, 1**) | – | none | – | – | – | – |
 | swing-change | – | **0** | none | – | – | – | – |
-| riser | – | – | 2 to 14 | **0.71** | – | – | – |
-| swell | – | – | 5 to 13 | **0.67** | – | – | – |
-| timbres | – | – | 2 to 8 (false) | – | **1** | – | – |
+| riser | – | – | 4 to 16 | **1.00** | – | – | – |
+| swell | – | – | 4 to 13 | **0.75** | – | – | – |
+| timbres | – | – | 3 to 8.9 (false) | – | **1** | – | – |
 | pass-by | – | – | none | – | – | **3.88 s, 19.6 m/s** (4 s, 25 m/s) | **6.1 Hz, 97 c** (6 Hz, 80 c); **29.5 Hz, 49 c** (28 Hz, 30 c) |
 
 Rhythm signature, similarity to `straight`: straight-140 **0.988**, fills 0.998, waltz 0.924, sixteenths 0.909,
 swing-2 0.859, snare-laid-back 0.784.
+
+## Results: hits per band (Playhead 0.3.0+)
+
+Each band's own hits (`hits`) against the true hits of that band, one to one within 30 ms: recall (precision). Beside
+them the attacks labelled with that band, one per moment, as before.
+
+| Sound | hits low | hits mid | hits high | attacks labelled low | mid | high |
+|---|---|---|---|---|---|---|
+| straight, laid-back, pushed, loose, swing 1.5 to 3, swing-change, straight-140 | **1** (0.6) | **1** (0.4) | **1** (0.67) | 0.98 to 1 (0.59 to 1) | 1 (1) | 0.75 to 0.77 (0.75 to 1) |
+| waltz | **1** (0.33) | **1** (0.67) | **1** (0.6) | 1 (0.76) | 1 (1) | 1 (0.81) |
+| fills | **1** (0.5) | **1** (0.5) | **1** (0.57) | 1 (0.98) | 1 (1) | 0.8 (0.7) |
+| sixteenths | **1** (0.5) | **1** (0.5) | **1** (0.79) | 1 (1) | 1 (1) | 0.94 (0.94) |
+| pulses, no-beat | **1** (0.42 to 1) | **1** (0.42) | **1** (0.45 to 1) | 1 (0.64 to 1) | 1 (1) | 1 (0.95 to 1) |
+
+Every hit of every band is found. A hat struck with the kick or snare, which the attacks give to the band that rises
+most, is a high hit too; the lower precision is what of other parts rises in a band (the snare's 190 Hz body in the
+low band, the kick's click in the mid band, the snare's noise in the high band), which the attacks' labels tell
+apart. On the arrangement the high band finds 168 of its 190 hats, among them 109 of the drop's 128 16ths (quiet
+ones over the tail of an open hat), where the attacks labelled high found 75 of 190.
 
 ## What it shows
 
@@ -114,10 +134,12 @@ swing-2 0.859, snare-laid-back 0.784.
 - **Fills and breaks** are found bar by bar with no false ones, and **swing per bar** follows a groove that starts
   straight and swings from bar 8 exactly. Bar 15's fill is the last bar and has no neighbour after it to stand out
   from.
-- **Builds that are not louder** are found: a riser that only sweeps up and thickens at one loudness (overlap 0.71 with
-  the true build: the 12 s found start 2 s early and end 2 s before the drop) and a swell of more and
-  more hits (0.67). No groove has a false build. The timbre blocks have one (2 to 8 s), where dark, clipped and bright
-  blocks follow each other as a staircase of brightness.
+- **Builds that are not louder** are found: a riser that only sweeps up and thickens at one loudness (overlap 1.00
+  with the true build) and a swell of more and more hits (0.75: it is found to end at 13 s, 3 s before the drop,
+  too far to be put on it). Builds are put on the form: found on whole seconds where their cues rise, they end
+  where the next section starts (the drop) and start at a section start or a downbeat. No groove has a false build.
+  The timbre blocks have one (3 to 8.9 s), where dark, clipped and bright blocks follow each other as a staircase of
+  brightness.
 - **Distortion** tells every clipped block from every clean one at the same loudness (AUC 1), rough and bright ones
   included.
 - **The pass-by** is placed 0.12 s from its closest moment, at 19.6 m/s where it went at 25: the speed comes from the

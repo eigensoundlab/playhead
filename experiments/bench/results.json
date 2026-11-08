@@ -11,6 +11,34 @@
     "p90Ms": 4.65
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 1
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.75,
+     "precision": 0.84
+    }
+   },
    "rhythm": {
     "tempo": 110.05,
     "reliable": true,
@@ -58,6 +86,34 @@
     "p90Ms": 4.65
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 1
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.75,
+     "precision": 0.84
+    }
+   },
    "rhythm": {
     "tempo": 109.87,
     "reliable": true,
@@ -105,6 +161,34 @@
     "p90Ms": 10.55
    },
    "bands": 0.95,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 0.77
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.75,
+     "precision": 0.75
+    }
+   },
    "rhythm": {
     "tempo": 110.05,
     "reliable": true,
@@ -152,6 +236,34 @@
     "p90Ms": 7.89
    },
    "bands": 0.94,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 0.92
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.75,
+     "precision": 0.82
+    }
+   },
    "rhythm": {
     "tempo": 110.01,
     "reliable": true,
@@ -199,6 +311,34 @@
     "p90Ms": 1.97
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 1
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.75,
+     "precision": 1
+    }
+   },
    "rhythm": {
     "tempo": 100.04,
     "reliable": true,
@@ -246,6 +386,34 @@
     "p90Ms": 4.24
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 0.71
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.75,
+     "precision": 0.8
+    }
+   },
    "rhythm": {
     "tempo": 100.04,
     "reliable": true,
@@ -293,6 +461,34 @@
     "p90Ms": 6.21
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.75,
+     "precision": 1
+    }
+   },
    "rhythm": {
     "tempo": 100.06,
     "reliable": true,
@@ -340,6 +536,34 @@
     "p90Ms": 1.27
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.33
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.67
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.6
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 0.76
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.81
+    }
+   },
    "rhythm": {
     "tempo": 132.08,
     "reliable": true,
@@ -387,6 +611,34 @@
     "p90Ms": 0.75
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.5
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.5
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.57
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 0.98
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.8,
+     "precision": 0.7
+    }
+   },
    "rhythm": {
     "tempo": 112.05,
     "reliable": true,
@@ -444,6 +696,34 @@
     "p90Ms": 0.79
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 0.8
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.75,
+     "precision": 0.92
+    }
+   },
    "rhythm": {
     "tempo": 100.04,
     "reliable": true,
@@ -493,6 +773,34 @@
     "p90Ms": 23.13
    },
    "bands": 0.96,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.5
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.5
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.79
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 1
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.94,
+     "precision": 0.94
+    }
+   },
    "rhythm": {
     "tempo": 96.04,
     "reliable": true,
@@ -539,6 +847,18 @@
     "p90Ms": 0.7
    },
    "bands": 1,
+   "hits": {
+    "high": {
+     "recall": 1,
+     "precision": 1
+    }
+   },
+   "attackBands": {
+    "high": {
+     "recall": 1,
+     "precision": 1
+    }
+   },
    "rhythm": {
     "tempo": 119.11,
     "reliable": false,
@@ -571,6 +891,18 @@
     "p90Ms": 0.7
    },
    "bands": 1,
+   "hits": {
+    "high": {
+     "recall": 1,
+     "precision": 1
+    }
+   },
+   "attackBands": {
+    "high": {
+     "recall": 1,
+     "precision": 1
+    }
+   },
    "rhythm": {
     "tempo": 120.13,
     "reliable": true,
@@ -610,6 +942,34 @@
     "p90Ms": 2.14
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.54
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.42
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.45
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 1,
+     "precision": 0.64
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.95
+    }
+   },
    "rhythm": {
     "tempo": 111.82,
     "reliable": false,
@@ -633,6 +993,34 @@
     "p90Ms": 9.07
    },
    "bands": 1,
+   "hits": {
+    "low": {
+     "recall": 1,
+     "precision": 0.6
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 0.4
+    },
+    "high": {
+     "recall": 1,
+     "precision": 0.67
+    }
+   },
+   "attackBands": {
+    "low": {
+     "recall": 0.98,
+     "precision": 0.59
+    },
+    "mid": {
+     "recall": 1,
+     "precision": 1
+    },
+    "high": {
+     "recall": 0.77,
+     "precision": 1
+    }
+   },
    "rhythm": {
     "tempo": 140.04,
     "reliable": true,
@@ -698,12 +1086,12 @@
    "pulseClarity": 0.64,
    "builds": [
     [
-     2,
-     13.98,
+     3.994,
+     15.987,
      0.66
     ]
    ],
-   "buildIoU": 0.71,
+   "buildIoU": 1,
    "glides": 4,
    "signature": true
   },
@@ -735,12 +1123,12 @@
    "pulseClarity": 0.58,
    "builds": [
     [
-     4.99,
+     3.994,
      12.98,
      0.92
     ]
    ],
-   "buildIoU": 0.67,
+   "buildIoU": 0.75,
    "glides": 2,
    "signature": true
   },
@@ -765,8 +1153,8 @@
    "pulseClarity": 0,
    "builds": [
     [
-     2,
-     7.99,
+     2.972,
+     8.916,
      0.64
     ]
    ],

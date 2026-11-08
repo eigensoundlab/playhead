@@ -21,8 +21,9 @@
   const hz = m => 440 * Math.pow(2, (m - 69) / 12);
   function rng(seed) { let s = seed % 2147483646 + 1; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
 
-  function render(sr) {
-    sr = sr || 44100;
+  // opts.clip: false renders the stab clean (for testing a distortion cue against the same part undistorted)
+  function render(sr, opts) {
+    sr = sr || 44100; opts = opts || {};
     const n = Math.ceil((BARS * BAR + 1.5) * sr), y = new Float32Array(n), r = rng(7);
     const add = (x, t, g) => { const i0 = Math.round(t * sr); for (let i = 0; i < x.length && i0 + i < n; i++) y[i0 + i] += g * x[i]; };
     const kick = () => { const m = Math.round(0.35 * sr), x = new Float32Array(m); let ph = 0; for (let i = 0; i < m; i++) { const t = i / sr; ph += 2 * Math.PI * (48 + 110 * Math.exp(-t * 30)) / sr; x[i] = Math.sin(ph) * Math.exp(-t * 9) * Math.min(1, t / 0.0008); } return x; };
@@ -30,7 +31,7 @@
     const hat = open => { const m = Math.round((open ? 0.3 : 0.06) * sr), x = new Float32Array(m); let prev = 0; for (let i = 0; i < m; i++) { const t = i / sr, w = r() * 2 - 1; x[i] = 0.35 * (w - prev) * Math.exp(-t * (open ? 12 : 70)) * Math.min(1, t / 0.0003); prev = w; } return x; };
     // a sawtooth through a one-pole low-pass, with an attack and a decay
     const saw = (f, len, cut, decay) => { const m = Math.round(len * sr), x = new Float32Array(m), a = 1 - Math.exp(-2 * Math.PI * cut / sr); let lp = 0, ph = 0; for (let i = 0; i < m; i++) { const t = i / sr; ph = (ph + f / sr) % 1; lp += a * ((2 * ph - 1) - lp); x[i] = lp * Math.min(1, t / 0.004, (len - t) / 0.01) * Math.exp(-t * decay); } return x; };
-    const truth = { bpm: BPM, beatsPerBar: 4, bar: BAR, sections: SECTIONS.map(([label, a, b]) => ({ label, start: a * BAR, end: b * BAR })), build: [16 * BAR, 20 * BAR], drop: 20 * BAR, fills: [11], breaks: [12], passBy: null, distortion: [24 * BAR, 28 * BAR], hits: [] };
+    const truth = { bpm: BPM, beatsPerBar: 4, bar: BAR, sections: SECTIONS.map(([label, a, b]) => ({ label, start: a * BAR, end: b * BAR })), build: [16 * BAR, 20 * BAR], drop: 20 * BAR, fills: [11], breaks: [12], passBy: null, distortion: opts.clip === false ? null : [24 * BAR, 28 * BAR], hits: [] };
     // a part that starts at a known moment: kick, snare, hat (closed or open), bass or stab
     const play = (inst, x, t, g) => { add(x, t, g); truth.hits.push({ t: Math.round(t * sr) / sr, inst }); };
     const sec = bar => SECTIONS.find(([, a, b]) => bar >= a && bar < b)[0];
@@ -56,7 +57,7 @@
         for (let st = 0; st < 16; st++) play("hat", hat(st % 4 === 2), at(st), st % 2 ? 0.45 : 0.7);
         for (const st of [2, 6, 10, 14]) play("bass", saw(hz(ch[0] + 12), 1.6 * STEP, 700, 3), at(st), 0.55);   // the off-beat bass
         // a distorted stab in the second half of the drop: a chord of sawtooths clipped hard
-        if (bar >= 24) for (const st of [0, 3, 6]) { const x = saw(hz(ch[1] + 12), 2 * STEP, 5000, 2); for (const m of ch.slice(2)) { const z = saw(hz(m + 12), 2 * STEP, 5000, 2); for (let i = 0; i < x.length; i++) x[i] += z[i]; } for (let i = 0; i < x.length; i++) x[i] = Math.max(-0.25, Math.min(0.25, 3 * x[i])); play("stab", x, at(st), 1.6); }
+        if (bar >= 24) for (const st of [0, 3, 6]) { const x = saw(hz(ch[1] + 12), 2 * STEP, 5000, 2); for (const m of ch.slice(2)) { const z = saw(hz(m + 12), 2 * STEP, 5000, 2); for (let i = 0; i < x.length; i++) x[i] += z[i]; } if (opts.clip !== false) for (let i = 0; i < x.length; i++) x[i] = Math.max(-0.25, Math.min(0.25, 3 * x[i])); else for (let i = 0; i < x.length; i++) x[i] *= 0.6; play("stab", x, at(st), 1.6); }
       }
     }
     // the build: a riser (noise swept up from 300 Hz to 8 kHz), held at one level

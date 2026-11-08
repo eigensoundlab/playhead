@@ -829,5 +829,6 @@
  "lib.item.metric16": "šestnáctiny",
  "lib.item.low": "basy",
  "lib.item.mid": "středy",
- "lib.item.high": "výšky"
+ "lib.item.high": "výšky",
+ "foot.av": "Audiovizuální Playhead"
 }

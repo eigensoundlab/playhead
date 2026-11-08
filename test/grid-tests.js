@@ -23,6 +23,10 @@ module.exports = async function (check) {
     `snare ${off(M["snare-laid-back"], "mid")} ms, hats ${off(M["hats-pushed"], "high")} ms; tightness ${s.tightnessMs} and ${M.loose.tightnessMs} ms`,
     Math.abs(off(M["snare-laid-back"], "mid") - 25) < 3 && Math.abs(off(M["hats-pushed"], "high") + 15) < 3 && Math.abs(off(s, "mid")) < 3
       && s.tightnessMs < 3 && Math.abs(M.loose.tightnessMs - 12) < 4);
+  const hitNames = ["straight", "hats-pushed", "loose", "swing-2", "waltz", "fills"];
+  check("grid: each band's own hits find every kick, snare and hat of the grooves, a hat struck with the kick too (the attacks labelled high find 75 %)",
+    hitNames.map(k => k + " " + ["low", "mid", "high"].map(b => M[k].hits[b].recall).join("/")).join(", ") + `; attacks labelled high in straight ${M.straight.attackBands.high.recall}`,
+    hitNames.every(k => ["low", "mid", "high"].every(b => M[k].hits[b].recall === 1)) && M.straight.attackBands.high.recall < 0.9);
   check("grid: swing ratio, the meter (3/4 against 4/4) and the downbeats",
     `swing ${M["swing-2"].rhythm.swing} (true 2), straight ${s.rhythm.swing}; waltz ${M.waltz.rhythm.beatsPerBar} beats a bar, downbeats ${M.waltz.downbeats}; 4/4 ${s.rhythm.beatsPerBar}`,
     Math.abs(M["swing-2"].rhythm.swing - 2) < 0.15 && Math.abs(s.rhythm.swing - 1) < 0.1 && M.waltz.rhythm.beatsPerBar === 3 && M.waltz.downbeats >= 0.9
@@ -72,6 +76,10 @@ module.exports = async function (check) {
   const AV = require("../experiments/av/site/drivers.js"), std = AV.standardDrivers(S.y, S.sr), rows = Object.fromEntries(AV.compare(S.truth, std, doc).map(r => [r.what, r]));
   const k = rows.Kicks, sn = rows.Snares, dr = rows.Drop, pv = rows["Pass-by"], fb = rows["Fill and break"];
   const drive = AV.playheadDriver(doc).drive(S.truth.passBy.closest), sdrive = AV.standardDrive(std, 10, 0);
+  const ht = rows.Hats, bl = rows["Build (not louder)"], sb = rows["Section boundaries"];
+  check("av: the build is put on the form (from its section start to the drop), every section boundary found, the fill and no other; more hats than the usual treble beats",
+    `build ${bl.ph && bl.ph.start}-${bl.ph && bl.ph.end} (built ${S.truth.build.map(v => v.toFixed(2)).join("-")}); boundaries ${sb.ph.found}/${sb.ph.of}; fills ${fb.ph.fills.join(" ")}; hats ${ht.ph.found}/${ht.ph.of} (usual ${ht.std.found})`,
+    !!bl.ph && bl.ph.overlap > 0.95 && sb.ph.found === sb.ph.of && fb.ph.fills.length === 1 && fb.ph.fill && ht.ph.found > ht.std.found && ht.ph.found >= 0.85 * ht.ph.of);
   check("av: Playhead's drive finds every kick and snare on time, the drop, the fill and break, and the pass-by, which the usual signals cannot",
     `kicks ${k.ph.found}/${k.ph.of} at ${k.ph.latencyMs} ms (usual ${k.std.found}/${k.std.of}, +${k.std.latencyMs} ms); snares ${sn.ph.found}/${sn.ph.of} (usual ${sn.std.found}); drop ${dr.ph.found ? Math.round(1000 * dr.ph.err) + " ms off" : "missed"} (usual ${dr.std.found ? "found" : "none"}); pass-by ${pv.ph ? Math.round(1000 * pv.ph.err) + " ms off" : "missed"}`,
     k.ph.found === k.ph.of && Math.abs(k.ph.latencyMs) <= 2 && sn.ph.found >= 0.95 * sn.ph.of && sn.ph.found > sn.std.found && dr.ph.found && Math.abs(dr.ph.err) < 0.2

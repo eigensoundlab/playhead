@@ -28,6 +28,17 @@ async function measure(S) {
   const alone = hits.filter(h => !hits.some(o => o !== h && Math.abs(o.t - h.t) < 0.015));
   const bandOk = alone.filter(h => { const a = doc.attacks.reduce((p, c) => (p == null || Math.abs(c.t - h.t) < Math.abs(p.t - h.t) ? c : p), null); return a && Math.abs(a.t - h.t) < 0.03 && a.band === h.band; });
   m.bands = alone.length ? r2(bandOk.length / alone.length) : null;
+  // hits per band (each band's own onsets) against the true hits of that band, one to one within 30 ms, and the same
+  // for the attacks labelled with that band (one attack per moment)
+  const match = (truth, det) => { const pairs = []; truth.forEach((t, i) => det.forEach((d, j) => { if (Math.abs(d - t) <= 0.03) pairs.push([Math.abs(d - t), i, j]); })); pairs.sort((a, b) => a[0] - b[0]); const ui = new Set(), uj = new Set(); for (const [, i, j] of pairs) if (!ui.has(i) && !uj.has(j)) { ui.add(i); uj.add(j); } return { recall: truth.length ? r2(ui.size / truth.length) : null, precision: det.length ? r2(uj.size / det.length) : null }; };
+  if (doc.hits && hits.length) {
+    m.hits = {}; m.attackBands = {};
+    for (const b of ["low", "mid", "high"]) {
+      const tb = hits.filter(h => h.band === b).map(h => h.t);
+      if (!tb.length) continue;
+      m.hits[b] = match(tb, doc.hits[b].map(h => h[0])); m.attackBands[b] = match(tb, doc.attacks.filter(a => a.band === b).map(a => a.t));
+    }
+  }
   const R = doc.rhythm || {};
   m.rhythm = { tempo: R.tempo, reliable: R.reliable, beatsPerBar: R.beatsPerBar, downbeatConfidence: R.downbeatConfidence, swing: R.swing == null ? null : R.swing, timing: R.timing || null };
   const pc = (doc.curves.pulseClarity || []).filter(v => v != null);
@@ -106,6 +117,10 @@ if (require.main === module) (async () => {
   const docs = {};
   for (const S of stimuli.filter(x => ["straight", "straight-140", "snare-laid-back", "swing-2", "waltz", "sixteenths", "fills"].includes(x.name))) docs[S.name] = (await measure(S)).doc;
   const sim = Object.fromEntries(Object.keys(docs).filter(k => k !== "straight").map(k => [k, P.rhythmSimilarity(docs.straight, docs[k])]));
+  console.log("\n| Sound | hits low: recall (precision) | hits mid | hits high | attacks by band: low | mid | high |");
+  console.log("|---|---|---|---|---|---|---|");
+  const rp = x => (x ? f(x.recall) + " (" + f(x.precision) + ")" : "–");
+  for (const m of out) if (m.hits) console.log("| " + [m.name, rp(m.hits.low), rp(m.hits.mid), rp(m.hits.high), rp(m.attackBands.low), rp(m.attackBands.mid), rp(m.attackBands.high)].join(" | ") + " |");
   console.log("\nRhythm signature, similarity to `straight`: " + Object.entries(sim).map(([k, v]) => k + " " + v).join(", "));
   fs.writeFileSync(path.join(__dirname, "results.json"), JSON.stringify({ generator: "experiments/bench/run.js, Playhead " + P.version, results: out, signatureSimilarity: sim }, null, 1) + "\n");
 })().catch(e => { console.error(e); process.exit(1); });

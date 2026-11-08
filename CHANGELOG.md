@@ -8,9 +8,18 @@
   MilkDrop-style band beats, centroid colour, worked out frame by frame without looking ahead), the right side from
   Playhead (attacks to the sample, the spectrum on the grid, the bar, sections, builds and drops, fills and breaks,
   distortion, pass-bys). A timeline of what each side detected under each, and for the demo arrangement what each side
-  found: every kick and snare at 0 ms against 79 kicks at +9 ms and 34 of 81 snares, the drop 14 ms off and the pass-by
-  23 ms off where the usual signals have none; the usual treble beats find more of the synthetic hats (185 of 190
-  against 123). Open your own file to compare.
+  found: every kick, 80 of 81 snares and 168 of 190 hats at 0 to 1 ms against 79 kicks, 29 snares and 133 hats at +8
+  to +9 ms, the build exactly, the drop 14 ms off and the pass-by 23 ms off where the usual signals have none. Linked
+  from the app's footer. Open your own file to compare.
+- **Hits per band** (`hits`, sfx and music profiles): each band's own onsets, `{ low, mid, high: [[t, strength]] }`,
+  to the sample: the kick, snare and hat layers for visuals and triggers. A hat struck with a kick is a high hit as
+  well as a low one, and quiet 16th hats over an open hat's tail are found (the high band from the signal above 2 kHz
+  at 1 ms). On the bench every hit of every band is found (attacks labelled high: 75 %).
+- **Builds on the form**: a build now ends at the section it arrives at, which makes it a drop, and starts at a section
+  start or a downbeat; builds left shorter than 5 s (a rise across a section change) are dropped. The `buildup` curve
+  ramps from each build's start to its drop. Bench riser overlap 1.00 (was 0.71), swell 0.75 (0.67); the
+  arrangement's build exact to 10 ms.
+- **Fills** must stand out from the bars after them too: a bar where a new part enters and stays is no longer a fill.
 - **Spectral playheads**: views of the spectrum on the beat grid, for what a tempogram cannot show (where in the bar
   the onsets fall, and which part of the spectrum makes them). `rhythm.spectral` keeps, per bar, 16th step and octave
   group, the level and the attack strength (about 350 bytes a bar). Three looks: **Bar spectrum** (`raster:spectrum`, a
