@@ -58,7 +58,8 @@ strcpy(9, "onset strength (hits)"); strcpy(10, "structural change"); strcpy(11, 
 strcpy(13, "repetition rate"); strcpy(14, "spectral motion"); strcpy(15, "periodicity"); strcpy(16, "phase coherence");
 strcpy(17, "time arrow"); strcpy(18, "surprisal"); strcpy(19, "recurrence"); strcpy(20, "timbre harshness");
 strcpy(21, "low onsets (kick)"); strcpy(22, "mid onsets (snare)"); strcpy(23, "high onsets (hats)"); strcpy(24, "pulse clarity");
-names = 24;
+strcpy(25, "pattern surprise"); strcpy(26, "swing"); strcpy(27, "distortion"); strcpy(28, "pitch motion"); strcpy(29, "build-up");
+names = 29;
 gfx_ext_retina = 1;
 
 @block

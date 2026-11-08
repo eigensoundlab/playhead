@@ -172,7 +172,7 @@ return function(T)
     local tk = item.takes[1]
     return core.take_map({ pos = item.pos, len = item.len, offs = tk.offs, rate = tk.rate, loop = false, src_len = len, sections = sections, file_len = file_len })
   end
-  local kinds = { events = true, sections = true, downbeats = true }
+  local kinds = { events = true, sections = true, downbeats = true, changes = true }
   local planA = core.marker_plan(robot_cached, map_of(A, robot_len), kinds)
   local planB = core.marker_plan(arc_doc, map_of(B, 64), kinds)
   local planC = core.marker_plan(robot_cached, map_of(C, robot_len, { { offs = 0, len = robot_len, rev = true } }, robot_len), kinds)

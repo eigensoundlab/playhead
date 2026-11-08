@@ -229,6 +229,20 @@ return function(T)
       p3.notes[1])
   end
 
+  do
+    -- builds, fills, breaks and pass-bys (Playhead 0.4): an item from 10 s playing the file from 2 s
+    local doc = { builds = { { start = 4, ["end"] = 12, strength = 0.8, drop = true } },
+      rhythm = { bars = { { start = 3, change = "fill" }, { start = 5, change = null }, { start = 7, change = "break" } } },
+      glides = { { start = 5, ["end"] = 8, passBy = true, closest = 6.5, speed = 20 }, { start = 9, ["end"] = 10, passBy = false } } }
+    local m = M.take_map({ pos = 10, len = 20, offs = 2, rate = 1, src_len = 30 })
+    local p = M.marker_plan(doc, m, { changes = true })
+    local names = {}; for _, k in ipairs(p.markers) do names[#names + 1] = k.name .. "@" .. M.num(k.pos, 2) end
+    check("markers: builds as regions, fills, breaks and pass-bys as markers, placed from the file onto the item",
+      #p.regions == 1 and near(p.regions[1].start, 12) and near(p.regions[1].stop, 20) and p.regions[1].name == "build to a drop"
+        and table.concat(names, ", ") == "fill@11, pass-by (72 km/h or more)@14.5, break@15",
+      table.concat(names, ", "))
+  end
+
   ------------------------------------------------------------------------------------------------------------------
   -- editing tools: arranging layers, splitting at sounds, tempo maps
   ------------------------------------------------------------------------------------------------------------------

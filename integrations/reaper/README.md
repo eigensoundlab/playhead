@@ -94,6 +94,10 @@ take's source and move with it; regions and bar markers are placed where the ite
 to the part of the file the item plays. "Replace" removes the markers this action added to the same items before
 (those still at the same place with the same name), so you can run it again after moving or trimming an item.
 Bars and sections come from the music profile (sounds over 10 s with the automatic profile).
+*Builds, fills and pass-bys* adds builds as regions (`build`, or `build to a drop` where a jump or a strong hit
+follows), fills and breaks as project markers at their bar, and pass-bys as markers at the moment the source passes,
+named with the speed its Doppler shift shows (`pass-by (72 km/h or more)`). Builds and fills come from the music
+profile; pass-bys from either. Documents from before Playhead 0.4 have none: analyse again.
 
 **Playhead - Write curves as automation.** Asks which curve goes to which of eight slots (by name or label, for
 example `harshness`, `tension`, `onset`, `impulsiveness`, `n1Kurtosis`; an empty slot is left as it was), and writes

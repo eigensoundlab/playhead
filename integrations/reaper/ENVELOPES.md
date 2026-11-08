@@ -16,8 +16,13 @@ recipes.
 | `tension` | build-ups and releases: the trend of loudness, sharpness and roughness (and in music, harmony) |
 | `harmonicTension` | (music) dissonance and distance from the key |
 | `surprise` | how unexpected each moment is against the recent past |
-| `onsetStrength` | where the hits and attacks are |
-| `structureNovelty`, `localPulse` | (music) where a section changes; how clear and strong the beat is |
+| `timbreHarshness` | how harsh the sound's colour is at any level (sharpness, roughness, fluctuation without loudness) |
+| `distortion` | clipping and saturation: 0 clean, about 0.7 hard-clipped |
+| `pitchSlope` | the strongest partial's motion (glides, sirens, Doppler), written from -12 to 12 semitones a second |
+| `onsetStrength` | where the hits and attacks are; `onsetLow`, `onsetMid`, `onsetHigh` the same for kick, snare and hats |
+| `structureNovelty`, `localPulse`, `pulseClarity` | (music) where a section changes; how clear and strong the beat is; how clearly a beat is felt |
+| `buildup` | (music) how strongly the sound is building (denser, brighter or louder second by second), 0 elsewhere |
+| `patternSurprise`, `swing` | (music, per bar) how far the bar's drum pattern is from the bars before (fills and breaks); the bar's swing |
 | `n1Kurtosis` ... `n8Recurrence` | descriptors: impulsiveness (clicks, crackle), repetition rate, spectral motion, periodicity, phase coherence, time arrow, surprisal, recurrence |
 
 **Playhead - Strip window** shows any of them over the item (look code `lane:<curve>`, for example

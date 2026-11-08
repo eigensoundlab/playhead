@@ -3,6 +3,26 @@
 ## Unreleased
 
 ### Added
+- **Rhythm changes, builds and sound motion** (descriptors from the research report, each tested on the bench first):
+  - Per bar on the beat grid: `swing`, the drum `pattern` (per band, 16 steps), `surprise` against the four bars
+    before, and `change` (`fill` or `break`); `rhythm.template`, the groove (per band and step the median strength and
+    timing); curves `patternSurprise` and `swing`. On the bench every fill and break is found with none false, and a
+    groove that starts to swing at bar 8 is followed bar by bar.
+  - `builds`: stretches where the sound keeps building second by second by density, brightness or loudness, with
+    `drop` where a jump or a hit follows; the `buildup` curve. A riser at one loudness and a swell of more hits are
+    found (overlap 0.71 and 0.67), no groove has a false build.
+  - `distortion` curve: clipped runs and the flattened crest of a saturated sound (clipped against clean blocks at one
+    loudness: AUC 1).
+  - `glides` (the strongest partial's steady pitch motion, drum pitch drops left out) and pass-bys among them: the
+    Doppler shift of a source going past, with the moment it passes and the speed it shows (a lower bound: 19.6 m/s for
+    25); `pitchSlope` curve. `vibrato`: held notes whose pitch swings regularly, from a singer's 6 Hz to a rotor's 28 Hz
+    (micro-Doppler), from the note's instantaneous frequency.
+  - `rhythm.signature` and `rhythmSimilarity(a, b)`: the rhythm's shape at any tempo (the scale transform), 0.99 for
+    the same groove 30 BPM faster. It separates weakly (a waltz 0.92) and microtiming moves it.
+  - `toMarkers` and `playhead markers --kinds changes`: builds as regions, fills, breaks and pass-bys as markers.
+  - REAPER: Add markers adds them ("Builds, fills and pass-bys"); the five new curves can be written as automation.
+  - `attacks` carry their `strength`. Tightness is measured with each band's offset over the whole file (was per bar,
+    which took some of the spread for offset: 10.8 ms now for 11.3 ms of random timing).
 - **Timing to the sample, and the beat grid** (the infrastructure for rhythm descriptors):
   - `attacks`: every onset refined to the sample where its level starts to rise, with the band it rises in (low:
     kick and bass, mid: snare and body, high: hats and cymbals). The frame onsets came about 14 ms early; the

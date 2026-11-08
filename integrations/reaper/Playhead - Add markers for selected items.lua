@@ -1,10 +1,11 @@
--- @description Playhead: add markers for selected items (events, onsets, downbeats, sections)
+-- @description Playhead: add markers for selected items (events, onsets, downbeats, sections, builds, fills, pass-bys)
 -- @version 0.2.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about
 --   Adds Playhead's analysis of the selected items as markers: events and onsets as take markers (they move with
---   the take), downbeats as project markers and sections as project regions, all clipped to what each item plays.
+--   the take), downbeats as project markers and sections as project regions, builds as regions, fills, breaks and
+--   pass-bys as markers, all clipped to what each item plays.
 --   Packaged by "Playhead - Analyse selected items.lua".
 
 -- SPDX-License-Identifier: Apache-2.0
@@ -23,7 +24,7 @@ if not ok then
 end
 local core = R.core
 
-local DEFAULTS = { events = true, onsets = false, sections = true, downbeats = true, replace = true }
+local DEFAULTS = { events = true, onsets = false, sections = true, downbeats = true, replace = true, changes = true }
 
 local function ask_choices()
   local c = R.get_json("markers", {})
@@ -34,12 +35,13 @@ local function ask_choices()
     { caption = "Sections as project regions (yes/no)", default = core.yesno(c.sections) },
     { caption = "Downbeats as project markers (yes/no)", default = core.yesno(c.downbeats) },
     { caption = "Replace markers added here before (yes/no)", default = core.yesno(c.replace) },
+    { caption = "Builds, fills and pass-bys (yes/no)", default = core.yesno(c.changes) },
   }
   while true do
     local v = R.dialog("Playhead: add markers", fields, 60)
     if not v then return nil end
     local out, bad = {}, {}
-    for i, key in ipairs({ "events", "onsets", "sections", "downbeats", "replace" }) do
+    for i, key in ipairs({ "events", "onsets", "sections", "downbeats", "replace", "changes" }) do
       local b = core.parse_bool(v[i])
       if b == nil then bad[#bad + 1] = fields[i].caption:gsub(" %(yes/no%)", "") end
       out[key] = b
@@ -54,7 +56,7 @@ local function ask_choices()
 end
 
 local function add_markers(entries, choices, problems)
-  local kinds = { events = choices.events, onsets = choices.onsets, sections = choices.sections, downbeats = choices.downbeats }
+  local kinds = { events = choices.events, onsets = choices.onsets, sections = choices.sections, downbeats = choices.downbeats, changes = choices.changes }
   local lines, total = {}, 0
   local take_markers_ok = reaper.SetTakeMarker ~= nil
   if (kinds.events or kinds.onsets) and not take_markers_ok then
@@ -87,8 +89,13 @@ local function add_markers(entries, choices, problems)
         total = total + n
         local parts = {}
         if kinds.events or kinds.onsets then parts[#parts + 1] = #plan.take .. " take markers" end
-        if kinds.downbeats then parts[#parts + 1] = #plan.markers .. " bar markers" end
-        if kinds.sections then parts[#parts + 1] = #plan.regions .. " regions" end
+        local nmark, nbuild = 0, 0
+        for _, mk in ipairs(plan.markers) do if mk.kind == "change" then nmark = nmark + 1 end end
+        for _, rg in ipairs(plan.regions) do if rg.kind == "build" then nbuild = nbuild + 1 end end
+        local nchange = nmark + nbuild
+        if kinds.downbeats then parts[#parts + 1] = (#plan.markers - nmark) .. " bar markers" end
+        if kinds.sections then parts[#parts + 1] = (#plan.regions - nbuild) .. " regions" end
+        if kinds.changes then parts[#parts + 1] = nchange .. " builds, fills and pass-bys" end
         lines[#lines + 1] = info.name .. ": " .. table.concat(parts, ", ") .. (removed > 0 and (" (" .. removed .. " earlier ones replaced)") or "")
         for _, note in ipairs(plan.notes) do problems[#problems + 1] = info.name .. ": " .. note end
       end
@@ -104,7 +111,7 @@ local function main()
   if #items == 0 then R.message("Select one or more audio items first.") return end
   local choices = ask_choices()
   if not choices then return end
-  if not (choices.events or choices.onsets or choices.sections or choices.downbeats) then
+  if not (choices.events or choices.onsets or choices.sections or choices.downbeats or choices.changes) then
     R.message("Nothing chosen to add.")
     return
   end

@@ -7,7 +7,7 @@
 //   playhead analyze <files or folders...> [--profile auto|fast|sfx|music] [--out file.json | --out-dir dir]
 //                    [--curve-rate N] [--wave-columns N] [--fill-null V] [--pretty]
 //   playhead analyze - --sr 44100 --channels 2 [...]   raw interleaved float32 (little-endian) samples on stdin
-//   playhead markers <file> [--format tsv|csv|json|audacity|edl|srt] [--kinds sections,events,downbeats,onsets]
+//   playhead markers <file> [--format tsv|csv|json|audacity|edl|srt] [--kinds sections,events,downbeats,onsets,changes]
 //                         [--fps N --start-tc 01:00:00:00 (edl)] [--profile ...]   (file: audio or a .playhead.json)
 //   playhead frames <file> [--fps 60] [--curves a,b,...] [--scale fixed|file|raw] [--format csv|json|blender]
 //                         the curves once per video frame, for engines, VJ and 3D tools
@@ -32,7 +32,7 @@ const HELP = `Playhead ${Playhead.version}: overview curves, events, sections an
   playhead analyze <files or folders...> [--profile auto|fast|sfx|music] [--out file.json | --out-dir dir]
                    [--curve-rate N] [--wave-columns N] [--fill-null V] [--pretty]
   playhead analyze - --sr 44100 --channels 2 [...]     (raw interleaved float32 samples on stdin)
-  playhead markers <file> [--format tsv|csv|json|audacity|edl|srt] [--kinds sections,events,downbeats,onsets]
+  playhead markers <file> [--format tsv|csv|json|audacity|edl|srt] [--kinds sections,events,downbeats,onsets,changes]
                    [--fps 25 --start-tc 01:00:00:00]      (edl: DaVinci Resolve timeline markers)
   playhead frames <file> [--fps 60] [--curves loudness,onsetStrength,...] [--scale fixed|file|raw] [--format csv|json|blender]
   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]

@@ -801,5 +801,10 @@
  "lib.curve.onsetLow": "nástupy v basech (kopák)",
  "lib.curve.onsetMid": "nástupy ve středech (virbl)",
  "lib.curve.onsetHigh": "nástupy ve výškách (činely)",
- "lib.curve.pulseClarity": "zřetelnost pulzu"
+ "lib.curve.pulseClarity": "zřetelnost pulzu",
+ "lib.curve.patternSurprise": "překvapení ve vzorci",
+ "lib.curve.swing": "swing",
+ "lib.curve.distortion": "zkreslení",
+ "lib.curve.pitchSlope": "pohyb výšky",
+ "lib.curve.buildup": "gradace"
 }

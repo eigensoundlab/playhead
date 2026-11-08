@@ -270,7 +270,7 @@ end
 M.CURVE_ORDER = { "loudness", "activity", "arousal", "harshness", "tension", "harmonicTension", "surprise", "lufs",
   "onsetStrength", "structureNovelty", "localPulse", "n1Kurtosis", "n2RepetitionHz", "n4Velocity", "n5Cpp",
   "n5Coherence", "n6Arrow", "n7Surprisal", "n8Recurrence", "timbreHarshness", "onsetLow", "onsetMid", "onsetHigh",
-  "pulseClarity" }
+  "pulseClarity", "patternSurprise", "swing", "distortion", "pitchSlope", "buildup" }
 M.CURVE_LABELS = {
   loudness = "loudness", activity = "activity", arousal = "arousal", harshness = "harshness", tension = "tension",
   harmonicTension = "harmonic tension", surprise = "novelty (spectral surprise)", lufs = "loudness (LUFS)",
@@ -278,7 +278,8 @@ M.CURVE_LABELS = {
   n1Kurtosis = "impulsiveness", n2RepetitionHz = "repetition rate", n4Velocity = "spectral motion", n5Cpp = "periodicity",
   n5Coherence = "phase coherence", n6Arrow = "time arrow", n7Surprisal = "surprisal", n8Recurrence = "recurrence",
   timbreHarshness = "timbre harshness", onsetLow = "low onsets (kick)", onsetMid = "mid onsets (snare)",
-  onsetHigh = "high onsets (hats)", pulseClarity = "pulse clarity"
+  onsetHigh = "high onsets (hats)", pulseClarity = "pulse clarity", patternSurprise = "pattern surprise", swing = "swing",
+  distortion = "distortion", pitchSlope = "pitch motion", buildup = "build-up"
 }
 -- the number each curve is known by in Playhead Control.jsfx (its hidden "source" sliders); 0 = another curve
 M.CURVE_CODES = {}
@@ -374,11 +375,12 @@ local function pct(v, p) return v[floor(p * (#v - 1)) + 1] end
 
 --- The value range a curve is shown on: [0, 1] for the curves on fixed library-wide scales; the 5th-95th
 --- percentile for the descriptor curves n1-n8 (as the strip); the 99th percentile for structural change and local
---- pulse; -60..0 LUFS for lufs.
+--- pulse; -60..0 LUFS for lufs; -12..12 semitones a second for pitchSlope.
 function M.curve_scale(doc, name)
   local c = doc.curves[name]
   if not is_curve(c) then return 0, 1 end
   if name == "lufs" then return -60, 0 end
+  if name == "pitchSlope" then return -12, 12 end
   local v = sorted_values(c)
   if #v == 0 then return 0, 1 end
   local lo, hi
@@ -745,6 +747,32 @@ function M.marker_plan(doc, m, kinds)
           plan.regions[#plan.regions + 1] = { start = iv[1], stop = iv[2], name = tostring(s.label or "") }
         end
       end
+    end
+  end
+  -- changes (Playhead 0.4 and later): builds as regions, fills and breaks as markers at their bar, pass-bys as markers
+  -- at the moment the source is closest (with its speed)
+  if kinds.changes then
+    local found = 0
+    for _, b in ipairs(type(doc.builds) == "table" and doc.builds or {}) do
+      for _, iv in ipairs(M.file_interval_to_project(m, b.start, b["end"], 1000)) do
+        plan.regions[#plan.regions + 1] = { start = iv[1], stop = iv[2], name = "build" .. (b.drop and " to a drop" or ""), kind = "build" }; found = found + 1
+      end
+    end
+    local r = doc.rhythm
+    for _, bar in ipairs(type(r) == "table" and type(r.bars) == "table" and r.bars or {}) do
+      if bar.change == "fill" or bar.change == "break" then
+        for _, T in ipairs(M.file_to_project(m, bar.start, 1000)) do plan.markers[#plan.markers + 1] = { pos = T, name = bar.change, kind = "change" }; found = found + 1 end
+      end
+    end
+    for _, g in ipairs(type(doc.glides) == "table" and doc.glides or {}) do
+      if g.passBy and g.closest then
+        for _, T in ipairs(M.file_to_project(m, g.closest, 1000)) do
+          plan.markers[#plan.markers + 1] = { pos = T, name = fmt("pass-by (%s km/h or more)", M.num((g.speed or 0) * 3.6, 0)), kind = "change" }; found = found + 1
+        end
+      end
+    end
+    if doc.builds == nil and (type(r) ~= "table" or r.bars == nil) and doc.glides == nil then
+      plan.notes[#plan.notes + 1] = "no builds, fills or pass-bys in this analysis (Playhead 0.4 and later find them; run Analyse again)"
     end
   end
   sort(plan.take, function(a, b) return a.pos < b.pos end)
@@ -1762,6 +1790,7 @@ function M.render_strip(doc, g, opts)
   end
   local function auto_range(name, arr)
     if name == "lufs" then return -60, 0 end
+    if name == "pitchSlope" then return -12, 12 end
     local v = sorted_values(arr)
     if #v == 0 then return 0, 1 end
     local lo, hi
