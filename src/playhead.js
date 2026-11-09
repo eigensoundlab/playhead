@@ -785,7 +785,7 @@ async function build(F, buf, opts, t0, prog) {
     doc.events = X.events.map(e => ({ start: rnd(e.t0, 4), end: rnd(e.t1, 4), decayEnd: rnd(e.tEnd, 4), peak: rnd(e.peakT, 4), peakDb: rnd(e.peakDb, 2),
       tag: e.tag, word: e.word, facture: e.facture, mass: e.mass, direction: e.dir || null, f0: e.f0 ? rnd(e.f0, 1) : null, grains: e.grains.map(t => rnd(t, 4)) }));
     doc.layers = X.layers.map(l => ({ name: l.name, hz: rnd(l.hz, 1), share: rnd(l.share, 3), start: rnd(l.span[0], 4), end: rnd(l.span[1], 4) }));
-    doc.issues = X.issues.filter(i => i.sev !== "ok").map(i => ({ severity: i.sev, text: i.text }));
+    doc.issues = X.issues.filter(i => i.sev !== "ok").map(i => ({ severity: i.sev, code: i.key === "clippedOne" ? "clipped" : i.key, text: i.text }));
     const D = await PHD.describe(F, buf);
     prog(0.9);
     Object.assign(doc.curves, {
@@ -882,9 +882,93 @@ async function build(F, buf, opts, t0, prog) {
     const LG = St.lag;
     if (LG) doc.repetition = { unit: St.useBeats ? "beat" : "time", unitSeconds: rnd(St.blk, 4), lagStep: LG.lstep, lags: LG.nLag, columns: LG.cols, times: LG.times.map(t => rnd(t, 3)), encoding: "base64-u8", data: toB64(LG.data) };
   }
+  doc.summary.levels = levelsOf(buf, doc);
   doc.timing = { ms: Date.now() - t0 };
   prog(1);
   return doc;
+}
+
+/* ---------------- levels: what a levelling tool needs to know about a sound (summary.levels) ----------------
+   ITU-R BS.1770-5 loudness (K-weighted, the channels' energies summed, mono counted once) and level, over four spans:
+   the whole file; the sounding span (summary.soundStart to soundEnd, silence before and after left out); the loudest
+   event (from its start to where it has decayed 35 dB); and each event within 20 dB of the loudest (the median, for
+   footsteps, rattles and bursts). Per span: rms (dBFS, the channels' mean power), integrated (LUFS, 400 ms blocks with
+   75 % overlap, -70 LUFS absolute and -10 LU relative gates; a span under 0.4 s is one block, its own mean),
+   momentaryMax and shortTermMax (LUFS, the loudest 0.4 s and 3 s window, EBU Tech 3341, moved in 10 ms steps; a span
+   shorter than the window is the window with silence around the span, as a meter shows an isolated sound). Peak
+   (dBFS) and true peak (dBTP, 4x oversampled with a windowed-sinc interpolator) are of the whole file: a gain scales
+   the whole file, so only its peaks limit it. null where a span is silent or missing (no events in the fast
+   profile). docs/LEVELS.md uses these as momentaryMax@event and so on. */
+// 4x interpolation for the true peak: the value at j + p/4 (p = 1..3) from samples j-7 .. j+8, a sinc under a Kaiser
+// window (beta 8), each phase normalised to unit gain
+const TP_M = 8, TP_TAPS = (() => {
+  const I0 = x => { let s = 1, t = 1; for (let k = 1; k < 30; k++) { t *= (x / (2 * k)) ** 2; s += t; } return s; };
+  return [0, 1, 2, 3].map(p => {
+    const row = []; for (let m = -TP_M + 1; m <= TP_M; m++) { const d = p / 4 - m, u = d / TP_M;
+      row.push((d === 0 ? 1 : Math.sin(Math.PI * d) / (Math.PI * d)) * (Math.abs(u) < 1 ? I0(8 * Math.sqrt(1 - u * u)) / I0(8) : 0)); }
+    const s = row.reduce((a, b) => a + b, 0); return row.map(v => v / s);
+  });
+})();
+function truePeakOf(chs, pk) {
+  // the true peak can lie above the sample peak only next to samples near it: those within 6 dB are interpolated
+  const thr = pk * 0.5; let tp = pk;
+  for (const x of chs) for (let i = 0; i < x.length; i++) {
+    if (Math.abs(x[i]) < thr) continue;
+    for (let j = i - 1; j <= i; j++) for (let p = 1; p < 4; p++) { // the three points between sample j and j+1
+      const h = TP_TAPS[p]; let v = 0;
+      for (let k = 0; k < h.length; k++) { const s = j + k - TP_M + 1; if (s >= 0 && s < x.length) v += h[k] * x[s]; }
+      if (Math.abs(v) > tp) tp = Math.abs(v);
+    }
+  }
+  return tp;
+}
+function levelsOf(buf, doc) {
+  const sr = buf.sampleRate, nc = buf.numberOfChannels, n = buf.length, chs = [];
+  for (let c = 0; c < nc; c++) chs.push(buf.getChannelData(c));
+  const kc = WL.kFilterCoeffs(sr), K = new Float64Array(n + 1), Q = new Float64Array(n + 1), tmp = new Float32Array(n), z = new Float32Array(n);
+  const kp = new Float64Array(n), rp = new Float64Array(n);
+  let pk = 0;
+  for (const x of chs) {
+    WL.biquadInto(x, tmp, kc[0]); WL.biquadInto(tmp, z, kc[1]);
+    for (let i = 0; i < n; i++) { kp[i] += z[i] * z[i]; rp[i] += x[i] * x[i] / nc; const a = Math.abs(x[i]); if (a > pk) pk = a; }
+  }
+  for (let i = 0; i < n; i++) { K[i + 1] = K[i] + kp[i]; Q[i + 1] = Q[i] + rp[i]; }
+  const LU = e => (e > 0 ? -0.691 + 10 * Math.log10(e) : null), dB = e => (e > 0 ? 10 * Math.log10(e) : null), r2 = v => (v == null || !isFinite(v) ? null : rnd(v, 2));
+  const mean = (A, a, b) => (A[b] - A[a]) / Math.max(1, b - a);
+  const winMax = (a, b, w) => {
+    if (b - a <= w) return (K[b] - K[a]) / w;
+    const h = Math.max(1, Math.round(0.01 * sr)); let m = 0;
+    for (let s = a; ; s += h) { const s0 = Math.min(s, b - w); m = Math.max(m, (K[s0 + w] - K[s0]) / w); if (s0 >= b - w) break; }
+    return m;
+  };
+  const integrated = (a, b) => {
+    const w = Math.round(0.4 * sr), h = Math.round(0.1 * sr);
+    if (b - a < w) { const e = mean(K, a, b); return LU(e) != null && LU(e) > -70 ? e : 0; }
+    const bl = []; for (let s = a; s + w <= b; s += h) bl.push((K[s + w] - K[s]) / w);
+    let g = bl.filter(e => LU(e) != null && LU(e) > -70); if (!g.length) return 0;
+    const rel = LU(g.reduce((x, y) => x + y, 0) / g.length) - 10; g = g.filter(e => LU(e) > rel);
+    return g.reduce((x, y) => x + y, 0) / g.length;
+  };
+  const span = (t0, t1) => {
+    const a = Math.max(0, Math.min(n, Math.round(t0 * sr))), b = Math.max(a, Math.min(n, Math.round(t1 * sr)));
+    if (b - a < Math.round(0.002 * sr) || K[b] - K[a] <= 0) return null;
+    return { start: rnd(a / sr, 4), end: rnd(b / sr, 4), rms: r2(dB(mean(Q, a, b))), integrated: r2(LU(integrated(a, b))),
+      momentaryMax: r2(LU(winMax(a, b, Math.round(0.4 * sr)))), shortTermMax: r2(LU(winMax(a, b, Math.round(3 * sr)))) };
+  };
+  const file = span(0, n / sr), S = doc.summary || {};
+  const active = S.soundStart != null && S.soundEnd != null && S.soundEnd > S.soundStart ? span(S.soundStart, S.soundEnd) : null;
+  const evs = (doc.events || []).filter(e => e.peakDb != null);
+  let event = null, events = null;
+  if (evs.length) {
+    const top = evs.reduce((a, e) => (e.peakDb > a.peakDb ? e : a));
+    const sp = e => span(e.start, Math.max(e.start + 0.002, Math.min(e.end, e.decayEnd != null && e.decayEnd > e.start ? e.decayEnd : e.end)));
+    event = sp(top);
+    const each = evs.filter(e => e.peakDb >= top.peakDb - 20).map(sp).filter(Boolean);
+    const med = k => { const v = each.map(s => s[k]).filter(x => x != null).sort((a, b) => a - b), h = v.length >> 1; return v.length ? rnd(v.length % 2 ? v[h] : (v[h - 1] + v[h]) / 2, 2) : null; };
+    if (each.length) events = { count: each.length, rms: med("rms"), integrated: med("integrated"), momentaryMax: med("momentaryMax"), shortTermMax: med("shortTermMax") };
+  }
+  const tp = pk > 0 ? truePeakOf(chs, pk) : 0;
+  return { peak: r2(pk > 0 ? 20 * Math.log10(pk) : null), truePeak: r2(tp > 0 ? 20 * Math.log10(tp) : null), file, active, event, events };
 }
 
 /* ---------------- the analysis-driven tools (effects bench) ---------------- */

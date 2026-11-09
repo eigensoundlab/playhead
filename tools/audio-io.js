@@ -55,7 +55,9 @@ function readWav(file) {
     } else throw new Error("unsupported WAV encoding " + tag);
     chans[c][i] = v;
   }
-  return makeBuffer(sr, chans);
+  const buf = makeBuffer(sr, chans);
+  buf.bitDepth = bits; buf.float = tag === 3;   // what the file holds, for format checks (playhead levels)
+  return buf;
 }
 
 /* ---------- ffmpeg decoder ---------- */

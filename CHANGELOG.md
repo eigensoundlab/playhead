@@ -3,6 +3,18 @@
 ## Unreleased
 
 ### Added
+- **Levels** (`playhead levels`, `Playhead.levels`, `src/levels.js`, [docs/LEVELS.md](docs/LEVELS.md)): many files at
+  relevant levels without touching them. Every analysis now has `summary.levels`: peak, true peak (4x oversampled),
+  RMS, integrated loudness (ITU-R BS.1770-5) and the loudest 0.4 s and 3 s (EBU Tech 3341), over the file, the sounding
+  span, the loudest event and each event. A spec (`playhead-levels` v1) holds the settings (measure, default the
+  loudest 0.4 s of the loudest event; target, amount, depth, limits) and tag rules (groups set offsets, modifiers add,
+  notes only ask for checks; tags from Kurator, or the file's folder, its UCS category, Playhead's class); a manifest
+  adds one gain per file, limited by the true-peak ceiling. The command line measures folders, keeps the manifest as a
+  store (unchanged files are not analysed again) and writes a report (HTML or CSV): each group's spread and outliers,
+  files to check, and where peak, RMS, LUFS-I, Max M and Max S would level a file differently from the project's
+  measure. Asset checks now carry a `code`. Two pilots ([experiments/levels](experiments/levels/README.md)): on the
+  corpus's 56 effects the usual measures disagree by 7 to 18 dB per file; limiting shows in a sound's own numbers, while
+  compressing a one-shot raises its crest factor.
 - **Audiovisual Playhead** ([experiments/av](experiments/av/README.md), on the site at `/av/`): one scene drawn twice
   from the same sound by the same rules, with WebGPU or WebGL 2. The left side runs them on the usual signals (level,
   WebAudio analyser octaves, MilkDrop-style band beats, energy trend, level jumps, the loudest bin), worked out frame by

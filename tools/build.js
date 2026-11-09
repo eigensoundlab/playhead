@@ -13,7 +13,7 @@ const path = require("path");
 const root = path.resolve(__dirname, "..");
 const read = p => fs.readFileSync(path.join(root, p), "utf8");
 const SOURCES = ["src/analysis.js", "src/descriptors.js", "src/probes.js", "src/effects.js", "src/playhead.js", "src/i18n-data.js", "src/i18n.js", "src/app.js"];
-const CORE = ["src/analysis.js", "src/descriptors.js", "src/effects.js", "src/playhead.js", "src/cues.js"];
+const CORE = ["src/analysis.js", "src/descriptors.js", "src/effects.js", "src/playhead.js", "src/cues.js", "src/levels.js"];
 const VERSION = require("../package.json").version;
 
 function parts() {
@@ -80,7 +80,7 @@ function coreUMD() {
 }
 function coreESM() {
   return BANNER + "const module = undefined, require = undefined;\n" + coreBody()
-    + "export default Playhead;\nexport const { version, schema, schemaVersion, profiles, analyze, process, tools, toMarkers, curveAt, drawStrip, cues } = Playhead;\n";
+    + "export default Playhead;\nexport const { version, schema, schemaVersion, profiles, analyze, process, tools, toMarkers, curveAt, drawStrip, cues, levels } = Playhead;\n";
 }
 // command line as one CommonJS file (Node built-ins only), the input of the single-executable build
 function cliBundle() {

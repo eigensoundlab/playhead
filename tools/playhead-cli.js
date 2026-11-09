@@ -15,6 +15,13 @@
 //                         a cue sheet: the cues the rules make from the analysis (visuals, game events, effects), with
 //                         their times known in advance, and the mappings sampled at --rate; rules.json is
 //                         { rules: [...], mappings: [...] } as Playhead.cues takes them (docs/GAMES.md)
+//   playhead levels <files or folders...> [--spec playhead-levels.json] [--out playhead-levels.json] [--report report.html|.csv]
+//                         [--measure m] [--target LUFS] [--amount 0..1] [--depth 0..2] [--group-by folder|ucs|class|none]
+//                         [--profile auto|sfx|fast] [--fresh]
+//                         measures every file, applies the spec's tag rules and settings, writes a manifest with one gain
+//                         per file and a report (groups, outliers, checks, where the usual measures disagree). A
+//                         manifest given as --spec is a store: files whose path, size and Playhead version match are
+//                         not analysed again (--fresh analyses all). docs/LEVELS.md
 //   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]
 //   playhead arrange --parts parts.json [--goal punch|big|clean] [--range s] [--gains lo,hi] [--count N] [--seed N]
 //                         layers: parts.json is [{ doc: "a.playhead.json", offset, gain, start, end, lock }]; prints the
@@ -28,7 +35,7 @@
 // reads it half-written.
 "use strict";
 const fs = require("fs"), path = require("path");
-const Playhead = global.__PLAYHEAD_BUNDLED__ || (() => { require("../src/analysis.js"); require("../src/descriptors.js"); require("../src/effects.js"); const P = require("../src/playhead.js"); require("../src/cues.js"); return P; })();
+const Playhead = global.__PLAYHEAD_BUNDLED__ || (() => { require("../src/analysis.js"); require("../src/descriptors.js"); require("../src/effects.js"); const P = require("../src/playhead.js"); require("../src/cues.js"); require("../src/levels.js"); return P; })();
 const IO = global.__PLAYHEAD_IO__ || require("./audio-io.js");
 
 const HELP = `Playhead ${Playhead.version}: overview curves, events, sections and descriptors for sound files.
@@ -41,6 +48,9 @@ const HELP = `Playhead ${Playhead.version}: overview curves, events, sections an
   playhead frames <file> [--fps 60] [--curves loudness,onsetStrength,...] [--scale fixed|file|raw] [--format csv|json|blender]
   playhead cues <file> [--preset playhead|usual|anticipation|furnace|melodic|weapon|impact|device | --rules rules.json]
                    [--rate 30] [--out cues.json]     (a cue sheet for engines: see docs/GAMES.md)
+  playhead levels <files or folders...> [--spec playhead-levels.json] [--out playhead-levels.json] [--report report.html|.csv]
+                   [--measure momentaryMax@event] [--target -18] [--amount 1] [--depth 1] [--group-by folder|ucs|class|none]
+                   [--profile auto|sfx|fast] [--fresh]     (levels, groups and outliers: see docs/LEVELS.md)
   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]
   playhead arrange --parts parts.json [--goal punch|big|clean] [--range s] [--gains lo,hi] [--count N] [--seed N]
   playhead tools
@@ -254,6 +264,45 @@ async function main() {
     if (!(rate > 0 && rate <= 1000)) fail("--rate must be a number from 1 to 1000");
     const text = JSON.stringify(C.sheet(C.source(doc), rules, mappings, { rate }), null, o.pretty ? 1 : 0);
     if (o.out) writeText(o.out, text + "\n"); else console.log(text);
+    return;
+  }
+  if (cmd === "levels") {
+    const L = Playhead.levels;
+    let spec = {};
+    if (o.spec) {
+      try { spec = JSON.parse(fs.readFileSync(o.spec, "utf8")); } catch (e) { fail("cannot read " + o.spec + ": " + e.message); }
+      if (!spec || spec.format !== L.format) fail(o.spec + " is not a " + L.format + " file");
+    }
+    spec = Object.assign({}, spec, { levels: Object.assign({}, spec.levels || {}) });
+    for (const k of ["target", "amount", "depth"]) if (o[k] != null) { const v = Number(o[k]); if (!isFinite(v)) fail("--" + k + " must be a number"); spec.levels[k] = v; }
+    if (o.measure) spec.levels.measure = o.measure;
+    try { L.settingsOf(spec); } catch (e) { fail(e.message); }
+    if (o.groupBy && !["folder", "ucs", "class", "none"].includes(o.groupBy)) fail("--group-by is folder, ucs, class or none");
+    const files = IO.listAudio(o._.length ? o._ : ["."]); if (!files.length) fail("levels found no audio files in " + (o._.join(", ") || "."));
+    // paths in the manifest are relative to its own folder (or to the one folder measured), with forward slashes
+    const base = path.resolve(o.out ? path.dirname(o.out) : o._.length === 1 && fs.statSync(o._[0]).isDirectory() ? o._[0] : ".");
+    const rel = f => path.relative(base, f).split(path.sep).join("/");
+    // earlier entries, from a manifest given as --spec: their paths are relative to that manifest's folder
+    const specDir = o.spec ? path.dirname(path.resolve(o.spec)) : base;
+    const known = new Map((spec.files || []).filter(e => e && e.path).map(e => [path.resolve(specDir, e.path), e]));
+    const own = t => !/^(folder|ucs|class):/.test(t), entries = []; let reused = 0;
+    for (const [i, f] of files.entries()) {
+      const p = rel(f), size = fs.statSync(f).size, old = known.get(path.resolve(f)), tags = old ? (old.tags || []).filter(own) : [];
+      if (old && !o.fresh && old.size === size && old.analysis && old.analysis.playhead === Playhead.version && old.measures && Object.keys(old.measures).length) {
+        entries.push(Object.assign({}, old, { path: p, tags: Array.from(new Set([...tags, ...L.autoTags(p, old.class, path.basename(path.dirname(f)))])) })); reused++; continue;
+      }
+      const buf = read(f, o);
+      const doc = await Playhead.analyze(buf, Object.assign(opts(o, f), { profile: o.profile || "auto" }));
+      entries.push(L.entryOf(doc, { path: p, folder: path.basename(path.dirname(f)), size, tags, trim: old ? old.trim : 0, bitDepth: buf.bitDepth }));
+      if (process.stderr.isTTY) process.stderr.write("\r" + (i + 1) + "/" + files.length + " " + path.basename(f).slice(0, 50).padEnd(50));
+    }
+    if (process.stderr.isTTY) process.stderr.write("\r" + " ".repeat(60) + "\r");
+    const m = L.manifest(spec, entries), rep = L.report(m, { groupBy: o.groupBy || "folder" });
+    if (o.out) writeText(o.out, JSON.stringify(m, null, 1) + "\n");
+    if (o.report) writeText(o.report, /\.csv$/i.test(o.report) ? L.csv(rep) : L.html(rep));
+    if (!o.out && !o.report) { console.log(JSON.stringify(m, null, o.pretty ? 1 : 0)); return; }
+    const outl = rep.groups.reduce((a, g) => a + g.outliers.length, 0);
+    process.stderr.write(`${files.length} files (${reused} measured before), ${rep.groups.length} group${rep.groups.length === 1 ? "" : "s"}, ${outl} outlier${outl === 1 ? "" : "s"}, ${rep.problems.length} to check, ${rep.disagreements.length} where the measures disagree by more than ${rep.checks.disagreement} dB\n`);
     return;
   }
   if (cmd === "process") {

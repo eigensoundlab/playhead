@@ -111,6 +111,7 @@ playhead analyze sound.wav > sound.playhead.json       # one executable per plat
 playhead markers song.wav --kinds sections,downbeats   # tab-separated regions and markers for editors
 playhead process shot.wav --tool layers --param gains=-12
 playhead cues rifle.wav --preset weapon > rifle.cues.json   # cues for a game engine (docs/GAMES.md)
+playhead levels Audio/SFX --out Audio/SFX/playhead-levels.json --report levels.html   # levels, groups, outliers (docs/LEVELS.md)
 ```
 
 **Looks.** What goes on the strip is a list of layers (a plain or coloured waveform or a spectrogram behind, a line, up
@@ -142,6 +143,16 @@ timeline of what it detected. Three demos (a dance arrangement, a melodic piece,
 before a drop, raise smoke while a shot rings out) and export as a **cue sheet** for game engines:
 `Playhead.cues` and `playhead cues` make the same from any document ([docs/GAMES.md](docs/GAMES.md): Unity, other
 engines, sound-effect cues).
+
+**Levels for many files.** `playhead levels` measures a folder of sound effects or recordings (peak, true peak, RMS,
+LUFS-I, the loudest 0.4 s and 3 s, over the file, the sounding span, the loudest event and each event), applies a
+project's tag rules (a group sets an offset, a modifier adds one, a note asks for checks) and settings (measure,
+target, amount, depth, limits), and writes one gain per file into a manifest, `playhead-levels.json`, without touching
+the files. Its report lists each group's spread and outliers, the files to check (clipping, DC, clicks at the start,
+wrong sample rate, gains the true-peak ceiling limits) and where the usual measures (peak, LUFS-I, Max M) would level a
+file differently from the project's: the comparison of standard normalisation with Playhead's, file by file. On the
+test set's 56 effects a peak-normalised library turned out 3.4 to 9.8 dB apart in loudness within its groups. REAPER,
+Kurator, SFX Workbench and engine scripts are to read the same manifest ([docs/LEVELS.md](docs/LEVELS.md)).
 
 **Tracks in a folder.** Documents combine: `Playhead.combine([{ doc, offset, gain }, ...])` returns a document for the
 sum of several sounds without the audio or a new analysis, so a folder track, a group of layered effects or a set of
@@ -389,6 +400,7 @@ src/probes.js         synthetic test signals with ground truth, descriptor tour
 src/effects.js        analysis-driven tools, WAV encoder
 src/playhead.js       public API: analyze(), drawStrip(), toMarkers(), curveAt(), process(), combine(), align(), arrange(), localize()
 src/cues.js           rules into cues and cue sheets (Playhead.cues): visuals, game events, sound-effect cues
+src/levels.js         tag rules and settings into one gain per file, manifests and the levels report (Playhead.levels)
 src/i18n.js           translations at run time; src/i18n-data.js is built from i18n/<lang>.json
 src/app.js            user interface
 i18n/                 the English texts (en.json), the translations and the translators' guide
@@ -410,6 +422,7 @@ experiments/paper/    figure data, figure script and a sound for the paper (tool
 experiments/listening/  the listening test of the arrangement goals: stimuli, test page (on the site at /listening/), analysis
 experiments/visuals/  Playhead's curves against the usual audio-reactive signals as drivers of visuals; viewer at /visuals/
 experiments/av/       the Audiovisual Playhead: one scene twice, usual signals against Playhead's, a rule editor; at /av/
+experiments/levels/   how far the usual loudness measures disagree on the corpus; whether compression and limiting show
 tools/audio-io.js     WAV reader/writer; other formats through ffmpeg
 tools/build.js        builds _site/, a single-file version and dist/ (library bundles, command-line bundle)
 tools/playhead-cli.js command line: analyze, markers, frames, cues, process, arrange, tools
@@ -417,6 +430,7 @@ tools/build-cli.js    one executable for the current platform (Node single execu
 examples/             a host page and an analysis worker using the library bundle
 docs/INTEGRATION.md   API, document schema and recipes for other applications
 docs/GAMES.md         games and audio-driven visuals: rules, cue sheets, Unity and other engines, sound-effect cues
+docs/LEVELS.md        levels for many files: measures, tag rules, the manifest, the report; plans for REAPER, Kurator, engines
 tools/serve.js        local static server
 tools/i18n.js         translations: extract the English, build, check, compare with the sound vocabulary
 integrations/reaper/  REAPER actions, the Playhead Control JSFX and their tests (ReaPack package)
