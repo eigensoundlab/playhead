@@ -38,6 +38,8 @@
 --   take volume, with group offsets on take gain or on a track named like the group. Take volumes and track faders
 --   changed by hand are left alone. A report of the groups, the sounds far from them and the gains a limit held back
 --   goes to the console.
+--   The strip window draws a selected track, or a folder with every track under it: its items combined from their
+--   analyses (playhead combine) without rendering the mix.
 
 -- SPDX-License-Identifier: Apache-2.0
 -- Copyright 2026 Daniel Sandner

@@ -71,4 +71,26 @@ module.exports = async function (check) {
     let ok = true, c2 = null; try { c2 = P.combine([{ doc: tiny, offset: 0.16 }, { doc: dbo, offset: 0.16 }]); P.arrange([{ doc: tiny, offset: 0.1 }, { doc: dbo, offset: 0.16 }], { goal: "punch" }); } catch (e) { ok = false; }
     check("combine: a very short part (rounded curve rate) joins the longer part's grid", "rate " + tiny.curves.rate + " with " + dbo.curves.rate + (c2 ? " → " + c2.curves.rate : ""), ok && c2.curves.rate === dbo.curves.rate);
   }
+
+  // slices: the part of a file an item plays (a DAW's track), then combined; and the command line
+  {
+    const sl = P.slice(dm, 0.5, 1.5), fast = P.slice(dm, 0.5, 1.5, { rate: 2 });
+    const onIn = (dm.onsets || []).filter(t => t >= 0.5 && t < 1.5).map(t => +(t - 0.5).toFixed(4));
+    const lufsOk = sl.curves.lufs.length === Math.ceil(1.5 * dm.curves.rate) - Math.floor(0.5 * dm.curves.rate) && sl.curves.lufs[0] === dm.curves.lufs[Math.floor(0.5 * dm.curves.rate)];
+    check("slice: a part of a document as its own: cut curves and overviews, onsets moved to its start; at twice the speed half as long, its tempo doubled",
+      `1 s of ${dm.source.duration} s: ${sl.source.duration} s, ${sl.curves.lufs.length} curve values, onsets ${sl.onsets.join(" ")} (expected ${onIn.join(" ")}); at rate 2: ${fast.source.duration} s, curve rate ${fast.curves.rate}`,
+      sl.source.duration === 1 && lufsOk && JSON.stringify(sl.onsets) === JSON.stringify(onIn) && fast.source.duration === 0.5 && fast.curves.rate === 2 * dm.curves.rate
+        && sl.wave.columns > 0 && sl.wave.columns < dm.wave.columns && sl.sliced.start === 0.5 && sl.summary.levels === undefined);
+    const fs = require("fs"), path = require("path"), os = require("os"), { spawnSync } = require("child_process");
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "playhead-combine-"));
+    fs.writeFileSync(path.join(tmp, "a.json"), JSON.stringify(da)); fs.writeFileSync(path.join(tmp, "b.json"), JSON.stringify(db));
+    fs.writeFileSync(path.join(tmp, "parts.json"), JSON.stringify([{ doc: "a.json" }, { doc: "b.json", offset: 0.5, gain: -6 }, { doc: "a.json", offset: 2, start: 0.25, end: 1.25, rate: 2 }]));
+    const r = spawnSync(process.execPath, [path.join(__dirname, "../tools/playhead-cli.js"), "combine", "--parts", path.join(tmp, "parts.json"), "--rate", "100"], { encoding: "utf8", maxBuffer: 1 << 26 });
+    let out = null; try { out = JSON.parse(r.stdout); } catch (e) { out = null; }
+    const direct = P.combine([{ doc: da }, { doc: db, offset: 0.5, gain: -6 }, { doc: P.slice(da, 0.25, 1.25, { rate: 2 }), offset: 2 }], { rate: 100, duration: 2.5 });
+    check("combine: the command line combines documents named in a parts file, cutting each to its part, as Playhead.combine and Playhead.slice do",
+      r.status !== 0 ? (r.stderr || "").slice(0, 200) : `${out.source.duration} s, ${out.combined.parts.length} parts`,
+      r.status === 0 && out && out.source.duration === 2.5 && out.combined.parts.length === 3 && JSON.stringify(out.curves.lufs) === JSON.stringify(direct.curves.lufs));
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 };

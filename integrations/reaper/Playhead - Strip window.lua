@@ -1,4 +1,4 @@
--- @description Playhead: strip window (the selected item drawn in a Playhead look, dockable)
+-- @description Playhead: strip window (the selected item, or the selected track or folder, drawn in a Playhead look, dockable)
 -- @version 0.3.0
 -- @author Daniel Sandner
 -- @noindex
@@ -9,6 +9,8 @@
 --   the edit and play cursors. Click to move the edit cursor; right-click for looks and options. The mouse wheel
 --   zooms as in REAPER's arrange view (Ctrl, Shift or Alt with the wheel, or a horizontal wheel, scrolls; drag with
 --   the middle button to move the view).
+--   With a track selected rather than an item, it draws the track: its items, and for a folder every track under it,
+--   combined from their analyses.
 --   Packaged by "Playhead - Analyse selected items.lua".
 
 -- SPDX-License-Identifier: Apache-2.0
@@ -19,6 +21,13 @@
 -- The strip is drawn once into an image and redrawn only when the item, the look, the window size or the theme
 -- changes; cursors are drawn over it. On the bar raster (a row per bar, top to bottom) the cursors are drawn in the
 -- row of the bar they are in, and a click moves the edit cursor to that point of that bar.
+--
+-- A track: the most recent selection wins, so selecting a track (clicking its name) shows the track, and selecting an
+-- item shows the item. The track's audio items, and for a folder those of every track under it, are analysed (each
+-- file once) and combined by `playhead combine` into one document from their first to their last item, without
+-- rendering the mix: each item as the part of its file it plays (start offset, playback rate, loops), at its
+-- item, take and track volumes (up to the selected track); muted items and tracks are left out, and so are takes
+-- that play their file reversed. The combined document is cached until an item, a volume or a mute changes.
 
 local source = debug.getinfo(1, "S").source
 local dir = source:match("^@?(.*[/\\])") or ""
@@ -37,7 +46,7 @@ local st = {
   look = R.get("look", "auto"),
   palette = R.get("palette", "reaper"),
   auto = core.parse_bool(R.get("strip_auto", "yes"), true),
-  sig = nil, item = nil, info = nil, doc = nil, message = "Select an audio item.", count = 0,
+  sig = nil, item = nil, info = nil, doc = nil, message = "Select an audio item or a track.", count = 0,
   job = nil, job_spec = nil, failed = {},
   cli = nil, cli_error = nil, profile = "auto",
   render = true, screen = true, w = 0, h = 0,
@@ -46,7 +55,10 @@ local st = {
   edit = nil, play = nil, left = false, right = false, legend = "",
   raster = nil,                                            -- the rows of the bar raster drawn ({ {start, stop}, ... }), if one is
   view = { 0, 1 },                                         -- the part of the item shown, as fractions of its length
-  pan = nil                                                -- a middle-button drag: { x, view }
+  pan = nil,                                               -- a middle-button drag: { x, view }
+  mode = nil,                                              -- "item" or "track": what is shown
+  track = nil, tr = nil,                                   -- the track shown and what it holds (see build_track)
+  last_isig = nil, last_track = nil, next_track = 0
 }
 
 local ZOOM_STEP = 1.25                                     -- per notch of the wheel
@@ -122,20 +134,180 @@ local function look_up_document(allow_analysis)
   st.screen = true
 end
 
+local check_track                                          -- (below: a track or folder)
+
 local function check_selection()
   local item = reaper.GetSelectedMediaItem(0, 0)
   local sig = quick_signature(item)
+  local track = reaper.GetSelectedTrack(0, 0)
+  -- the most recent selection wins: a newly selected item shows the item, a newly selected track the track
+  local item_changed, track_changed = sig ~= st.last_isig, track ~= st.last_track
+  st.last_isig, st.last_track = sig, track
+  local mode = st.mode
+  if item_changed and item then mode = "item" elseif track_changed and track then mode = "track" end
+  if mode == "item" and not item and track then mode = "track" end
+  if mode == "track" and not track then mode = "item" end
+  if mode == "track" then return check_track(track, st.mode ~= "track" or st.track ~= track) end
+  if st.mode ~= "item" then st.mode, st.sig, st.tr, st.track = "item", nil, nil, nil end
   st.count = reaper.CountSelectedMediaItems(0)
   if sig == st.sig then return end
   st.sig = sig
   if item ~= st.item then st.view = { 0, 1 } end           -- another item: shown whole (moving or trimming keeps the zoom)
   st.item = item
   st.render, st.screen = true, true
-  if not item then st.info, st.doc, st.message = nil, nil, "Select an audio item." return end
+  if not item then st.info, st.doc, st.message = nil, nil, "Select an audio item or a track." return end
   local info, err = R.take_info(item)
   st.info = info
   if not info then st.doc, st.message = nil, err return end
   look_up_document(true)
+end
+
+------------------------------------------------------------------------------------------------------------------------
+-- a track or a folder: its items combined (playhead combine)
+------------------------------------------------------------------------------------------------------------------------
+local function db_of(v) v = math.abs(v); return v > 0 and 20 * math.log(v, 10) or -150 end
+
+-- the track and every track under it (a folder's tracks at any depth), and their items
+local function track_items(track)
+  local inside, n = {}, 0
+  for i = 0, reaper.CountTracks(0) - 1 do
+    local t = reaper.GetTrack(0, i)
+    for _, up in ipairs(R.track_chain(t)) do if up == track then inside[t] = true; n = n + 1 break end end
+  end
+  local items = {}
+  for i = 0, reaper.CountMediaItems(0) - 1 do
+    local it = reaper.GetMediaItem(0, i)
+    if inside[reaper.GetMediaItem_Track(it)] then items[#items + 1] = it end
+  end
+  return items, n, inside
+end
+
+local function track_signature(track)
+  local items, n, inside = track_items(track)
+  local parts = { tostring(track), R.track_name(track), tostring(n) }
+  for t in pairs(inside) do
+    parts[#parts + 1] = string.format("%s:%.6f:%d", tostring(t), reaper.GetMediaTrackInfo_Value(t, "D_VOL"), math.floor(reaper.GetMediaTrackInfo_Value(t, "B_MUTE")))
+  end
+  table.sort(parts)
+  for _, it in ipairs(items) do
+    local take = reaper.GetActiveTake(it)
+    parts[#parts + 1] = quick_signature(it) .. string.format("|%.6f|%d|%.6f", reaper.GetMediaItemInfo_Value(it, "D_VOL"),
+      math.floor(reaper.GetMediaItemInfo_Value(it, "B_MUTE")), take and reaper.GetMediaItemTakeInfo_Value(take, "D_VOL") or 0)
+  end
+  return table.concat(parts, ";"), items, n
+end
+
+-- what the track holds: entries { info, gain (dB), parts }, the span a..b, and what was left out and why
+local function build_track(track, items, ntracks)
+  local tr = { track = track, name = R.track_name(track), ntracks = ntracks, entries = {}, left_out = {}, nitems = 0 }
+  if tr.name == "" then tr.name = "Track " .. math.floor(reaper.GetMediaTrackInfo_Value(track, "IP_TRACKNUMBER")) end
+  for _, it in ipairs(items) do
+    local info, err = R.take_info(it)
+    if not info then
+      if not tostring(err):find("empty") then tr.left_out[#tr.left_out + 1] = err end
+    else
+      local muted = reaper.GetMediaItemInfo_Value(it, "B_MUTE") ~= 0
+      local gain = db_of(reaper.GetMediaItemInfo_Value(it, "D_VOL")) + db_of(reaper.GetMediaItemTakeInfo_Value(info.take, "D_VOL"))
+      for _, t in ipairs(R.track_chain(info.track)) do
+        if reaper.GetMediaTrackInfo_Value(t, "B_MUTE") ~= 0 then muted = true end
+        gain = gain + db_of(reaper.GetMediaTrackInfo_Value(t, "D_VOL"))
+        if t == track then break end
+      end
+      local parts = core.item_parts(info.map)
+      if muted then tr.left_out[#tr.left_out + 1] = "\"" .. info.name .. "\" is muted"
+      elseif not parts then tr.left_out[#tr.left_out + 1] = "\"" .. info.name .. "\" plays its file reversed"
+      elseif #parts > 0 and gain > -140 then
+        tr.entries[#tr.entries + 1] = { info = info, gain = gain, parts = parts }
+        tr.nitems = tr.nitems + 1
+        local m = info.map
+        tr.a = math.min(tr.a or m.pos, m.pos)
+        tr.b = math.max(tr.b or (m.pos + m.len), m.pos + m.len)
+      end
+    end
+  end
+  return tr
+end
+
+local function track_title(tr)
+  local what = tr.ntracks > 1 and string.format("folder, %d tracks, %d item%s", tr.ntracks, tr.nitems, tr.nitems == 1 and "" or "s")
+    or string.format("%d item%s", tr.nitems, tr.nitems == 1 and "" or "s")
+  return "Track: " .. tr.name .. " (" .. what .. (#tr.left_out > 0 and (", " .. #tr.left_out .. " left out") or "") .. ")"
+end
+
+-- the combined document for the track: the items' analyses first (one at a time, in the background), then
+-- `playhead combine`, cached by the parts it combines
+local function look_up_track(allow)
+  local tr = st.tr
+  if not tr or not tr.a then return end
+  local cli = ensure_cli()
+  if not cli then st.message = "The Playhead command line is not set up. Right-click for options, or run Playhead - Settings." return end
+  local missing, ready = {}, 0
+  for _, e in ipairs(tr.entries) do
+    if not e.doc then e.doc = R.cached_document(e.info, cli, st.profile) end
+    if e.doc then ready = ready + 1 elseif not st.failed[e.info.file] then missing[#missing + 1] = e end
+  end
+  if #missing > 0 then
+    st.doc = nil
+    if st.job then st.message = string.format("Analysing the track's items: %d of %d ready...", ready, #tr.entries)
+    elseif allow and st.auto then start_analysis(missing[1].info)
+    else st.message = "Some of the track's items are not analysed yet. Right-click and choose Analyse the track's items." end
+    st.screen = true
+    return
+  end
+  if ready == 0 then st.doc, st.message = nil, "None of the track's items could be analysed." st.screen = true return end
+  local parts = {}
+  for _, e in ipairs(tr.entries) do
+    if e.doc then
+      for _, p in ipairs(e.parts) do
+        parts[#parts + 1] = { doc = R.cache_path(e.info, cli, st.profile), offset = p.at - tr.a, gain = e.gain, start = p.start, ["end"] = p["end"], rate = p.rate }
+      end
+    end
+  end
+  local text = core.json_encode(parts)
+  local key = core.fnv1a64(text .. "|" .. tostring(cli.version) .. "|" .. string.format("%.6f", tr.b - tr.a))
+  local final = R.join(R.cache_dir, "track-" .. key .. ".json")
+  tr.cache = final
+  if R.exists(final) then
+    local doc = core.load_document(R.read_file(final) or "")
+    if doc then st.doc, st.message = doc, nil; st.render, st.screen = true, true return end
+    os.remove(final)
+  end
+  if st.failed[final] then st.doc, st.message = nil, "Could not combine the track: " .. st.failed[final] return end
+  if st.job then return end
+  R.mkdir(R.cache_dir)
+  local parts_file = final .. ".parts.json"
+  R.write_file(parts_file, text)
+  local part = final .. ".part"
+  st.job_spec = { argv = cli.argv({ "combine", "--parts", parts_file, "--duration", string.format("%.4f", tr.b - tr.a), "--name", tr.name, "--out", part }),
+    move_from = part, move_to = final, extra_path = cli.extra_path, timeout = cli.settings.timeout, label = "Combining " .. tr.name,
+    file = tr.name, cache = final, kind = "combine", parts_file = parts_file }
+  local job, err = R.start_job(st.job_spec)
+  if not job then st.failed[final] = err; st.message = err; st.job_spec = nil return end
+  st.job, st.doc = job, nil
+  st.screen = true
+end
+
+function check_track(track, switched)
+  local now = reaper.time_precise()
+  if not switched and st.mode == "track" and st.track == track and now < st.next_track then return end
+  st.next_track = now + 0.5
+  local tsig, items, n = track_signature(track)
+  if tsig == st.sig and not switched then return end
+  local same = st.mode == "track" and st.track == track
+  st.mode, st.sig, st.track, st.item, st.count = "track", tsig, track, nil, 0
+  if not same then st.view = { 0, 1 } end
+  st.render, st.screen = true, true
+  local tr = build_track(track, items, n)
+  st.tr = tr
+  if not tr.a then
+    st.info, st.doc = nil, nil
+    st.message = "No audio items to show on \"" .. tr.name .. "\"" .. (#tr.left_out > 0 and (": " .. table.concat(tr.left_out, "; ")) or ".")
+    return
+  end
+  local len = tr.b - tr.a
+  st.info = { map = core.take_map({ pos = tr.a, len = len, offs = 0, rate = 1, loop = false, src_len = len, sections = {}, file_len = len }),
+    name = track_title(tr), file = "track:" .. tostring(track), track = track }
+  look_up_track(true)
 end
 
 local function poll_job()
@@ -144,8 +316,19 @@ local function poll_job()
   if not res then return end
   local spec = st.job_spec
   st.job, st.job_spec = nil, nil
+  if spec.kind == "combine" then
+    R.remove(spec.parts_file)
+    local doc, err = R.analysis_result(spec, res)
+    if not doc then st.failed[spec.cache] = err end
+    if st.mode == "track" and st.tr and st.tr.cache == spec.cache then
+      if doc then st.doc, st.message = doc, nil else st.doc, st.message = nil, "Could not combine the track: " .. tostring(err) end
+      st.render, st.screen = true, true
+    elseif st.mode == "track" then look_up_track(true) end
+    return
+  end
   local doc, err = R.analysis_result(spec, res)
   if not doc then st.failed[spec.file] = err end
+  if st.mode == "track" then look_up_track(true) return end    -- the next item of the track, or the combining
   if st.info and st.info.file == spec.file then
     if doc then st.doc, st.message = doc, nil else st.doc, st.message = nil, "Analysis failed: " .. tostring(err) end
     st.render, st.screen = true, true
@@ -269,7 +452,8 @@ local function draw_screen()
   else
     local msg = st.message or ""
     if st.job then
-      msg = string.format("Analysing %s ... %.1f s", core.basename(st.job_spec.file), reaper.time_precise() - st.job.started)
+      msg = st.job_spec.kind == "combine" and string.format("%s ... %.1f s", st.job_spec.label, reaper.time_precise() - st.job.started)
+        or string.format("Analysing %s ... %.1f s", core.basename(st.job_spec.file), reaper.time_precise() - st.job.started)
     end
     draw_text(8 * s, top + 8 * s, msg, th.text, 0.85, 13, gfx.w - 16 * s)
   end
@@ -318,7 +502,11 @@ local function show_menu()
   end
   entries[#entries + 1] = { label = "Colours", submenu = colours }
   entries[#entries + 1] = { separator = true }
-  entries[#entries + 1] = { label = st.doc and "Analyse this item again" or "Analyse this item", disabled = st.info == nil or st.job ~= nil, value = { action = "again" } }
+  if st.mode == "track" then
+    entries[#entries + 1] = { label = st.doc and "Analyse the track's items again" or "Analyse the track's items", disabled = st.tr == nil or st.job ~= nil, value = { action = "again_track" } }
+  else
+    entries[#entries + 1] = { label = st.doc and "Analyse this item again" or "Analyse this item", disabled = st.info == nil or st.job ~= nil, value = { action = "again" } }
+  end
   entries[#entries + 1] = { label = "Analyse items automatically when selected", checked = st.auto, value = { action = "auto" } }
   if st.cli_error then entries[#entries + 1] = { label = "Look for the Playhead command line again", value = { action = "cli" } } end
   entries[#entries + 1] = { separator = true }
@@ -341,10 +529,18 @@ local function show_menu()
       st.doc = nil
       start_analysis(st.info)
     end
+  elseif v.action == "again_track" and st.tr then
+    local cli = ensure_cli()
+    if cli then
+      for _, e in ipairs(st.tr.entries) do R.forget_document(e.info, cli, st.profile); st.failed[e.info.file] = nil; e.doc = nil end
+      if st.tr.cache then os.remove(st.tr.cache); st.failed[st.tr.cache] = nil end
+      st.doc = nil
+      look_up_track(true)
+    end
   elseif v.action == "auto" then
     st.auto = not st.auto
     R.set("strip_auto", core.yesno(st.auto))
-    if st.auto and st.info and not st.doc then look_up_document(true) end
+    if st.auto and st.info and not st.doc then if st.mode == "track" then look_up_track(true) else look_up_document(true) end end
   elseif v.action == "cli" then
     ensure_cli(true)
     if st.cli_error then R.message(st.cli_error) end
@@ -415,7 +611,8 @@ local function loop()
   poll_job()
   if st.info and not st.doc and not st.job and now >= st.next_cache then
     st.next_cache = now + 1
-    look_up_document(st.failed[st.info.file] == nil)        -- another action may have analysed it meanwhile
+    if st.mode == "track" then look_up_track(true)
+    else look_up_document(st.failed[st.info.file] == nil) end   -- another action may have analysed it meanwhile
   end
   if st.job and now >= st.next_status then st.next_status = now + 0.25; st.screen = true end
   handle_mouse()

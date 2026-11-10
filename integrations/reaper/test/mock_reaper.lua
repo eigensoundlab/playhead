@@ -67,7 +67,7 @@ function Mock.new(T, opts)
   end
   function env.add_item(track, t)
     local item = { kind = "MediaItem", track = track, pos = t.pos or 0, len = t.len or 1, loop = t.loop and 1 or 0, takes = {}, cur = 0,
-      selected = t.selected ~= false, guid = guid(), vol = t.vol or 1, lock = t.lock or 0, fadeout = 0, timebase = -1 }
+      selected = t.selected ~= false, guid = guid(), vol = t.vol or 1, lock = t.lock or 0, fadeout = 0, timebase = -1, mute = t.mute or 0 }
     if t.source then
       item.takes[1] = { kind = "MediaItem_Take", item = item, src = t.source, offs = t.offs or 0, rate = t.rate or 1, name = t.name or "",
         midi = t.midi or false, markers = {}, vals = { D_VOL = 1, D_PAN = 0, D_PANLAW = -1, D_PITCH = 0, B_PPITCH = 0, I_CHANMODE = 0 }, stretch = t.stretch or 0 }
@@ -104,7 +104,7 @@ function Mock.new(T, opts)
   -- the API
   ----------------------------------------------------------------------------------------------------------------
   local R = {}
-  local ITEM_KEYS = { D_POSITION = "pos", D_LENGTH = "len", B_LOOPSRC = "loop", I_CURTAKE = "cur", D_VOL = "vol", C_LOCK = "lock",
+  local ITEM_KEYS = { D_POSITION = "pos", D_LENGTH = "len", B_LOOPSRC = "loop", I_CURTAKE = "cur", D_VOL = "vol", C_LOCK = "lock", B_MUTE = "mute",
     D_FADEOUTLEN = "fadeout", C_BEATATTACHMODE = "timebase" }
   local TAKE_KEYS = { D_STARTOFFS = true, D_PLAYRATE = true, D_VOL = true, D_PAN = true, D_PANLAW = true, D_PITCH = true, B_PPITCH = true, I_CHANMODE = true }
 
@@ -270,6 +270,8 @@ function Mock.new(T, opts)
   end
   function R.GetMediaTrackInfo_Value(tr, k)
     check("GetMediaTrackInfo_Value", { "MediaTrack", "string" }, tr, k)
+    if k == "B_MUTE" then return tr.mute or 0 end
+    if k == "IP_TRACKNUMBER" then for i, t in ipairs(env.tracks) do if t == tr then return i end end return 0 end
     if k ~= "D_VOL" then err("GetMediaTrackInfo_Value: parameter " .. k) return 0 end
     return tr.vol or 1
   end

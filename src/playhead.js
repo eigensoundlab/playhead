@@ -1089,6 +1089,54 @@ function mergeTimes(lists, gap) {
   return out;
 }
 const r4 = v => Math.round(v * 1e4) / 1e4;          // rnd(v, 4) without toFixed, for the per-column loops below
+// A part of a document as a document of its own: from start to end (seconds of the file), played at opts.rate (2:
+// twice as fast), with its time 0 at start. For combining items that play part of a file (a DAW's track, a trimmed
+// layer). Curves, the waveform overview and the spectrogram are cut; onsets, novelty ticks, events, beats, downbeats
+// and sections are cut and moved; what cannot be cut (the levels, descriptors, layers, the views' data) is left out.
+// The cuts fall on the curves' and overviews' own columns, so the part's edges are good to one column.
+function slice(doc, start, end, opts) {
+  opts = opts || {};
+  if (!doc || !doc.curves || !doc.source) throw new Error("Playhead.slice: not a document");
+  const D = doc.source.duration, r = opts.rate > 0 ? opts.rate : 1;
+  const t0 = Math.max(0, Math.min(D, +start || 0)), t1 = Math.max(t0, Math.min(D, end == null ? D : +end));
+  const dur = (t1 - t0) / r, mv = t => rnd(Math.max(0, Math.min(dur, (t - t0) / r)), 4), inside = t => t >= t0 && t < t1;
+  const c = doc.curves, cr = c.rate, a = Math.max(0, Math.floor(t0 * cr));
+  const curves = { rate: rnd(cr * r, 6), start: 0, scale: c.scale };
+  for (const [k, v] of Object.entries(c)) {
+    if (!Array.isArray(v)) continue;
+    const b = Math.min(v.length, Math.max(a + 1, Math.ceil(t1 * cr)));
+    curves[k] = v.slice(a, b);
+  }
+  const cut = (cols, from, to) => [Math.max(0, Math.floor(from / D * cols)), Math.max(Math.floor(from / D * cols) + 1, Math.min(cols, Math.ceil(to / D * cols)))];
+  let wave = null;
+  if (doc.wave && doc.wave.columns) {
+    const [wa, wb] = cut(doc.wave.columns, t0, t1), w = doc.wave;
+    wave = { columns: wb - wa, min: w.min.slice(wa, wb), max: w.max.slice(wa, wb), rms: w.rms.slice(wa, wb) };
+  }
+  let spectrum = null;
+  if (doc.spectrum && doc.spectrum.data) {
+    const sp = doc.spectrum, B = sp.bands, [sa, sb] = cut(sp.columns, t0, t1), u8 = fromB64(sp.data);
+    spectrum = Object.assign({}, sp, { columns: sb - sa, data: toB64(u8.subarray(sa * B, sb * B)) });
+  }
+  const times = ts => (ts || []).filter(inside).map(mv);
+  const events = doc.events ? doc.events.filter(e => e.start < t1 && (e.end == null ? e.start : e.end) > t0).map(e => Object.assign({}, e, {
+    start: mv(Math.max(t0, e.start)), end: e.end == null ? null : mv(Math.min(t1, e.end)), decayEnd: e.decayEnd == null ? null : mv(Math.min(t1, Math.max(t0, e.decayEnd))),
+    peak: e.peak == null ? null : mv(Math.min(t1, Math.max(t0, e.peak))), grains: (e.grains || []).filter(inside).map(mv) })) : null;
+  const rhythm = doc.rhythm ? { tempo: doc.rhythm.tempo == null ? null : rnd(doc.rhythm.tempo * r, 2), reliable: doc.rhythm.reliable, clarity: doc.rhythm.clarity,
+    beats: times(doc.rhythm.beats), downbeats: times(doc.rhythm.downbeats) } : null;
+  const sections = doc.sections ? doc.sections.filter(sc => sc.start < t1 && sc.end > t0).map(sc => ({ start: mv(Math.max(t0, sc.start)), end: mv(Math.min(t1, sc.end)), label: sc.label })) : null;
+  const lf = (curves.lufs || []).filter(v => v != null).sort((x, y) => x - y), q = p => lf[Math.floor(p * (lf.length - 1))];
+  const S = doc.summary || {};
+  const summary = { peakLufs: lf.length ? rnd(lf[lf.length - 1], 2) : null, loudnessRange: lf.length ? rnd(q(0.95) - q(0.1), 2) : null,
+    soundStart: S.soundStart == null || S.soundStart >= t1 ? null : mv(Math.max(t0, S.soundStart)), soundEnd: S.soundEnd == null || S.soundEnd <= t0 ? null : mv(Math.min(t1, S.soundEnd)) };
+  return {
+    schema: SCHEMA, schemaVersion: SCHEMA_VERSION, generator: doc.generator,
+    source: Object.assign({}, doc.source, { duration: rnd(dur, 4) }),
+    profile: doc.profile, assetClass: doc.assetClass, guessedClass: doc.guessedClass, summary, curves, wave, spectrum,
+    onsets: times(doc.onsets), noveltyTicks: times(doc.noveltyTicks), rhythm, sections, events, layers: null, issues: null, descriptors: null,
+    sliced: { start: rnd(t0, 4), end: rnd(t1, 4), rate: r }
+  };
+}
 function combine(parts, opts) {
   opts = opts || {};
   const A = opts.aligned || align(parts, opts), cols = A.columns, rate = A.rate, dur = A.duration, ps = A.parts, first = ps[0].doc;
@@ -2413,7 +2461,7 @@ function drawStrip(ctx, doc, opts) {
   return { code: lookCode(asked), layers: asked, legend: describeLook(asked, doc), items };
 }
 
-const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, frames, curveAt, rhythmSimilarity, align, combine, combineRules: COMBINE_RULES, measureParts, arrange, goals: GOALS, drawStrip, view, viewKinds: VIEW_KINDS, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
+const api = { version: VERSION, schema: SCHEMA, schemaVersion: SCHEMA_VERSION, profiles: PROFILES, analyze, fromAnalysis, process, tools, toMarkers, frames, curveAt, rhythmSimilarity, align, combine, slice, combineRules: COMBINE_RULES, measureParts, arrange, goals: GOALS, drawStrip, view, viewKinds: VIEW_KINDS, parseLook, lookCode, describeLook, lookFits, looks: LOOKS, curveLabels: CURVE_LABELS, localize, forms: FORMS, shapes: SHAPES, theme: DEFAULT_THEME, internals: { WL, PHD, get FX() { return FXroot(); } } };
 if (typeof module !== "undefined" && module.exports) module.exports = api;
 root.Playhead = api;
 })(typeof globalThis !== "undefined" ? globalThis : this);

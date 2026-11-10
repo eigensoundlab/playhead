@@ -22,6 +22,12 @@
 //                         per file and a report (groups, outliers, checks, where the usual measures disagree). A
 //                         manifest given as --spec is a store: files whose path, size and Playhead version match are
 //                         not analysed again (--fresh analyses all). docs/LEVELS.md
+//   playhead combine --parts parts.json [--out doc.json] [--rate N] [--duration s] [--name text]
+//                         one document for several parts, from their documents alone (Playhead.combine): parts.json is
+//                         [{ doc: "a.playhead.json", offset, gain, start, end, rate }] (paths relative to it); start, end
+//                         (seconds of the file) and rate (playback rate) cut a document to the part an item plays
+//                         (Playhead.slice). For a DAW's track or folder; --rate is the curves' rate (default: the
+//                         parts', at most 4000 columns)
 //   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]
 //   playhead arrange --parts parts.json [--goal punch|big|clean] [--range s] [--gains lo,hi] [--count N] [--seed N]
 //                         layers: parts.json is [{ doc: "a.playhead.json", offset, gain, start, end, lock }]; prints the
@@ -51,6 +57,7 @@ const HELP = `Playhead ${Playhead.version}: overview curves, events, sections an
   playhead levels <files or folders...> [--spec playhead-levels.json] [--out playhead-levels.json] [--report report.html|.csv]
                    [--measure momentaryMax@event] [--target -18] [--amount 1] [--depth 1] [--group-by folder|ucs|class|none]
                    [--profile auto|sfx|fast] [--fresh]     (levels, groups and outliers: see docs/LEVELS.md)
+  playhead combine --parts parts.json [--out doc.json] [--rate N] [--duration s]   (a track or folder from its parts' documents)
   playhead process <file> --tool <id> [--param name=value ...] [--out-dir dir]
   playhead arrange --parts parts.json [--goal punch|big|clean] [--range s] [--gains lo,hi] [--count N] [--seed N]
   playhead tools
@@ -303,6 +310,29 @@ async function main() {
     if (!o.out && !o.report) { console.log(JSON.stringify(m, null, o.pretty ? 1 : 0)); return; }
     const outl = rep.groups.reduce((a, g) => a + g.outliers.length, 0);
     process.stderr.write(`${files.length} files (${reused} measured before), ${rep.groups.length} group${rep.groups.length === 1 ? "" : "s"}, ${outl} outlier${outl === 1 ? "" : "s"}, ${rep.problems.length} to check, ${rep.disagreements.length} where the measures disagree by more than ${rep.checks.disagreement} dB\n`);
+    return;
+  }
+  if (cmd === "combine") {
+    if (!o.parts) fail("combine needs --parts parts.json ([{ doc, offset, gain, start, end, rate }])");
+    let list; try { list = JSON.parse(fs.readFileSync(o.parts, "utf8")); } catch (e) { fail("cannot read " + o.parts + ": " + e.message); }
+    if (!Array.isArray(list) || !list.length) fail(o.parts + " must be a list of parts");
+    const base = path.dirname(path.resolve(o.parts)), docs = new Map(), parts = [];
+    for (const [i, p] of list.entries()) {
+      if (!p || typeof p.doc !== "string") fail("part " + (i + 1) + " has no doc (a .playhead.json path)");
+      const f = path.resolve(base, p.doc);
+      if (!docs.has(f)) docs.set(f, await documentOf(f, o, "auto"));
+      let d = docs.get(f);
+      if (p.start != null || p.end != null || (p.rate && p.rate !== 1)) d = Playhead.slice(d, p.start || 0, p.end, { rate: p.rate || 1 });
+      parts.push({ doc: d, offset: Number(p.offset) || 0, gain: Number(p.gain) || 0 });
+    }
+    const dur = o.duration ? Number(o.duration) : Math.max(...parts.map(p => p.offset + p.doc.source.duration));
+    if (!(dur > 0)) fail("--duration must be a positive number");
+    const own = Math.max(...parts.map(p => p.doc.curves.rate || 0));
+    const rate = o.rate ? Number(o.rate) : Math.max(1, Math.min(own || 20, 4000 / dur));
+    if (!(rate > 0)) fail("--rate must be a positive number");
+    const doc = Playhead.combine(parts, { rate, duration: dur, name: o.name || path.basename(o.parts).replace(/\.json$/i, "") });
+    const text = JSON.stringify(doc, null, o.pretty ? 1 : 0);
+    if (o.out) writeText(o.out, text + "\n"); else console.log(text);
     return;
   }
   if (cmd === "process") {

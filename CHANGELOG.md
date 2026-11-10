@@ -21,6 +21,11 @@
   a track named like the group. Volumes and faders changed by hand are left alone; the report goes to the console. The
   Lua port gives the same gains as `Playhead.levels` (tested). A loop in the core library no longer assigns to its
   loop variable (Lua 5.5 forbids it).
+- **REAPER strip window: tracks and folders.** With a track selected, the strip window draws the track, or a folder
+  with every track under it: each item as the part of its file it plays, at its volumes, combined from the items'
+  analyses without rendering the mix. `Playhead.slice(doc, start, end, { rate })` cuts a document to the part an item
+  plays; `playhead combine --parts parts.json` combines documents named in a file (each cut by `start`, `end`,
+  `rate`).
 - **Audiovisual Playhead** ([experiments/av](experiments/av/README.md), on the site at `/av/`): one scene drawn twice
   from the same sound by the same rules, with WebGPU or WebGL 2. The left side runs them on the usual signals (level,
   WebAudio analyser octaves, MilkDrop-style band beats, energy trend, level jumps, the loudest bin), worked out frame by

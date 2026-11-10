@@ -526,6 +526,38 @@ return function(T)
       for _, s in ipairs(env.texts or {}) do if s:find("^Analysing robot copy%.wav") then said = true end end
       return T.exists(cache_file(copy, robot_len)) and said, ticks .. " rounds"
     end)
+  -- a folder track: with no item selected and the folder selected, the window draws the folder's items combined
+  do
+    local fold = env.add_track("Drums folder")
+    local c1, c2 = env.add_track("Hit", fold), env.add_track("Arc", fold)
+    local K = env.add_item(c1, { source = env.source({ file = robot_file, len = robot_len }), pos = 400, len = robot_len, name = "hit in folder" })
+    local Q = env.add_item(c2, { source = env.source({ file = arc_file, len = 64, sr = 44100 }), pos = 401, len = 10, offs = 5, name = "arc in folder", vol = 0.5 })
+    c2.vol = 0.5
+    env.select({})
+    fold.selected = true
+    closing = false
+    env.texts = {}
+    local tcursor, combined
+    scenario("strip window: a selected folder track is drawn from its tracks' items, combined without rendering; a click maps to project time",
+      script("Strip window"), { seconds = 60, on_tick = function(i)
+        if not combined then
+          for _, f in ipairs(T.listdir(cache) or {}) do if f:match("^track%-.*%.json$") and not f:match("parts") then combined = cache .. "/" .. f end end
+          if combined and not tcursor then G.mouse_x, G.mouse_y, G.mouse_cap = 450, 80, 1 end
+        elseif not tcursor then G.mouse_cap = 0; tcursor = env.cursor
+        elseif i > 3 then closing = true end
+        if i > 3000 then closing = true end
+      end }, function()
+        local doc = combined and core.load_document(T.read(combined))
+        local said = false
+        for _, s in ipairs(env.texts or {}) do if s:find("Track: Drums folder (folder, 3 tracks, 2 items)", 1, true) then said = true end end
+        local parts = doc and doc.combined and doc.combined.parts or {}
+        local ok = doc and math.abs(doc.source.duration - 11) < 0.01 and #parts == 2 and math.abs(parts[2].offset - 1) < 1e-6
+          and math.abs(parts[2].gain - (-12.0412)) < 0.01 and said and tcursor and math.abs(tcursor - (400 + 450 / 900 * 11)) < 0.05
+        return ok, string.format("%s; %d parts, gains %s; cursor %.3f", combined and "combined" or "not combined", #parts,
+          #parts > 1 and tostring(parts[2].gain) or "-", tcursor or -1)
+      end)
+    fold.selected = false
+  end
   env.getchar = function() return 0 end
 
   ------------------------------------------------------------------------------------------------------------------

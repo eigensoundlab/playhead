@@ -112,6 +112,7 @@ playhead markers song.wav --kinds sections,downbeats   # tab-separated regions a
 playhead process shot.wav --tool layers --param gains=-12
 playhead cues rifle.wav --preset weapon > rifle.cues.json   # cues for a game engine (docs/GAMES.md)
 playhead levels Audio/SFX --out Audio/SFX/playhead-levels.json --report levels.html   # levels, groups, outliers (docs/LEVELS.md)
+playhead combine --parts parts.json > folder.playhead.json   # a folder track from its parts' documents, without the mix
 ```
 
 **Looks.** What goes on the strip is a list of layers (a plain or coloured waveform or a spectrogram behind, a line, up

@@ -164,6 +164,15 @@ are greyed), your own look code (for example `wave:harshness lane:activity ticks
 app can be pasted), analysing again, automatic analysis of newly selected items, colours, and docking. Space starts
 and stops playback.
 
+**A track or a folder.** Select a track (click its name) and the window draws the track instead: its audio items,
+and for a folder track those of every track under it, from the first item to the last. The most recent selection
+wins: select an item again to see the item. Each item counts as the part of its file it plays (start offset, playback
+rate, loops) at its item, take and track volumes up to the selected track; muted items and tracks are left out, and
+so are takes that play their file reversed (the header says how many). The items are analysed in the background as
+needed (each file once), then combined from their analyses by `playhead combine` without rendering the mix: the
+whole is predicted from its parts, as in the Playhead app's *Tracks in a folder*. The result is kept until an item,
+a volume or a mute changes. Right-click for analysing the track's items again.
+
 **Zoom** works as in REAPER's arrange view:
 - the mouse wheel zooms around the mouse;
 - Ctrl, Shift or Alt with the wheel, or a horizontal wheel, scrolls;

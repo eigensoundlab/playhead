@@ -538,6 +538,34 @@ function M.file_to_project(m, f, limit)
   return M.source_to_project(m, s, limit)
 end
 
+--- The parts of its file an item plays, for combining a track's items (playhead combine): a list of
+--- { at = project time, start = file time, ["end"] = file time, rate }, one per loop of the source; or nil and why
+--- (a reversed source cannot be cut forward). At most `limit` loops (default 256).
+function M.item_parts(m, limit)
+  if m.reversed then return nil, "reversed" end
+  if not (m.len > 0) then return {} end
+  local out, L = {}, m.src_len
+  local s, T, stop = m.offs, m.pos, m.pos + m.len
+  if L and m.loop then s = s % L end
+  for _ = 1, limit or 256 do
+    if T >= stop - EPS then break end
+    local s_end = s + (stop - T) * m.rate
+    if L then
+      if not m.loop and s >= L - EPS then break end
+      s_end = min(s_end, L)
+    end
+    local a = max(0, s)
+    local at = T + (a - s) / m.rate
+    if s_end - a > EPS then
+      out[#out + 1] = { at = at, start = M.source_to_file(m, a), ["end"] = M.source_to_file(m, s_end), rate = m.rate }
+    end
+    if not (L and m.loop) then break end
+    T = T + (s_end - s) / m.rate
+    s = 0
+  end
+  return out
+end
+
 --- Project intervals { {t0, t1}, ... } in which the file interval [fa, fb] is heard, clipped to the item.
 function M.file_interval_to_project(m, fa, fb, limit)
   local a, b = min(fa, fb), max(fa, fb)

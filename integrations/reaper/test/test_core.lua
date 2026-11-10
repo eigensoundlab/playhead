@@ -786,4 +786,22 @@ return function(T)
     check("levels: take volume and dB keep the polarity", near(M.levels_to_vol(-6.0206, true), -0.5, 1e-4) and near(M.levels_to_db(-0.5), -6.0206, 1e-3), "")
   end
 
+  ------------------------------------------------------------------------------------------------------------------
+  -- the parts of their files that items play (combining a track)
+  ------------------------------------------------------------------------------------------------------------------
+  do
+    local p1 = M.item_parts(M.take_map({ pos = 10, len = 2, offs = 1, rate = 1, src_len = 5 }))
+    local p2 = M.item_parts(M.take_map({ pos = 10, len = 3, offs = 4, rate = 2, src_len = 5, loop = true }))
+    local p3 = M.item_parts(M.take_map({ pos = 10, len = 4, offs = -1, rate = 1, src_len = 2 }))
+    local p4, why = M.item_parts(M.take_map({ pos = 0, len = 1, offs = 0, rate = 1, src_len = 1, sections = { { offs = 0, len = 1, rev = true } } }))
+    local p5 = M.item_parts(M.take_map({ pos = 0, len = 2, offs = 0.5, rate = 1, src_len = 3, sections = { { offs = 10, len = 3, rev = false } } }))
+    local function show(ps) local o = {} for _, p in ipairs(ps or {}) do o[#o + 1] = string.format("%g@%g-%g", p.at, p.start, p["end"]) end return table.concat(o, " ") end
+    local ok = #p1 == 1 and near(p1[1].at, 10) and near(p1[1].start, 1) and near(p1[1]["end"], 3)
+      and #p2 == 2 and near(p2[1].at, 10) and near(p2[1].start, 4) and near(p2[1]["end"], 5) and near(p2[2].at, 10.5) and near(p2[2].start, 0) and near(p2[2]["end"], 5)
+      and #p3 == 1 and near(p3[1].at, 11) and near(p3[1].start, 0) and near(p3[1]["end"], 2)
+      and p4 == nil and why == "reversed" and #p5 == 1 and near(p5[1].start, 10.5) and near(p5[1]["end"], 12.5)
+    check("item parts: the part of the file an item plays, one per loop, at its playback rate, through sections; reversed takes refused",
+      ok, show(p1) .. " | " .. show(p2) .. " | " .. show(p3) .. " | " .. show(p5))
+  end
+
 end
