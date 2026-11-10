@@ -16,7 +16,7 @@
 --   cache keys                 M.cache_key{ path, size, length, profile, version, os }
 --   processing tools           M.parse_tools(text), M.tool_dialog(tool, remembered), M.parse_tool_inputs(...)
 
-local M = { VERSION = "0.2.0", SCHEMA = "playhead-analysis", SCHEMA_VERSION = 1 }
+local M = { VERSION = "0.3.0", SCHEMA = "playhead-analysis", SCHEMA_VERSION = 1 }
 
 local floor, ceil, abs, max, min, huge = math.floor, math.ceil, math.abs, math.max, math.min, math.huge
 local byte, sub, find, fmt, rep = string.byte, string.sub, string.find, string.format, string.rep
@@ -2782,6 +2782,215 @@ function M.dialog_values(csv, n)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
+-- levels (docs/LEVELS.md): measures, tag rules and project settings into one gain per file. The same rules and the
+-- same rounding as Playhead.levels (src/levels.js); test_core checks the two give the same gains.
+------------------------------------------------------------------------------------------------------------------------
+M.LEVELS_FORMAT = "playhead-levels"
+M.LEVELS_MANIFEST = "playhead-levels.json"
+M.LEVELS_DEFAULTS = { measure = "momentaryMax@event", target = -18, amount = 1, depth = 1, place = "take",
+  limits = { boost = 12, cut = 40, truePeak = -1 } }
+M.LEVELS_MEASURES = { "peak", "truePeak", "rms", "integrated", "momentaryMax", "shortTermMax" }
+M.LEVELS_SCOPES = { "", "active", "event", "events" }
+local function present(v) return v ~= nil and v ~= NULL end
+local function round2(v) return floor(v * 100 + 0.5) / 100 end
+local function has(list, v) for _, x in ipairs(list) do if x == v then return true end end return false end
+
+--- summary.levels of a document as a flat table: integrated, momentaryMax@event, rms@active ...
+function M.levels_flat(L)
+  local out = {}
+  if type(L) ~= "table" or L == NULL then return out end
+  if present(L.peak) then out.peak = L.peak end
+  if present(L.truePeak) then out.truePeak = L.truePeak end
+  for _, sk in ipairs({ { "", "file" }, { "active", "active" }, { "event", "event" }, { "events", "events" } }) do
+    local s = L[sk[2]]
+    if type(s) == "table" and s ~= NULL then
+      for _, m in ipairs({ "rms", "integrated", "momentaryMax", "shortTermMax" }) do
+        if present(s[m]) then out[m .. (sk[1] ~= "" and ("@" .. sk[1]) or "")] = s[m] end
+      end
+    end
+  end
+  return out
+end
+
+--- A measure name ("momentaryMax@event") as { measure, scope }, or nil and a message.
+function M.levels_parse_measure(name)
+  local m, s = tostring(name or ""):match("^([^@]*)@?(.*)$")
+  if not has(M.LEVELS_MEASURES, m) then return nil, "unknown measure \"" .. tostring(m) .. "\" (one of " .. concat(M.LEVELS_MEASURES, ", ") .. ")" end
+  if not has(M.LEVELS_SCOPES, s) then return nil, "unknown scope \"@" .. s .. "\" (@active, @event or @events)" end
+  if s ~= "" and (m == "peak" or m == "truePeak") then return nil, m .. " is of the whole file only" end
+  return { measure = m, scope = s }
+end
+
+--- The value of a measure, falling back to the whole file when its scope is missing. Returns value, the name used.
+function M.levels_value(measures, name)
+  measures = measures or {}
+  if present(measures[name]) then return measures[name], name end
+  local p = M.levels_parse_measure(name)
+  if p and present(measures[p.measure]) then return measures[p.measure], p.measure end
+  return nil, nil
+end
+
+--- The tags every file gets: its folder, the UCS category at the start of its name, Playhead's class.
+function M.levels_auto_tags(path, class, folder)
+  local parts = M.split(tostring(path or ""):gsub("\\", "/"), "/")
+  local name, out = parts[#parts] or "", {}
+  local dir = folder or (#parts > 1 and parts[#parts - 1] or nil)
+  if dir and dir ~= "" then out[#out + 1] = "folder:" .. dir end
+  local ucs = name:match("^(%u%u%u+%a*)_")
+  if ucs then out[#out + 1] = "ucs:" .. ucs end
+  if class and class ~= NULL and class ~= "" then out[#out + 1] = "class:" .. class end
+  return out
+end
+
+--- A rule's tag matches a file's tag exactly or as a parent (Weapons matches Weapons/Shotguns); case ignored.
+function M.levels_match_tag(rule, tag)
+  local r, t = tostring(rule):lower(), tostring(tag):lower()
+  return t == r or t:sub(1, #r + 1) == r .. "/"
+end
+
+--- The project's settings: the defaults, then the spec's (a manifest's) levels, then the project's own.
+function M.levels_settings(spec, own)
+  local S = {}
+  for k, v in pairs(M.LEVELS_DEFAULTS) do S[k] = v end
+  S.limits = { boost = 12, cut = 40, truePeak = -1 }
+  for i = 1, 2 do
+    local src = i == 1 and (spec and spec.levels) or own   -- (not ipairs: the first may be nil)
+    if type(src) == "table" and src ~= NULL then
+      for k, v in pairs(src) do
+        if k == "limits" and type(v) == "table" then for lk, lv in pairs(v) do if present(lv) then S.limits[lk] = lv end end
+        elseif present(v) then S[k] = v end
+      end
+    end
+  end
+  return S
+end
+
+--- Which rules apply to a file's tags: its group (the first group rule that matches), modifiers, notes, and other
+--- group rules that also match.
+function M.levels_resolve(rules, tags)
+  local group, modifiers, notes, also = nil, {}, {}, {}
+  for _, r in ipairs(rules or {}) do
+    if type(r) == "table" and r.on ~= false and present(r.tag) then
+      local hit = false
+      for _, t in ipairs(tags or {}) do if M.levels_match_tag(r.tag, t) then hit = true break end end
+      if hit then
+        local role = present(r.role) and r.role or "group"
+        if role == "group" then if not group then group = r else also[#also + 1] = r.tag end
+        elseif role == "modifier" then modifiers[#modifiers + 1] = r
+        else notes[#notes + 1] = r end
+      end
+    end
+  end
+  return { group = group, modifiers = modifiers, notes = notes, also = also }
+end
+
+--- One file's gain: amount x (target - measured) + depth x (group offset + modifier offsets) + trim, limited by the
+--- boost and cut limits and the true-peak ceiling. S: settings (M.levels_settings); entry { tags, measures, trim }.
+--- group_offset is the group's part of the gain (depth x its offset), for placing it on a track instead of the take.
+function M.levels_gain(S, rules, entry)
+  local R = M.levels_resolve(rules, entry.tags)
+  local name = (R.group and present(R.group.measure)) and R.group.measure or S.measure
+  local v, used = M.levels_value(entry.measures, name)
+  local g_off = R.group and (tonumber(R.group.offset) or 0) or 0
+  local m_off = 0
+  for _, r in ipairs(R.modifiers) do m_off = m_off + (tonumber(r.offset) or 0) end
+  local trim = tonumber(entry.trim) or 0
+  local lv = v and S.amount * (S.target - v) or 0
+  local gain = lv + S.depth * (g_off + m_off) + trim
+  local wanted, limited = gain, nil
+  if gain > S.limits.boost then gain = S.limits.boost; limited = "boost" end
+  if gain < -S.limits.cut then gain = -S.limits.cut; limited = "cut" end
+  local m = entry.measures or {}
+  local tp = present(m.truePeak) and m.truePeak or (present(m.peak) and m.peak or nil)
+  if present(S.limits.truePeak) and tp and tp + gain > S.limits.truePeak then gain = S.limits.truePeak - tp; limited = "truePeak" end
+  local mods = {}
+  for _, r in ipairs(R.modifiers) do mods[#mods + 1] = r.tag end
+  local notes = {}
+  for _, r in ipairs(R.notes) do notes[#notes + 1] = r.tag end
+  return { gain = round2(gain), wanted = round2(wanted), measure = name, used = used, measured = v, group = R.group and R.group.tag or nil,
+    group_offset = round2(S.depth * g_off), offset = round2(g_off + m_off), modifiers = mods, notes = notes, also = R.also, limited = limited, unmeasured = v == nil }
+end
+
+--- What a manifest keeps about a file, from its analysis document.
+function M.levels_entry(doc, path, tags, folder)
+  local top
+  for _, e in ipairs(doc.events ~= NULL and doc.events or {}) do
+    if type(e) == "table" and present(e.peakDb) and (not top or e.peakDb > top.peakDb) then top = e end
+  end
+  local class = top and present(top.facture) and top.facture or nil
+  local all, seen = {}, {}
+  for _, t in ipairs(tags or {}) do if not seen[t] then seen[t] = true; all[#all + 1] = t end end
+  for _, t in ipairs(M.levels_auto_tags(path, class, folder)) do if not seen[t] then seen[t] = true; all[#all + 1] = t end end
+  return { path = path, tags = all, class = class, measures = M.levels_flat(doc.summary and doc.summary.levels), trim = 0 }
+end
+
+--- A file's path relative to a folder, with forward slashes, or nil when it is not inside it. Case ignored on Windows.
+function M.levels_relative(dir, file, os)
+  local d, f = tostring(dir):gsub("\\", "/"):gsub("/+$", ""), tostring(file):gsub("\\", "/")
+  local dd, ff = d, f
+  if os == "windows" then dd, ff = d:lower(), f:lower() end
+  if ff:sub(1, #dd + 1) ~= dd .. "/" then return nil end
+  return f:sub(#d + 2)
+end
+
+--- The manifest entry for a file (path relative to the manifest, and its size when the entry has one), or nil.
+function M.levels_find_entry(manifest, rel, size, os)
+  if type(manifest) ~= "table" or type(manifest.files) ~= "table" then return nil end
+  local want = os == "windows" and rel:lower() or rel
+  for _, e in ipairs(manifest.files) do
+    if type(e) == "table" and present(e.path) then
+      local p = tostring(e.path):gsub("\\", "/")
+      if os == "windows" then p = p:lower() end
+      if p == want and (not present(e.size) or not size or e.size == size) then return e end
+    end
+  end
+  return nil
+end
+
+--- A gain in dB and a polarity (the sign of REAPER's take volume) as a take volume, and back.
+function M.levels_to_vol(db, negative) local v = 10 ^ (db / 20); return negative and -v or v end
+function M.levels_to_db(vol) local a = abs(vol); if a <= 0 then return -150 end return 20 * math.log(a, 10) end
+
+--- The report printed after levelling: rows { name, group, measured, used, gain, limited, wanted, skipped, why }.
+function M.levels_report(rows, S, spread)
+  spread = spread or 4
+  local lines, groups, order = {}, {}, {}
+  lines[#lines + 1] = fmt("Playhead levels: %d item%s, measure %s, target %s, amount %s, depth %s, groups on %s.", #rows, #rows == 1 and "" or "s",
+    S.measure, M.num(S.target, 1), M.num(S.amount, 2), M.num(S.depth, 2), S.place == "track" and "tracks named like them where found, else take gain" or "take gain")
+  for _, r in ipairs(rows) do
+    local g = r.group or "(no group)"
+    if not groups[g] then groups[g] = {}; order[#order + 1] = g end
+    table.insert(groups[g], r)
+  end
+  for _, g in ipairs(order) do
+    local list, vals = groups[g], {}
+    for _, r in ipairs(list) do if r.measured then vals[#vals + 1] = r.measured end end
+    sort(vals)
+    local med
+    if #vals > 0 then local h = #vals // 2; med = (#vals % 2 == 1) and vals[h + 1] or (vals[h] + vals[h + 1]) / 2 end
+    local outl = {}
+    if #list >= 3 and med then
+      for _, r in ipairs(list) do if r.measured and abs(r.measured - med) > spread then outl[#outl + 1] = fmt("%s %+.1f", r.name, r.measured - med) end end
+    end
+    lines[#lines + 1] = fmt("  %s: %d item%s%s%s", g, #list, #list == 1 and "" or "s", med and fmt(", median %.1f", med) or "",
+      #outl > 0 and (", more than " .. M.num(spread) .. " dB off: " .. concat(outl, ", ")) or "")
+  end
+  local notes = {}
+  for _, r in ipairs(rows) do
+    if r.skipped then notes[#notes + 1] = "  " .. r.name .. ": " .. r.skipped
+    else
+      if r.limited then notes[#notes + 1] = fmt("  %s: gain %+.1f dB limited to %+.1f dB by %s", r.name, r.wanted, r.gain,
+        r.limited == "truePeak" and ("the true-peak ceiling (" .. M.num(S.limits.truePeak) .. " dBTP)") or ("the " .. r.limited .. " limit")) end
+      if r.used and r.used ~= r.measure then notes[#notes + 1] = "  " .. r.name .. ": " .. r.measure .. " unavailable, used " .. r.used end
+      if r.unmeasured then notes[#notes + 1] = "  " .. r.name .. ": not measured (silent, or no analysis)" end
+      for _, w in ipairs(r.why or {}) do notes[#notes + 1] = "  " .. r.name .. ": " .. w end
+    end
+  end
+  if #notes > 0 then lines[#lines + 1] = "To check:"; for _, n in ipairs(notes) do lines[#lines + 1] = n end end
+  return lines
+end
+
+------------------------------------------------------------------------------------------------------------------------
 -- settings
 ------------------------------------------------------------------------------------------------------------------------
 M.SETTINGS_SECTION = "Playhead"
@@ -2790,7 +2999,8 @@ M.SETTINGS_SECTION = "Playhead"
 M.PACKAGE = {
   actions = { "Playhead - Analyse selected items.lua", "Playhead - Add markers for selected items.lua", "Playhead - Write curves as automation.lua",
     "Playhead - Process selected items.lua", "Playhead - Arrange selected layers.lua", "Playhead - Split items at sounds.lua",
-    "Playhead - Tempo map from item.lua", "Playhead - Strip window.lua", "Playhead - Settings.lua" },
+    "Playhead - Tempo map from item.lua", "Playhead - Strip window.lua", "Playhead - Settings.lua", "Playhead - Level items.lua",
+    "Playhead - Levels settings.lua" },
   lib = { "playhead_core.lua", "playhead_reaper.lua" },
   effect = "Playhead Control.jsfx",
   tools = { "Playhead - Install.lua", "Playhead - Uninstall.lua" },
@@ -2810,7 +3020,7 @@ M.PROFILES = { auto = true, fast = true, sfx = true, music = true }
 --- Folders from the "extra folders" setting, plus the usual places for ffmpeg and node on macOS.
 function M.extra_path_dirs(setting, os)
   local out = {}
-  for d in tostring(setting or ""):gmatch("[^;]+") do d = trim(d); if d ~= "" then out[#out + 1] = d end end
+  for part in tostring(setting or ""):gmatch("[^;]+") do local d = trim(part); if d ~= "" then out[#out + 1] = d end end
   if os == "macos" then out[#out + 1] = "/opt/homebrew/bin"; out[#out + 1] = "/usr/local/bin" end
   if os == "linux" then out[#out + 1] = "/usr/local/bin" end
   return out

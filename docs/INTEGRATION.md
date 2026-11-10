@@ -308,7 +308,8 @@ runs the executable without blocking REAPER and keeps the documents in a cache. 
 items, add events and onsets as take markers and sections and downbeats as regions and markers, write curves as
 automation on a small JSFX (Playhead Control) whose parameters can drive any plug-in through parameter links or
 MIDI CC, render the effects bench tools as new takes, and draw the item in any look in a dockable strip window,
-the views of rhythm and form included (the bar raster maps the cursor and clicks through its rows). All of them follow
+the views of rhythm and form included (the bar raster maps the cursor and clicks through its rows), and level many
+items from a `playhead-levels.json` manifest or the analysis by the project's tag rules ([LEVELS.md](LEVELS.md)). All of them follow
 the take's start offset, playback rate, loop and reversed sections. Its Lua core (document reader, time mapping, views,
 strip renderer, command lines) is tested against the documents, `Playhead.view` and `drawStrip` here.
 

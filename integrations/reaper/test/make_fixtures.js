@@ -145,5 +145,26 @@ const ref = { generator: "src/playhead.js " + Playhead.version, probe: PROBE, ro
     .map(code => ({ code, out: Playhead.lookCode(Playhead.parseLook(code) || []) }))
     .concat(["spec:tempo~cyclic,ticks:downbeats", "raster~4bars,sections", "raster:loudness,spec:mel", "wave:harshness,spec:mod,spec:bogus",
       "spec:lag,scalogram,scalogram:loudness~x,lane:activity", "tempogram", "rhythms"].map(code => ({ code, out: Playhead.lookCode(Playhead.parseLook(code) || []) }))) };
+// levels (src/levels.js): the measures of the two documents as entries, synthetic entries for the limits and the
+// fallbacks, and the gains under two specs, for the Lua port (core.levels_gain)
+const LV = require(path.join(root, "src/levels.js"));
+const lvEntries = [
+  { from: "robot", path: "sfx/GUNShotgn_Robot hit.wav", tags: ["Weapons/Shotguns/Pump", "subtle"] },
+  { from: "arc", path: "Explosions/arc.wav", tags: ["Explosions", "Weapons", "hero"] }
+].map(o => Object.assign({ from: o.from }, LV.entryOf(o.from === "robot" ? robot : arc, { path: o.path, tags: o.tags })))
+  .concat([{ path: "Nature/brook.wav", tags: ["Nature", "folder:Nature"], measures: { integrated: -40, peak: -30 }, trim: 1.5 },
+    { path: "quiet.wav", tags: [], measures: { momentaryMax: -50, truePeak: -45 } },
+    { path: "Explosions/silent.wav", tags: ["Explosions"], measures: {} }]);
+const lvSpecs = [
+  { levels: { measure: "momentaryMax@event", target: -18 }, rules: [] },
+  { levels: { measure: "integrated", target: -20, amount: 0.5, depth: 1.5, limits: { boost: 6, cut: 10, truePeak: -2 } }, rules: [
+    { tag: "Weapons/Shotguns", role: "group", offset: 3 }, { tag: "Weapons", role: "group", offset: 2 },
+    { tag: "Explosions", role: "group", offset: 4, measure: "shortTermMax@active" }, { tag: "subtle", role: "modifier", offset: -4 },
+    { tag: "hero", role: "modifier", offset: 2, on: false }, { tag: "Nature", role: "note" }, { tag: "class:impulse", role: "modifier", offset: 1 }] }
+];
+ref.levels = { entries: lvEntries, cases: lvSpecs.map(spec => ({ spec, gains: lvEntries.map(e => {
+  const g = LV.gainOf(spec, e);
+  return { gain: g.gain, wanted: g.wanted, used: g.used, group: g.group, limitedBy: g.limitedBy, offset: g.offset, modifiers: g.modifiers, notes: g.notes };
+}) })) };
 fs.writeFileSync(path.join(outDir, "reference.json"), JSON.stringify(ref) + "\n");
 console.log("fixtures written to " + outDir);

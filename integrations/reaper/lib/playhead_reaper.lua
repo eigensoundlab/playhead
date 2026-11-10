@@ -874,6 +874,78 @@ function R.report_problems(problems, heading)
 end
 
 ------------------------------------------------------------------------------------------------------------------------
+-- levels (docs/LEVELS.md): manifests next to the media, the project's own settings, and what the script set on each
+-- take and track (P_EXT:playhead_levels), so it can tell a gain it set from one changed by hand
+------------------------------------------------------------------------------------------------------------------------
+R.LEVELS_KEY = "P_EXT:playhead_levels"
+local manifest_memory = {}
+
+--- The nearest playhead-levels.json in a file's folder or up to three folders above it: manifest, its folder, its path.
+function R.levels_manifest_for(file)
+  local dir = core.dirname(file)
+  for _ = 1, 4 do
+    if dir == "" then break end
+    local p = R.join(dir, core.LEVELS_MANIFEST)
+    if manifest_memory[p] == nil then
+      local m = false
+      if R.exists(p) then
+        local ok, v = pcall(core.json_decode, R.read_file(p) or "")
+        if ok and type(v) == "table" and v.format == core.LEVELS_FORMAT then m = v end
+      end
+      manifest_memory[p] = m
+    end
+    if manifest_memory[p] then return manifest_memory[p], dir, p end
+    local up = core.dirname(dir)
+    if up == dir then break end
+    dir = up
+  end
+  return nil
+end
+function R.levels_forget_manifests() manifest_memory = {} end
+
+--- The project's own levels settings and rules: { levels = {...}, rules = {...} | nil, rules_from = path }.
+function R.levels_project()
+  local _, v = reaper.GetProjExtState(0, R.SECTION, "levels")
+  if v and v ~= "" then
+    local ok, t = pcall(core.json_decode, v)
+    if ok and type(t) == "table" then return t end
+  end
+  return {}
+end
+function R.levels_set_project(t) reaper.SetProjExtState(0, R.SECTION, "levels", core.json_encode(t)) end
+
+local function ext_get(getset, obj)
+  local ok, v = getset(obj, R.LEVELS_KEY, "", false)
+  if ok and v and v ~= "" then
+    local ok2, t = pcall(core.json_decode, v)
+    if ok2 and type(t) == "table" then return t end
+  end
+  return nil
+end
+--- What the script set on a take or a track last time ({ applied = dB, ... }), or nil; and setting it.
+function R.levels_take_state(take) return ext_get(reaper.GetSetMediaItemTakeInfo_String, take) end
+function R.levels_set_take_state(take, t) reaper.GetSetMediaItemTakeInfo_String(take, R.LEVELS_KEY, t and core.json_encode(t) or "", true) end
+function R.levels_track_state(track) return ext_get(reaper.GetSetMediaTrackInfo_String, track) end
+function R.levels_set_track_state(track, t) reaper.GetSetMediaTrackInfo_String(track, R.LEVELS_KEY, t and core.json_encode(t) or "", true) end
+
+function R.track_name(track)
+  local ok, n = reaper.GetSetMediaTrackInfo_String(track, "P_NAME", "", false)
+  return ok and n or ""
+end
+--- A track and the folder tracks above it, nearest first.
+function R.track_chain(track)
+  local out = {}
+  while track and #out < 64 do out[#out + 1] = track; track = reaper.GetParentTrack(track) end
+  return out
+end
+--- Every item in the project.
+function R.all_items()
+  local out = {}
+  for i = 0, reaper.CountMediaItems(0) - 1 do out[#out + 1] = reaper.GetMediaItem(0, i) end
+  return out
+end
+
+------------------------------------------------------------------------------------------------------------------------
 -- Playhead Control (the JSFX whose eight sliders carry curves)
 ------------------------------------------------------------------------------------------------------------------------
 local function fx_name(track, fx)

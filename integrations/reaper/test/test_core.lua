@@ -731,4 +731,59 @@ return function(T)
     check("messages: missing ffmpeg, missing executable and other errors explained", f1:find("ffmpeg") and f1:find("%.flac") and f2:find("could not be started")
       and f3 == "Playhead stopped with an error (exit code 1): Error: boom", f3)
   end
+  ------------------------------------------------------------------------------------------------------------------
+  -- levels: the same entries and gains as src/levels.js
+  ------------------------------------------------------------------------------------------------------------------
+  do
+    local L = ref.levels
+    local bad = {}
+    local docs = { robot = robot, arc = arc }
+    -- entries from the documents: measures, class and tags as Playhead.levels.entryOf makes them
+    for _, je in ipairs(L.entries) do
+      if je.from then
+        local own = {}
+        for _, t in ipairs(je.tags) do if not t:find(":") then own[#own + 1] = t end end
+        local le = M.levels_entry(docs[je.from], je.path, own)
+        if le.class ~= je.class then bad[#bad + 1] = je.path .. ": class " .. tostring(le.class) .. " vs " .. tostring(je.class) end
+        if table.concat(le.tags, "|") ~= table.concat(je.tags, "|") then bad[#bad + 1] = je.path .. ": tags " .. table.concat(le.tags, "|") .. " vs " .. table.concat(je.tags, "|") end
+        local n = 0
+        for k, v in pairs(je.measures) do n = n + 1; if not near(le.measures[k], v, 1e-9) then bad[#bad + 1] = je.path .. ": " .. k end end
+        for k in pairs(le.measures) do if je.measures[k] == nil then bad[#bad + 1] = je.path .. ": extra " .. k end end
+        if n < 10 then bad[#bad + 1] = je.path .. ": only " .. n .. " measures" end
+      end
+    end
+    local compared = 0
+    for ci, case in ipairs(L.cases) do
+      local S = M.levels_settings(case.spec)
+      for i, je in ipairs(L.entries) do
+        local g, want = M.levels_gain(S, case.spec.rules, je), case.gains[i]
+        compared = compared + 1
+        local same = near(g.gain, want.gain, 1e-9) and near(g.wanted, want.wanted, 1e-9) and near(g.offset, want.offset, 1e-9)
+          and (g.used or "") == (want.used or "") and (g.group or "") == (want.group or "") and (g.limited or "") == (want.limitedBy or "")
+          and table.concat(g.modifiers, "|") == table.concat(want.modifiers, "|") and table.concat(g.notes, "|") == table.concat(want.notes, "|")
+        if not same then bad[#bad + 1] = string.format("case %d, %s: %s dB (%s, %s) vs %s dB (%s, %s)", ci, je.path, tostring(g.gain), tostring(g.used), tostring(g.limited), tostring(want.gain), tostring(want.used), tostring(want.limitedBy)) end
+      end
+    end
+    check("levels: entries from the documents (measures, class, automatic tags) and the gains under two specs are those of src/levels.js (" .. compared .. " gains)", #bad == 0, bad[1])
+    local p1, e1 = M.levels_parse_measure("momentaryMax@event")
+    local _, e2 = M.levels_parse_measure("loudest@event")
+    local _, e3 = M.levels_parse_measure("peak@event")
+    check("levels: measure names are checked", p1 and p1.scope == "event" and e1 == nil and e2 and e3 and e3:find("whole file"), tostring(e2))
+    local rel_w = M.levels_relative("C:\\Sounds\\Lib", "c:/sounds/lib/Guns/Shot 1.wav", "windows")
+    local rel_l = M.levels_relative("/s/lib/", "/s/lib/a/b.wav", "linux")
+    local out = M.levels_relative("/s/lib", "/s/library/b.wav", "linux")
+    local man = { files = { { path = "Guns/Shot 1.wav", size = 10 }, { path = "a/b.wav" } } }
+    local found = M.levels_find_entry(man, "guns/shot 1.wav", 10, "windows")
+    local nosize = M.levels_find_entry(man, "Guns/Shot 1.wav", 11, "linux")
+    check("levels: paths relative to a manifest's folder (case ignored on Windows), entries matched by path and size",
+      rel_w == "Guns/Shot 1.wav" and rel_l == "a/b.wav" and out == nil and found == man.files[1] and nosize == nil and M.levels_find_entry(man, "a/b.wav", 99, "linux") == man.files[2],
+      tostring(rel_w) .. " / " .. tostring(rel_l))
+    local S1 = M.levels_settings(nil, { place = "track", target = -23, limits = { boost = 6 } })
+    local S2 = M.levels_settings({ levels = { target = -20, depth = 2 } }, { target = -23 })
+    check("levels: settings: the defaults, then a manifest's, then the project's own (also without a manifest)",
+      S1.place == "track" and S1.target == -23 and S1.limits.boost == 6 and S1.limits.cut == 40 and S2.target == -23 and S2.depth == 2 and S2.measure == "momentaryMax@event",
+      tostring(S1.place) .. " " .. tostring(S1.target))
+    check("levels: take volume and dB keep the polarity", near(M.levels_to_vol(-6.0206, true), -0.5, 1e-4) and near(M.levels_to_db(-0.5), -6.0206, 1e-3), "")
+  end
+
 end

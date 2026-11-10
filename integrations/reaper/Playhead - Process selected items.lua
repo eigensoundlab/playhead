@@ -1,5 +1,5 @@
 -- @description Playhead: process selected items with a Playhead tool (each result as a new take)
--- @version 0.2.0
+-- @version 0.3.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about

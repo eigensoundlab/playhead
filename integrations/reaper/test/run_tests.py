@@ -251,6 +251,7 @@ def run_index(res, tmp):
     want = ["Playhead - Analyse selected items.lua", "Playhead - Add markers for selected items.lua", "Playhead - Write curves as automation.lua",
             "Playhead - Process selected items.lua", "Playhead - Arrange selected layers.lua", "Playhead - Split items at sounds.lua",
             "Playhead - Tempo map from item.lua", "Playhead - Strip window.lua", "Playhead - Settings.lua",
+            "Playhead - Level items.lua", "Playhead - Levels settings.lua",
             "lib/playhead_core.lua", "lib/playhead_reaper.lua", "Playhead Control.jsfx"]
     bad = []
     got = []

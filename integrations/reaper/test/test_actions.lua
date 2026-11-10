@@ -26,7 +26,7 @@ return function(T)
   env.ext["Playhead/node"] = T.node
   local function script(name) return T.pkg .. "/Playhead - " .. name .. ".lua" end
   local SCRIPTS = { "Analyse selected items", "Add markers for selected items", "Write curves as automation", "Process selected items",
-    "Arrange selected layers", "Split items at sounds", "Tempo map from item", "Strip window", "Settings" }
+    "Arrange selected layers", "Split items at sounds", "Tempo map from item", "Strip window", "Settings", "Level items", "Levels settings" }
 
   -- every file loads (syntax) and carries its licence and ReaPack header
   do
@@ -40,7 +40,7 @@ return function(T)
       local chunk, e = loadfile(f)
       if not chunk then bad[#bad + 1] = e end
       local text = T.read(f) or ""
-      for _, tag in ipairs({ "@description", "@version 0.2.0", "@author Daniel Sandner", "SPDX%-License%-Identifier: Apache%-2%.0", "Copyright 2026 Daniel Sandner" }) do
+      for _, tag in ipairs({ "@description", "@version 0.3.0", "@author Daniel Sandner", "SPDX%-License%-Identifier: Apache%-2%.0", "Copyright 2026 Daniel Sandner" }) do
         if not text:find(tag) then bad[#bad + 1] = n .. ": no " .. tag end
       end
     end
@@ -560,6 +560,77 @@ return function(T)
         end
         return ok, #pieces .. " pieces for " .. #G2.events .. " events"
       end)
+  end
+
+  ------------------------------------------------------------------------------------------------------------------
+  -- Levels
+  ------------------------------------------------------------------------------------------------------------------
+  do
+    local trL = env.add_track("SFX")
+    local L1 = env.add_item(trL, { source = env.source({ file = robot_file, len = robot_len }), pos = 300, len = robot_len, name = "robot for levels" })
+    local L2 = env.add_item(trL, { source = env.source({ file = arc_file, len = 64, sr = 44100 }), pos = 310, len = 20, name = "arc for levels" })
+    local S0 = core.levels_settings(nil, nil)
+    local function expected(doc, file) return core.levels_gain(S0, {}, core.levels_entry(doc, file, {})).gain end
+    local function db_of(item) return core.levels_to_db(item.takes[1].vals.D_VOL) end
+    env.select({ L1, L2 })
+    scenario("levels: items measured from Playhead's analysis get their gain as take volume (default settings), and the report goes to the console",
+      script("Level items"), nil, function()
+        local want1, want2 = expected(robot_cached, robot_file), expected(arc_doc, arc_file)
+        local ok = math.abs(db_of(L1) - want1) < 0.01 and math.abs(db_of(L2) - want2) < 0.01 and L1.takes[1].ext and L1.takes[1].ext["P_EXT:playhead_levels"]
+          and console():find("Playhead levels: 2 items", 1, true) and L1.vol == 1
+        return ok, string.format("robot %.2f dB (want %.2f), arc %.2f dB (want %.2f)", db_of(L1), want1, db_of(L2), want2)
+      end)
+    env.projext["Playhead/levels"] = core.json_encode({ levels = { target = -23 } })
+    env.select({ L2 })
+    scenario("levels: the project's own target applies to items without a manifest", script("Level items"), nil, function()
+      local want = core.levels_gain(core.levels_settings(nil, { target = -23 }), {}, core.levels_entry(arc_doc, arc_file, {})).gain
+      return math.abs(db_of(L2) - want) < 0.01 and math.abs(want - (expected(arc_doc, arc_file) - 5)) < 0.01, string.format("arc %.2f dB (want %.2f)", db_of(L2), want)
+    end)
+    env.projext["Playhead/levels"] = nil
+    env.select({ L1, L2 })
+    L1.takes[1].vals.D_VOL = 0.5
+    env.message_answers = { 7 }
+    scenario("levels: a take volume changed by hand since Playhead set it is left alone when you say so", script("Level items"), nil, function()
+      local m = env.messages[1] and env.messages[1].text or ""
+      return L1.takes[1].vals.D_VOL == 0.5 and m:find("changed since Playhead levelled", 1, true) and console():find("left as it is", 1, true), m:sub(1, 80)
+    end)
+    -- a manifest next to the files (as Kurator writes it): the sound's measures and tags, the rules; the group's
+    -- offset on a folder track named like the group
+    local ldir = T.media .. "/levels lib"
+    T.mkdirs(ldir)
+    local lfile = ldir .. "/EXPLReal_Robot hit.wav"
+    do local hi = io.open(robot_file, "rb"); local bytes = hi:read("a"); hi:close(); local ho = io.open(lfile, "wb"); ho:write(bytes); ho:close() end
+    local lsize = size(lfile)
+    local manifest = { format = "playhead-levels", version = 1, levels = { target = -18 }, rules = { { tag = "Explosions", role = "group", offset = 4 }, { tag = "subtle", role = "modifier", offset = -3, on = false } },
+      files = { { path = "EXPLReal_Robot hit.wav", size = lsize, tags = { "Explosions", "subtle" }, measures = { ["momentaryMax@event"] = -20, truePeak = -10 } } } }
+    do local h = io.open(ldir .. "/playhead-levels.json", "wb"); h:write(core.json_encode(manifest)); h:close() end
+    local fold = env.add_track("Explosions")
+    local child = env.add_track("Layer 1", fold)
+    local L3 = env.add_item(child, { source = env.source({ file = lfile, len = robot_len }), pos = 330, len = robot_len, name = "explosion layer" })
+    env.projext["Playhead/levels"] = core.json_encode({ levels = { place = "track" } })
+    local runs = #(env.exec or {})
+    env.select({ L3 })
+    scenario("levels: from a manifest (no analysis run): the take gets the levelling (+2 dB), the folder track named like the group its offset (+4 dB)",
+      script("Level items"), nil, function()
+        local ok = math.abs(db_of(L3) - 2) < 0.01 and math.abs(core.levels_to_db(fold.vol) - 4) < 0.01 and child.vol == 1 and #(env.exec or {}) == runs
+          and console():find("Explosions: 1 item", 1, true)
+        return ok, string.format("take %.2f dB, folder %.2f dB, %d runs", db_of(L3), core.levels_to_db(fold.vol), #(env.exec or {}) - runs)
+      end)
+    env.projext["Playhead/levels"] = core.json_encode({ levels = { place = "take", depth = 0.5 } })
+    scenario("levels: with group offsets on take gain and half the depth, the take carries +4 dB and the folder track goes back to 0 dB",
+      script("Level items"), nil, function()
+        return math.abs(db_of(L3) - 4) < 0.01 and fold.vol == 1 and console():find("moved back", 1, true), string.format("take %.2f dB, folder %.2f", db_of(L3), fold.vol)
+      end)
+    env.projext["Playhead/levels"] = nil
+    env.input_answers = { function(v) v[2] = "-20"; v[5] = "take"; return v end }
+    env.message_answers = { 6 }
+    env.file_answers = { ldir .. "/playhead-levels.json" }
+    scenario("levels settings: kept in the project, the rules taken from a manifest chosen in the dialog", script("Levels settings"), nil, function()
+      local t = core.json_decode(env.projext["Playhead/levels"] or "{}")
+      local ok = t.levels and t.levels.target == -20 and t.levels.place == "take" and type(t.rules) == "table" and #t.rules == 2 and console():find("2 rules from", 1, true)
+      return ok, tostring(env.projext["Playhead/levels"]):sub(1, 100)
+    end)
+    env.input_answers, env.message_answers, env.file_answers = {}, {}, {}
   end
 
   ------------------------------------------------------------------------------------------------------------------

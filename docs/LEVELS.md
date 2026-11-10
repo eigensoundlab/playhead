@@ -19,7 +19,7 @@ Kurator, SFX Workbench, REAPER and game engines:
 | Measures in every analysis (`summary.levels`), check codes (`issues[].code`) | in Playhead |
 | `Playhead.levels`: rules, gains, manifests, the report | in Playhead |
 | `playhead levels`: measure folders, write the manifest and the report | in Playhead |
-| REAPER: level items from a manifest, settings, report | planned |
+| REAPER: *Level items* (from a manifest or Playhead's analysis), *Levels settings*, the report in the console | in Playhead for REAPER 0.3.0 |
 | Kurator: the rules table on a project, the report, the manifest on delivery | planned |
 | SFX Workbench: manifest entries when saving | planned |
 | Engine import scripts (Wwise, FMOD, Unreal, Unity) | planned, in [GAMES.md](GAMES.md) |
@@ -255,20 +255,26 @@ What it shows:
 
 ### REAPER
 
-- *Playhead - Level items*: for the selected items (or all), finds `playhead-levels.json` in the media's folder or its
-  parents and matches the file by path and size. Without a manifest it measures in REAPER with
-  `CalculateNormalization(source, mode, target, start, end)` (modes 0 LUFS-I, 1 RMS-I, 2 peak, 3 true peak, 4 LUFS-M
-  max, 5 LUFS-S max), with the event's bounds from Playhead's cached analysis.
-- Stores per take in `P_EXT:playhead_levels` (measures, group, modifiers, trim, the gain applied, the version); the
-  project's settings and rules with `SetProjExtState`.
-- Owns take volume; if a take's volume differs from the gain it applied last time, someone changed it: the item is
-  skipped and listed. Polarity (a negative take volume) is kept. One undo block per run.
-- *Playhead - Levels settings* (target, amount, depth, measure, limits, groups on take gain or folder tracks, the rules,
-  with `track:` rules) and *Playhead - Levels report* (a line selects its items).
-- Optional: levelling new items as they arrive, through a background script that watches `GetProjectStateChangeCount`
-  (ReaScript has no import callback), started by SWS's startup action.
-- To verify in REAPER first: what `CalculateNormalization` returns (a linear gain, as community scripts assume), that its
-  bounds are in source time, and what LUFS-M max gives for a span under 0.4 s.
+In Playhead for REAPER 0.3.0 ([integrations/reaper](../integrations/reaper/README.md#the-actions)):
+
+- *Playhead - Level items*: for the selected items (or all), finds `playhead-levels.json` in the media's folder or up
+  to three folders above it and matches the file by path and size; without one, it measures from Playhead's analysis
+  (the cache, else the command line). Tags: the manifest's, `folder:`, `ucs:`, `class:`, and `track:` for the item's
+  track and the folder tracks above it.
+- Owns take volume and keeps per take what it set (`P_EXT:playhead_levels`: the gain, the measure and value, the group
+  and modifiers). A take volume set before (Normalize, by hand) or changed since is left alone unless you say
+  otherwise; the polarity is kept; one undo block per run.
+- Group offsets on take gain (default) or on the nearest track named like the group that holds the item (a folder
+  track): a fader moved since is left alone; back on take gain, offsets it put on tracks return to 0 dB.
+- *Playhead - Levels settings*: measure, target, amount, depth, groups on take or track, limits, and the rules from a
+  chosen `playhead-levels.json` (else each sound's own), kept in the project.
+- The report goes to the ReaScript console: each group's median and outliers, gains a limit held back, fallbacks, checks.
+- The same gains as `Playhead.levels` (the tests compare the Lua port with it on two specs and five files).
+
+Still planned: measuring an item's part rather than its whole file (REAPER's `CalculateNormalization(source, mode,
+target, start, end)` takes bounds; first to verify what it returns and what LUFS-M max gives under 0.4 s), and
+levelling new items as they arrive (ReaScript has no import callback: a background script watching
+`GetProjectStateChangeCount`, started by SWS's startup action).
 
 ### Kurator
 

@@ -1,5 +1,5 @@
 -- @description Playhead: add markers for selected items (events, onsets, downbeats, sections, builds, fills, pass-bys)
--- @version 0.2.0
+-- @version 0.3.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about

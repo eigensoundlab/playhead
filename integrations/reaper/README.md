@@ -7,8 +7,8 @@ ReaScripts that bring [Playhead](https://github.com/eigensoundlab/playhead)'s an
 curves (loudness, activity, harshness, tension, onset strength, impulsiveness and the other descriptors), events,
 onsets, beats, bar lines and sections of an item, as markers, as automation that can drive any effect, as processed
 takes from Playhead's analysis-driven tools, and as a strip view of the item in any Playhead look; and editing tools
-built on the analysis: arranging the layers of a sound, splitting a recording into its sounds, and a tempo map that
-follows a recording's bars. The parts that do
+built on the analysis: arranging the layers of a sound, splitting a recording into its sounds, a tempo map that
+follows a recording's bars, and levelling many items from measured loudness and tag rules. The parts that do
 not need REAPER (document reading, time mapping, the strip renderer, command lines) are a plain Lua library with its
 own tests, so the package is also a base for your own analysis-driven scripts.
 
@@ -194,6 +194,32 @@ The views of rhythm and form are drawn here as in the Playhead app:
 A view the analysis does not have (a tempogram of a sound effect) leaves the waveform in its place, and the legend
 says why. The strip is drawn once and redrawn only when the item, the look, the zoom, the window size or the colours
 change. As a toolbar button it shows whether the window is open.
+
+**Playhead - Level items.** Brings the selected items (with none selected: all items, after asking) to relevant
+levels without changing their files ([docs/LEVELS.md](../../docs/LEVELS.md)). Each sound's measures come from a
+`playhead-levels.json` in its file's folder or up to three folders above it (written by Kurator, SFX Workbench or
+`playhead levels`, with the sound's tags), else from Playhead's analysis (analysed first if needed; analyses from a
+Playhead without level measures are made again). The gain is amount × (target − measured) + depth × (group and
+modifier offsets) + trim, limited by the most boost and cut and the true-peak ceiling, with the tag rules of the
+project, else of the manifest. Tags are the manifest's, the file's folder (`folder:`), the UCS category in its name
+(`ucs:`), Playhead's class (`class:impulse` …) and the item's track and the folder tracks above it (`track:Weapons`).
+
+- The gain goes to the **take's volume**; the item's volume stays yours. The polarity is kept.
+- **Group offsets** go to the take too (they then reach the render and a game), or, with "track" in the settings, to
+  the nearest track named like the group that holds the item (a folder track `Explosions` for the group
+  `Explosions`, `folder:Explosions` or `Weapons/Explosions`): a fader to ride. Back on "take", offsets Playhead put on
+  tracks return to 0 dB.
+- A take volume set before (by Normalize, or by hand) or changed since Playhead set it, and a track fader moved since,
+  are left alone unless you say otherwise. Playhead keeps what it set on each take and track (`P_EXT:playhead_levels`).
+- The measures are kept, so running it again after changing the settings recomputes the gains without analysing.
+- The ReaScript console gets a report: each group's median and the sounds more than 4 dB from it, gains a limit held
+  back (with the gain asked for), measures that fell back to the whole file, asset checks, items left alone.
+- Measures are of the whole file, also when an item plays part of it.
+
+**Playhead - Levels settings.** This project's settings for levelling, kept in the project: the measure
+(`momentaryMax@event` by default; `integrated@active`, `peak` …), the target, the amount (0–1), the depth of the groups'
+offsets (0–2), where group offsets go (take or track), the most boost and cut and the true-peak ceiling; and the rules,
+taken from a `playhead-levels.json` chosen here, or each sound's own manifest's.
 
 **Playhead - Settings.** The executable (empty: look in `<resource>/Scripts/Playhead/`, then on the PATH), Node for
 the `.js` command line, the analysis profile (`auto`: sound effects up to 10 s, music above; `fast`: curves only;

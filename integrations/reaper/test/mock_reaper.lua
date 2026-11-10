@@ -57,8 +57,8 @@ function Mock.new(T, opts)
   ----------------------------------------------------------------------------------------------------------------
   local guid_n = 0
   local function guid() guid_n = guid_n + 1; return string.format("{00000000-0000-0000-0000-%012d}", guid_n) end
-  function env.add_track(name)
-    local tr = { kind = "MediaTrack", name = name, fx = {}, selected = false }
+  function env.add_track(name, parent)
+    local tr = { kind = "MediaTrack", name = name, fx = {}, selected = false, parent = parent, vol = 1 }
     env.tracks[#env.tracks + 1] = tr
     return tr
   end
@@ -245,9 +245,46 @@ function Mock.new(T, opts)
   end
   function R.GetSetMediaItemTakeInfo_String(take, k, v, set)
     check("GetSetMediaItemTakeInfo_String", { "MediaItem_Take", "string", "string", "boolean" }, take, k, v, set)
+    if k:sub(1, 6) == "P_EXT:" then
+      take.ext = take.ext or {}
+      if set then take.ext[k] = v; return true, v end
+      return take.ext[k] ~= nil, take.ext[k] or ""
+    end
     if k ~= "P_NAME" then err("GetSetMediaItemTakeInfo_String: parameter " .. k) return false, "" end
     if set then take.name = v end
     return true, take.name
+  end
+  -- tracks: names, folders (a track's parent), volume and extension data
+  function R.CountTracks(p) check("CountTracks", { "ReaProject" }, p); return #env.tracks end
+  function R.GetTrack(p, i) check("GetTrack", { "ReaProject", "integer" }, p, i); return env.tracks[i + 1] end
+  function R.GetParentTrack(tr) check("GetParentTrack", { "MediaTrack" }, tr); return tr.parent end
+  function R.GetSetMediaTrackInfo_String(tr, k, v, set)
+    check("GetSetMediaTrackInfo_String", { "MediaTrack", "string", "string", "boolean" }, tr, k, v, set)
+    if k == "P_NAME" then if set then tr.name = v end return true, tr.name or "" end
+    if k:sub(1, 6) == "P_EXT:" then
+      tr.ext = tr.ext or {}
+      if set then tr.ext[k] = v; return true, v end
+      return tr.ext[k] ~= nil, tr.ext[k] or ""
+    end
+    err("GetSetMediaTrackInfo_String: parameter " .. k) return false, ""
+  end
+  function R.GetMediaTrackInfo_Value(tr, k)
+    check("GetMediaTrackInfo_Value", { "MediaTrack", "string" }, tr, k)
+    if k ~= "D_VOL" then err("GetMediaTrackInfo_Value: parameter " .. k) return 0 end
+    return tr.vol or 1
+  end
+  function R.SetMediaTrackInfo_Value(tr, k, v)
+    check("SetMediaTrackInfo_Value", { "MediaTrack", "string", "number" }, tr, k, v)
+    if k ~= "D_VOL" then err("SetMediaTrackInfo_Value: parameter " .. k) return false end
+    tr.vol = v
+    return true
+  end
+  function R.CountMediaItems(p) check("CountMediaItems", { "ReaProject" }, p); return #env.items end
+  function R.GetMediaItem(p, i) check("GetMediaItem", { "ReaProject", "integer" }, p, i); return env.items[i + 1] end
+  function R.GetUserFileNameForRead(f, title, ext)
+    check("GetUserFileNameForRead", { "string", "string", "string" }, f, title, ext)
+    local a = table.remove(env.file_answers or {}, 1)
+    return a ~= nil, a or ""
   end
   function R.GetSetMediaItemInfo_String(item, k, v, set)
     check("GetSetMediaItemInfo_String", { "MediaItem", "string", "string", "boolean" }, item, k, v, set)

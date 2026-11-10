@@ -1,5 +1,5 @@
 -- @description Playhead for REAPER: analysis curves, markers, automation, processing tools and a strip view
--- @version 0.2.0
+-- @version 0.3.0
 -- @author Daniel Sandner
 -- @about
 --   # Playhead for REAPER
@@ -8,7 +8,8 @@
 --   sections of the selected items, as take markers and regions, as automation curves (through the Playhead
 --   Control effect, for parameter links and MIDI CC), as processed takes from Playhead's analysis-driven tools,
 --   and as a strip window that draws the item in a chosen look. Editing tools built on it: arranging the layers
---   of a sound, splitting a recording into its sounds, and a tempo map from a recording's beats.
+--   of a sound, splitting a recording into its sounds, a tempo map from a recording's beats, and levelling many
+--   items from measured loudness and tag rules, without changing their files.
 --
 --   Needs the Playhead command line (the executable from the Playhead releases on GitHub, or
 --   tools/playhead-cli.js from a Playhead checkout with Node.js). See README.md.
@@ -24,22 +25,19 @@
 --   [main] Playhead - Tempo map from item.lua
 --   [main] Playhead - Strip window.lua
 --   [main] Playhead - Settings.lua
+--   [main] Playhead - Level items.lua
+--   [main] Playhead - Levels settings.lua
 --   [nomain] lib/playhead_core.lua
 --   [nomain] lib/playhead_reaper.lua
 --   [effect] Playhead Control.jsfx
 -- @changelog
---   The views of rhythm and form in the strip window: bar raster (the cursors in the row of their bar, clicks
---   seek within the bar), tempogram, repetition (lag view), modulation spectrogram and curve rhythms (scalogram).
---   Zoom in the strip window as in REAPER's arrange view (mouse wheel; Ctrl, Shift or Alt and the wheel scrolls;
---   the middle button drags), following playback when REAPER's view does.
---   Colour palettes for the strip window: REAPER theme, Playhead, Heat, Colour-blind safe, Greyscale.
---   The tool "Stretch keeping the attacks" in Process selected items (with Playhead 0.3.0 or later); the item
---   is lengthened or shortened to play the stretched takes.
---   The analysing window fits its text on scaled displays.
---   New actions: Arrange selected layers (moves and gains of a layered sound's items for a punchier, bigger or
---   cleaner whole, auditioned one by one), Split items at sounds (a cut before each event or onset, pieces named,
---   shortened and given regions for rendering) and Tempo map from item (tempo markers at a recording's bars or
---   beats).
+--   Levels (needs Playhead 0.4 or later, or a build from main with level measures): "Level items" brings the selected
+--   items, or all, to relevant levels without touching their files. Measures come from a playhead-levels.json next
+--   to the sounds (Kurator, SFX Workbench, `playhead levels`) or from Playhead's analysis; gains follow the project's
+--   tag rules and settings ("Levels settings": measure, target, amount, depth, limits, rules from a file) and go to
+--   take volume, with group offsets on take gain or on a track named like the group. Take volumes and track faders
+--   changed by hand are left alone. A report of the groups, the sounds far from them and the gains a limit held back
+--   goes to the console.
 
 -- SPDX-License-Identifier: Apache-2.0
 -- Copyright 2026 Daniel Sandner

@@ -15,6 +15,12 @@
   measure. Asset checks now carry a `code`. Two pilots ([experiments/levels](experiments/levels/README.md)): on the
   corpus's 56 effects the usual measures disagree by 7 to 18 dB per file; limiting shows in a sound's own numbers, while
   compressing a one-shot raises its crest factor.
+- **Playhead for REAPER 0.3.0: levels.** *Level items* brings the selected items (or all) to relevant levels without
+  touching their files: measures from a `playhead-levels.json` next to the sounds or from Playhead's analysis, gains
+  from the project's tag rules and settings (*Levels settings*), as take volume, with group offsets on take gain or on
+  a track named like the group. Volumes and faders changed by hand are left alone; the report goes to the console. The
+  Lua port gives the same gains as `Playhead.levels` (tested). A loop in the core library no longer assigns to its
+  loop variable (Lua 5.5 forbids it).
 - **Audiovisual Playhead** ([experiments/av](experiments/av/README.md), on the site at `/av/`): one scene drawn twice
   from the same sound by the same rules, with WebGPU or WebGL 2. The left side runs them on the usual signals (level,
   WebAudio analyser octaves, MilkDrop-style band beats, energy trend, level jumps, the loudest bin), worked out frame by
