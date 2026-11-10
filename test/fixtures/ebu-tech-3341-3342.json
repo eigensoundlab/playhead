@@ -1,0 +1,843 @@
+{
+ "format": "listener-fixture",
+ "version": 1,
+ "generator": {
+  "name": "listener",
+  "version": "0.1.0"
+ },
+ "created": "2026-11-10T19:23:30Z",
+ "regenerate": "listener conform --iso532-1 <folder> --din45692 <folder> --ecma --fixtures <this folder>",
+ "source": "EBU Tech 3341 v4 and Tech 3342 v4, Table 1 of each; signals are 1 kHz sines, same phase in both channels, levels are per-channel peak levels in dBFS",
+ "sampleRate": 48000,
+ "integrated": [
+  {
+   "case": 1,
+   "parts": [
+    [
+     -23,
+     20
+    ]
+   ],
+   "expected": -23.0,
+   "tolerance": 0.1
+  },
+  {
+   "case": 2,
+   "parts": [
+    [
+     -33,
+     20
+    ]
+   ],
+   "expected": -33.0,
+   "tolerance": 0.1
+  },
+  {
+   "case": 3,
+   "parts": [
+    [
+     -36,
+     10
+    ],
+    [
+     -23,
+     60
+    ],
+    [
+     -36,
+     10
+    ]
+   ],
+   "expected": -23.0,
+   "tolerance": 0.1
+  },
+  {
+   "case": 4,
+   "parts": [
+    [
+     -72,
+     10
+    ],
+    [
+     -36,
+     10
+    ],
+    [
+     -23,
+     60
+    ],
+    [
+     -36,
+     10
+    ],
+    [
+     -72,
+     10
+    ]
+   ],
+   "expected": -23.0,
+   "tolerance": 0.1
+  },
+  {
+   "case": 5,
+   "parts": [
+    [
+     -26,
+     20
+    ],
+    [
+     -20,
+     20.1
+    ],
+    [
+     -26,
+     20
+    ]
+   ],
+   "expected": -23.0,
+   "tolerance": 0.1
+  }
+ ],
+ "shortTerm": [
+  {
+   "case": 9,
+   "parts": [
+    [
+     -20,
+     1.34
+    ],
+    [
+     -30,
+     1.66
+    ]
+   ],
+   "repeat": 5,
+   "expected": -23.0,
+   "tolerance": 0.1,
+   "rule": "every 3 s window"
+  },
+  {
+   "case": 10,
+   "segments": 20,
+   "silenceBefore": "i * 0.15",
+   "tone": [
+    -23,
+    3
+   ],
+   "silenceAfter": 1,
+   "expected": -23.0,
+   "tolerance": 0.1,
+   "rule": "Max S of each segment"
+  },
+  {
+   "case": 11,
+   "segments": 20,
+   "silenceBefore": "i * 0.15",
+   "tone": [
+    "-38 + i",
+    3
+   ],
+   "silenceAfter": "3 - i * 0.15",
+   "expected": "-38 + i",
+   "tolerance": 0.1,
+   "rule": "Max S of each segment"
+  }
+ ],
+ "momentary": [
+  {
+   "case": 12,
+   "parts": [
+    [
+     -20,
+     0.18
+    ],
+    [
+     -30,
+     0.22
+    ]
+   ],
+   "repeat": 25,
+   "expected": -23.0,
+   "tolerance": 0.1,
+   "rule": "every 0.4 s window"
+  },
+  {
+   "case": 13,
+   "segments": 20,
+   "silenceBefore": "i * 0.02",
+   "tone": [
+    -23,
+    0.4
+   ],
+   "silenceAfter": 1,
+   "expected": -23.0,
+   "tolerance": 0.1,
+   "rule": "Max M of each segment"
+  },
+  {
+   "case": 14,
+   "segments": 20,
+   "silenceBefore": "i * 0.02",
+   "tone": [
+    "-38 + i",
+    0.4
+   ],
+   "silenceAfter": "0.4 - i * 0.02",
+   "expected": "-38 + i",
+   "tolerance": 0.1,
+   "rule": "Max M of each segment"
+  }
+ ],
+ "truePeak": [
+  {
+   "case": 15,
+   "period": 4,
+   "amplitude": 0.5,
+   "phaseDeg": 0,
+   "expected": -6.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ]
+  },
+  {
+   "case": 16,
+   "period": 4,
+   "amplitude": 0.5,
+   "phaseDeg": 45,
+   "expected": -6.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ]
+  },
+  {
+   "case": 17,
+   "period": 6,
+   "amplitude": 0.5,
+   "phaseDeg": 60,
+   "expected": -6.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ]
+  },
+  {
+   "case": 18,
+   "period": 8,
+   "amplitude": 0.5,
+   "phaseDeg": 67.5,
+   "expected": -6.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ]
+  },
+  {
+   "case": 19,
+   "period": 4,
+   "amplitude": 1.41,
+   "phaseDeg": 45,
+   "expected": 3.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ]
+  }
+ ],
+ "loudnessRange": [
+  {
+   "case": 1,
+   "parts": [
+    [
+     -20,
+     20
+    ],
+    [
+     -30,
+     20
+    ]
+   ],
+   "expected": 10,
+   "tolerance": 1
+  },
+  {
+   "case": 2,
+   "parts": [
+    [
+     -20,
+     20
+    ],
+    [
+     -15,
+     20
+    ]
+   ],
+   "expected": 5,
+   "tolerance": 1
+  },
+  {
+   "case": 3,
+   "parts": [
+    [
+     -40,
+     20
+    ],
+    [
+     -20,
+     20
+    ]
+   ],
+   "expected": 20,
+   "tolerance": 1
+  },
+  {
+   "case": 4,
+   "parts": [
+    [
+     -50,
+     20
+    ],
+    [
+     -35,
+     20
+    ],
+    [
+     -20,
+     20
+    ],
+    [
+     -35,
+     20
+    ],
+    [
+     -50,
+     20
+    ]
+   ],
+   "expected": 15,
+   "tolerance": 1
+  }
+ ],
+ "needEbuFiles": [
+  "Tech 3341 cases 7, 8, 20-23 as distributed",
+  "Tech 3342 cases 5, 6"
+ ],
+ "oracle": [
+  {
+   "suite": "tech3341",
+   "case": 1,
+   "signal": "stereo 1 kHz sine, -23 dBFS, 20 s",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": [
+    -23.035,
+    -23.035,
+    -23.035
+   ],
+   "worstDeviation": -0.035,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 2,
+   "signal": "stereo 1 kHz sine, -33 dBFS, 20 s",
+   "expected": -33.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": [
+    -33.035,
+    -33.035,
+    -33.035
+   ],
+   "worstDeviation": -0.035,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 3,
+   "signal": "10 s at -36 dBFS; 60 s at -23 dBFS; 10 s at -36 dBFS",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": -23.055,
+   "worstDeviation": -0.055,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 4,
+   "signal": "10 s at -72 dBFS; 10 s at -36 dBFS; 60 s at -23 dBFS; 10 s at -36 dBFS; 10 s at -72 dBFS",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": -23.055,
+   "worstDeviation": -0.055,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 5,
+   "signal": "20 s at -26 dBFS; 20.1 s at -20 dBFS; 20 s at -26 dBFS",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": -23.02,
+   "worstDeviation": -0.02,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 6,
+   "signal": "5.0 sine: L, R -28; C -24; Ls, Rs -30 dBFS, 20 s",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": -23.058,
+   "worstDeviation": -0.058,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 9,
+   "signal": "(1.34 s at -20; 1.66 s at -30 dBFS) x 5: S constant after 3 s",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": [
+    -23.028,
+    -23.028
+   ],
+   "worstDeviation": -0.028,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 10,
+   "signal": "20 segments: i x 0.15 s silence, 3 s at -23 dBFS, 1 s silence: Max S each",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": [
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035
+   ],
+   "worstDeviation": -0.035,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 11,
+   "signal": "20 tones of 3 s at -38 ... -19 dBFS: Max S each",
+   "expected": [
+    -38.0,
+    -37.0,
+    -36.0,
+    -35.0,
+    -34.0,
+    -33.0,
+    -32.0,
+    -31.0,
+    -30.0,
+    -29.0,
+    -28.0,
+    -27.0,
+    -26.0,
+    -25.0,
+    -24.0,
+    -23.0,
+    -22.0,
+    -21.0,
+    -20.0,
+    -19.0
+   ],
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": [
+    -38.035,
+    -37.035,
+    -36.035,
+    -35.035,
+    -34.035,
+    -33.035,
+    -32.035,
+    -31.035,
+    -30.035,
+    -29.035,
+    -28.035,
+    -27.035,
+    -26.035,
+    -25.035,
+    -24.035,
+    -23.035,
+    -22.035,
+    -21.035,
+    -20.035,
+    -19.035
+   ],
+   "worstDeviation": -0.035,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 12,
+   "signal": "(0.18 s at -20; 0.22 s at -30 dBFS) x 25: M constant after 1 s",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": [
+    -23.002,
+    -23.002
+   ],
+   "worstDeviation": -0.002,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 13,
+   "signal": "20 segments: i x 20 ms silence, 0.4 s at -23 dBFS, 1 s silence: Max M each",
+   "expected": -23.0,
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": [
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035,
+    -23.035
+   ],
+   "worstDeviation": -0.035,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 14,
+   "signal": "20 tones of 0.4 s at -38 ... -19 dBFS: Max M each",
+   "expected": [
+    -38.0,
+    -37.0,
+    -36.0,
+    -35.0,
+    -34.0,
+    -33.0,
+    -32.0,
+    -31.0,
+    -30.0,
+    -29.0,
+    -28.0,
+    -27.0,
+    -26.0,
+    -25.0,
+    -24.0,
+    -23.0,
+    -22.0,
+    -21.0,
+    -20.0,
+    -19.0
+   ],
+   "tolerance": [
+    -0.1,
+    0.1
+   ],
+   "unit": "LUFS",
+   "measured": [
+    -38.035,
+    -37.035,
+    -36.035,
+    -35.035,
+    -34.035,
+    -33.035,
+    -32.035,
+    -31.035,
+    -30.035,
+    -29.035,
+    -28.035,
+    -27.035,
+    -26.035,
+    -25.035,
+    -24.035,
+    -23.035,
+    -22.035,
+    -21.035,
+    -20.035,
+    -19.035
+   ],
+   "worstDeviation": -0.035,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 15,
+   "signal": "sine at fs/4, amplitude 0.5, phase 0 deg",
+   "expected": -6.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": -6.015,
+   "worstDeviation": -0.015,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 16,
+   "signal": "sine at fs/4, amplitude 0.5, phase 45 deg",
+   "expected": -6.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": -6.004,
+   "worstDeviation": -0.004,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 17,
+   "signal": "sine at fs/6, amplitude 0.5, phase 60 deg",
+   "expected": -6.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": -6.014,
+   "worstDeviation": -0.014,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 18,
+   "signal": "sine at fs/8, amplitude 0.5, phase 67.5 deg",
+   "expected": -6.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": -6.012,
+   "worstDeviation": -0.012,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 19,
+   "signal": "sine at fs/4, amplitude 1.41, phase 45 deg",
+   "expected": 3.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": 3.001,
+   "worstDeviation": 0.001,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 20,
+   "signal": "fs/6 sine holding one period of an fs/4 sine, made at 4 fs, offset 0",
+   "expected": 0.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": -0.13,
+   "worstDeviation": -0.13,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 21,
+   "signal": "fs/6 sine holding one period of an fs/4 sine, made at 4 fs, offset 1",
+   "expected": 0.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": -0.118,
+   "worstDeviation": -0.118,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 22,
+   "signal": "fs/6 sine holding one period of an fs/4 sine, made at 4 fs, offset 2",
+   "expected": 0.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": -0.143,
+   "worstDeviation": -0.143,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3341",
+   "case": 23,
+   "signal": "fs/6 sine holding one period of an fs/4 sine, made at 4 fs, offset 3",
+   "expected": 0.0,
+   "tolerance": [
+    -0.4,
+    0.2
+   ],
+   "unit": "dBTP",
+   "measured": -0.118,
+   "worstDeviation": -0.118,
+   "pass": true,
+   "source": "EBU Tech 3341 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3342",
+   "case": 1,
+   "signal": "1 kHz sine, 20 s each at -20, -30 dBFS",
+   "expected": 10.0,
+   "tolerance": [
+    -1.0,
+    1.0
+   ],
+   "unit": "LU",
+   "measured": 10.0,
+   "worstDeviation": 0.0,
+   "pass": true,
+   "source": "EBU Tech 3342 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3342",
+   "case": 2,
+   "signal": "1 kHz sine, 20 s each at -20, -15 dBFS",
+   "expected": 5.0,
+   "tolerance": [
+    -1.0,
+    1.0
+   ],
+   "unit": "LU",
+   "measured": 5.0,
+   "worstDeviation": 0.0,
+   "pass": true,
+   "source": "EBU Tech 3342 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3342",
+   "case": 3,
+   "signal": "1 kHz sine, 20 s each at -40, -20 dBFS",
+   "expected": 20.0,
+   "tolerance": [
+    -1.0,
+    1.0
+   ],
+   "unit": "LU",
+   "measured": 20.0,
+   "worstDeviation": 0.0,
+   "pass": true,
+   "source": "EBU Tech 3342 v4 (2023), Table 1, synthesised"
+  },
+  {
+   "suite": "tech3342",
+   "case": 4,
+   "signal": "1 kHz sine, 20 s each at -50, -35, -20, -35, -50 dBFS",
+   "expected": 15.0,
+   "tolerance": [
+    -1.0,
+    1.0
+   ],
+   "unit": "LU",
+   "measured": 15.0,
+   "worstDeviation": 0.0,
+   "pass": true,
+   "source": "EBU Tech 3342 v4 (2023), Table 1, synthesised"
+  }
+ ]
+}
