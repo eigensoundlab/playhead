@@ -160,6 +160,7 @@ const finite = buf => { for (let c = 0; c < buf.numberOfChannels; c++) for (cons
   await require("./grid-tests.js")(check);
   await require("./cues-tests.js")(check);
   await require("./levels-tests.js")(check);
+  await require("./ebu-tests.js")(check);
 
   const failed = results.filter(r => !r.pass);
   console.log("\n" + (results.length - failed.length) + " of " + results.length + " checks passed in " + ((Date.now() - t0) / 1000).toFixed(0) + " s");

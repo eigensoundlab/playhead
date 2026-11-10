@@ -17,10 +17,13 @@ PH = json.load(open("playhead.json"))
 
 
 def kweight(x, sr):
+    """K-weighting of every channel along time. pyloudnorm's filter works on the last axis, so it gets one channel
+    at a time: given the (frames, channels) array whole, it filters across the channels instead."""
     m = pyln.Meter(sr)
     y = x.copy()
     for f in m._filters.values():
-        y = f.apply_filter(y)
+        for c in range(y.shape[1]):
+            y[:, c] = f.apply_filter(y[:, c])
     return y
 
 

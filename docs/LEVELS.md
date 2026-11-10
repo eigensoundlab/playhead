@@ -401,5 +401,5 @@ for whether the difference is heard at all.
   get the same per-group offsets as Playhead's (so it cannot win by having more settings). About 10–20 listeners and
   60–120 sounds, including dry and wet versions of one sound, reversed sounds, footsteps at different rates, booms and
   two playback levels.
-- On the test set the usual measures disagree by 7–18 dB per file (5th to 95th percentile of the differences), and
+- On the test set the usual measures disagree by 6–18 dB per file (5th to 95th percentile of the differences), and
   BS.1770 and Zwicker's loudness (ISO 532-1) by up to 17 dB, mostly on bass and tonal sounds: the choice matters.
