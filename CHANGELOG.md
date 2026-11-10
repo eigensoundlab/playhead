@@ -13,7 +13,7 @@
   store (unchanged files are not analysed again) and writes a report (HTML or CSV): each group's spread and outliers,
   files to check, and where peak, RMS, LUFS-I, Max M and Max S would level a file differently from the project's
   measure. Asset checks now carry a `code`. Two pilots ([experiments/levels](experiments/levels/README.md)): on the
-  corpus's 56 effects the usual measures disagree by 7 to 18 dB per file; limiting shows in a sound's own numbers, while
+  corpus's 56 effects the usual measures disagree by 6 to 18 dB per file; limiting shows in a sound's own numbers, while
   compressing a one-shot raises its crest factor.
 - **Playhead for REAPER 0.3.0: levels.** *Level items* brings the selected items (or all) to relevant levels without
   touching their files: measures from a `playhead-levels.json` next to the sounds or from Playhead's analysis, gains
@@ -198,6 +198,11 @@
     downbeat, the first with the time signature; the item is set to time base Time so it stays.
 - **REAPER: [a guide to Playhead's curves as envelopes](integrations/reaper/ENVELOPES.md):** writing them, seeing
   and editing them, linking parameters, MIDI CC, recipes and what to check when nothing moves.
+- **EBU Tech 3341 conformance in the tests** (`test/ebu-tests.js`): integrated, short-term and momentary loudness and
+  the true peak against the document's minimum-requirement cases that are defined by a formula (1 to 5 and 9 to 19),
+  from recipes written by listener (`test/fixtures/ebu-tech-3341-3342.json`). All within tolerance, the largest
+  deviation 0.04 LU.
+
 
 ### Changed
 - **The lab's strips:**
@@ -209,6 +214,13 @@
   stays readable on a light page or REAPER theme.
 
 ### Fixed
+- **The levels pilot's Max M and Max S were not K-weighted** (`experiments/levels/measures.py`): its `kweight()` gave
+  pyloudnorm's filter whole (frames, channels) arrays, and the filter works on the last axis, so it ran across the
+  channels. The file's results are regenerated; LUFS-I, peak, RMS and the Zwicker values did not change. With the
+  correction LUFS-I against Max M differ by 6.4 dB (was 7.5), and with Zwicker standing in for listeners no measure
+  evens the set clearly best (peak, LUFS-I, the loudest event's span and Max M within 0.6 dB of each other; before,
+  Max M and the event-aware candidates looked about 1 dB worse). Playhead's own measures were never affected. Found
+  by [listener](https://github.com/eigensoundlab/listener).
 - **Vibrato and rotor rates** of harmonic-rich sounds: the note is demodulated over whole periods of itself, so its
   harmonics no longer ripple the measured frequency (the bench rotor reads 28 Hz, 26 cents for 28 Hz, 30 cents: it
   read 29.5 Hz, 49 cents), and a note held between two glides (a motor running between its spin-up and spin-down) is

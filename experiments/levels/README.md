@@ -13,7 +13,10 @@ python3 ../experiments/levels/summarise.py               # the tables below
 python3 ../experiments/levels/compress_pilot.py ../corpus/sfx   # compression and limiting -> compress_pilot.json
 ```
 
-`measures.json` and `compress_pilot.json` here are the results quoted in the guide.
+`measures.json` and `compress_pilot.json` here are the results quoted in the guide. `measures.json` was regenerated on
+10 November 2026 after a correction to `measures.py`: its `kweight()` had passed whole (frames, channels) arrays to
+pyloudnorm's filter, which works on the last axis, so Max M, Max S and the two event-aware candidates were filtered
+across the channels, not along time. LUFS-I, peak, RMS and the Zwicker values were not affected.
 
 ## How far the usual measures disagree
 
@@ -22,13 +25,14 @@ time-varying loudness (ISO 532-1, through MoSQITo; its maximum and 5 % percentil
 taken as 100 dB SPL), and two event-aware candidates from Playhead's events (the loudest event's own span; a measure
 chosen by the event's type).
 
-- **The measures disagree by 7 to 18 dB per file.** Normalising with one measure instead of another moves a file by up to
+- **The measures disagree by 6 to 18 dB per file.** Normalising with one measure instead of another moves a file by up to
   that much (the 5th to 95th percentile of the differences, the files' median difference removed): LUFS-I against Max M
-  7.5 dB, LUFS-I against RMS 8.9, peak against LUFS-I 10.8, peak against Max S 17.6.
+  6.4 dB, LUFS-I against RMS 8.9, peak against LUFS-I 10.8, peak against Max S 16.5, RMS against Max S 18.1.
 - **Two loudness models disagree by up to 17 dB.** BS.1770 and Zwicker part most on bass and tonal sustained sounds
   (bass, drones, a bell: Zwicker 8 to 12 dB quieter) and on short bright noisy hits (Zwicker up to 6 dB louder).
-- **With Zwicker standing in for listeners, LUFS-I evens the set best** (spread after normalising: 4.4 to 4.7 dB standard
-  deviation, against 5.5 for Max M and 5.5 to 6.2 for the two event-aware candidates). The stand-in is weak: published
+- **With Zwicker standing in for listeners, no measure evens the set clearly best.** Spread after normalising, as a
+  standard deviation: peak 4.3 to 4.4 dB, LUFS-I 4.4 to 4.7, the loudest event's own span 4.6 to 4.7, Max M 4.8 to 4.9,
+  the measure chosen by class 5.1 to 5.3, RMS 5.1 to 5.4, Max S 5.9. The stand-in is weak: published
   evaluations find the ISO 532 models 4 to 12 dB off on individual impulsive sounds, and the spread here comes mostly from
   spectrum (bass, tones), not from timing. Only listeners can decide.
 
