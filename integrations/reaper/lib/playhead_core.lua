@@ -16,7 +16,7 @@
 --   cache keys                 M.cache_key{ path, size, length, profile, version, os }
 --   processing tools           M.parse_tools(text), M.tool_dialog(tool, remembered), M.parse_tool_inputs(...)
 
-local M = { VERSION = "0.3.0", SCHEMA = "playhead-analysis", SCHEMA_VERSION = 1 }
+local M = { VERSION = "0.3.1", SCHEMA = "playhead-analysis", SCHEMA_VERSION = 1 }
 
 local floor, ceil, abs, max, min, huge = math.floor, math.ceil, math.abs, math.max, math.min, math.huge
 local byte, sub, find, fmt, rep = string.byte, string.sub, string.find, string.format, string.rep

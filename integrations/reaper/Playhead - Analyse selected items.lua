@@ -1,5 +1,5 @@
 -- @description Playhead for REAPER: analysis curves, markers, automation, processing tools and a strip view
--- @version 0.3.0
+-- @version 0.3.1
 -- @author Daniel Sandner
 -- @about
 --   # Playhead for REAPER
@@ -31,15 +31,15 @@
 --   [nomain] lib/playhead_reaper.lua
 --   [effect] Playhead Control.jsfx
 -- @changelog
---   Levels (needs Playhead 0.4 or later, or a build from main with level measures): "Level items" brings the selected
+--   0.3.1 (with Playhead 0.4.0): the strip window draws a selected track, or a folder with every track under it: its
+--   items combined from their analyses (playhead combine) without rendering the mix.
+--   0.3.0: Levels (needs Playhead 0.4 or later): "Level items" brings the selected
 --   items, or all, to relevant levels without touching their files. Measures come from a playhead-levels.json next
 --   to the sounds (Kurator, SFX Workbench, `playhead levels`) or from Playhead's analysis; gains follow the project's
 --   tag rules and settings ("Levels settings": measure, target, amount, depth, limits, rules from a file) and go to
 --   take volume, with group offsets on take gain or on a track named like the group. Take volumes and track faders
 --   changed by hand are left alone. A report of the groups, the sounds far from them and the gains a limit held back
 --   goes to the console.
---   The strip window draws a selected track, or a folder with every track under it: its items combined from their
---   analyses (playhead combine) without rendering the mix.
 
 -- SPDX-License-Identifier: Apache-2.0
 -- Copyright 2026 Daniel Sandner

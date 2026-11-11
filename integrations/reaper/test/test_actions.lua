@@ -40,7 +40,7 @@ return function(T)
       local chunk, e = loadfile(f)
       if not chunk then bad[#bad + 1] = e end
       local text = T.read(f) or ""
-      for _, tag in ipairs({ "@description", "@version 0.3.0", "@author Daniel Sandner", "SPDX%-License%-Identifier: Apache%-2%.0", "Copyright 2026 Daniel Sandner" }) do
+      for _, tag in ipairs({ "@description", "@version 0.3.1", "@author Daniel Sandner", "SPDX%-License%-Identifier: Apache%-2%.0", "Copyright 2026 Daniel Sandner" }) do
         if not text:find(tag) then bad[#bad + 1] = n .. ": no " .. tag end
       end
     end

@@ -1,5 +1,5 @@
 -- @description Playhead: tempo map from item (the project grid follows a recording's bars or beats)
--- @version 0.3.0
+-- @version 0.3.1
 -- @author Daniel Sandner
 -- @noindex
 -- @about

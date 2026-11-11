@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.4.0 (2026-11-11)
 
 ### Added
 - **Levels** (`playhead levels`, `Playhead.levels`, `src/levels.js`, [docs/LEVELS.md](docs/LEVELS.md)): many files at
@@ -21,7 +21,7 @@
   a track named like the group. Volumes and faders changed by hand are left alone; the report goes to the console. The
   Lua port gives the same gains as `Playhead.levels` (tested). A loop in the core library no longer assigns to its
   loop variable (Lua 5.5 forbids it).
-- **REAPER strip window: tracks and folders.** With a track selected, the strip window draws the track, or a folder
+- **Playhead for REAPER 0.3.1: tracks and folders in the strip window.** With a track selected, the strip window draws the track, or a folder
   with every track under it: each item as the part of its file it plays, at its volumes, combined from the items'
   analyses without rendering the mix. `Playhead.slice(doc, start, end, { rate })` cuts a document to the part an item
   plays; `playhead combine --parts parts.json` combines documents named in a file (each cut by `start`, `end`,

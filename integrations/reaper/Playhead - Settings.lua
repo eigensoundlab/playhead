@@ -1,5 +1,5 @@
 -- @description Playhead: settings (command line, analysis profile, timeout, cache)
--- @version 0.3.0
+-- @version 0.3.1
 -- @author Daniel Sandner
 -- @noindex
 -- @about

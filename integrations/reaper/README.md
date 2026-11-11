@@ -46,7 +46,7 @@ Use one of these ways, not two: each adds its own set of actions.
    for your system.
 2. In REAPER, open **Actions > Show action list**, then **New action > Load ReaScript...**, choose
    `Playhead - Install.lua` in the unpacked folder, and **Run** it.
-3. It copies everything into REAPER's resource folder (`Scripts/Playhead`, `Effects/Playhead`), adds the nine actions
+3. It copies everything into REAPER's resource folder (`Scripts/Playhead`, `Effects/Playhead`), adds the eleven actions
    and **Playhead - Uninstall** to the action list, and checks the command line.
 
 To update, run the installer from a newer download; settings and analyses are kept. To remove Playhead, run
@@ -57,13 +57,13 @@ whether to delete the stored analyses and settings too.
 1. **Extensions > ReaPack > Import repositories...**, paste `https://eigensoundlab.github.io/playhead/reaper/index.xml`.
 2. **Extensions > ReaPack > Browse packages**, find **Playhead for REAPER**, install it, and **Apply**.
 
-The package holds the nine actions, the library and the effect, pinned to one commit with checksums. ReaPack offers
+The package holds the eleven actions, the library and the effect, pinned to one commit with checksums. ReaPack offers
 each new version as an update. The command line is not part of it: put the executable for your system in
 `<resource>/Scripts/Playhead/`, or choose it in **Playhead - Settings**. ReaPack removes the package by itself
 (right-click it in Browse packages).
 
 **From a Playhead checkout** (to follow development):
-- Load the six `Playhead - ....lua` files from `integrations/reaper/` with **Load ReaScript...**; they find `lib/`
+- Load the eleven `Playhead - ....lua` files (not Install and Uninstall) from `integrations/reaper/` with **Load ReaScript...**; they find `lib/`
   next to them.
 - Copy `Playhead Control.jsfx` into `<resource>/Effects/Playhead/`.
 - Choose `tools/playhead-cli.js` (with Node) or an executable in **Playhead - Settings**.
@@ -71,9 +71,9 @@ each new version as an update. The command line is not part of it: put the execu
 After `git pull`, REAPER runs the new scripts, with no copying. Running `Playhead - Install.lua` from the checkout
 installs a copy instead.
 
-**By hand.** Copy the six `Playhead - ....lua` files and the `lib` folder into `<resource>/Scripts/Playhead/`
+**By hand.** Copy the eleven `Playhead - ....lua` files (not Install and Uninstall) and the `lib` folder into `<resource>/Scripts/Playhead/`
 (with the executable, if you use it), and `Playhead Control.jsfx` into `<resource>/Effects/Playhead/`. Then
-**Actions > Show action list > New action > Load ReaScript...**, select the six action files, and bind keys or
+**Actions > Show action list > New action > Load ReaScript...**, select the eleven action files, and bind keys or
 toolbar buttons to them as you like.
 
 ## The actions
