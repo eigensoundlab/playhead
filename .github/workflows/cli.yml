@@ -1,6 +1,10 @@
 # Builds the Playhead command line as one executable per platform and attaches it, with the library bundles and
-# Playhead for REAPER (with that platform's executable and its installer), to the GitHub release. Runs when a release is published, or by hand: then the files are kept as workflow artifacts,
-# and attached to the release named in "tag" if one is given (to add files a failed run left out).
+# Playhead for REAPER (with that platform's executable and its installer), to the GitHub release. Each executable is
+# also attached on its own (playhead-<OS>-<ARCH>, .exe on Windows) with its SHA-256 (<file>.sha256): ReaPack installs
+# it with the REAPER package from there (tools/reapack-index.js), and the site, with its ReaPack index, is built again
+# when this finishes. Runs when a release is published, or by hand: then the files are kept as workflow artifacts,
+# and attached to the release named in "tag" if one is given (to add files a failed run left out), built from that
+# tag's code.
 name: Command line and library
 
 on:
@@ -25,6 +29,8 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}            # by hand with a tag: that release's code (empty: the default)
       - uses: actions/setup-node@v7
         with:
           node-version: 22
@@ -37,6 +43,20 @@ jobs:
         if: runner.os == 'Windows'
         shell: pwsh
         run: Compress-Archive -Path dist/playhead.exe -DestinationPath playhead-cli-${{ runner.os }}-${{ runner.arch }}.zip
+      # the executable on its own, with its SHA-256, for ReaPack (and any host that downloads the command line itself)
+      - name: Executable and checksum (Linux, macOS)
+        if: runner.os != 'Windows'
+        run: |
+          f="playhead-${{ runner.os }}-${{ runner.arch }}"
+          cp dist/playhead "$f"
+          if command -v sha256sum >/dev/null; then sha256sum "$f" | cut -d' ' -f1 > "$f.sha256"; else shasum -a 256 "$f" | cut -d' ' -f1 > "$f.sha256"; fi
+      - name: Executable and checksum (Windows)
+        if: runner.os == 'Windows'
+        shell: pwsh
+        run: |
+          $f = "playhead-${{ runner.os }}-${{ runner.arch }}.exe"
+          Copy-Item -Path dist/playhead.exe -Destination $f
+          (Get-FileHash -Algorithm SHA256 $f).Hash.ToLower() | Out-File -NoNewline -Encoding ascii "$f.sha256"
       # Playhead for REAPER with this system's command line: unpack, then run "Playhead - Install" in REAPER
       - name: REAPER package (Linux, macOS)
         if: runner.os != 'Windows'
@@ -66,6 +86,7 @@ jobs:
           path: |
             playhead-cli-*
             playhead-reaper-*
+            playhead-${{ runner.os }}-${{ runner.arch }}*
             playhead-core.*
       - name: Attach to the release
         if: github.event_name == 'release' || inputs.tag != ''
@@ -73,4 +94,4 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           TAG: ${{ github.event.release.tag_name || inputs.tag }}
-        run: gh release upload "$TAG" playhead-cli-* playhead-reaper-* $(ls playhead-core.* 2>/dev/null) --clobber
+        run: gh release upload "$TAG" playhead-cli-* playhead-reaper-* playhead-${{ runner.os }}-${{ runner.arch }}* $(ls playhead-core.* 2>/dev/null) --clobber

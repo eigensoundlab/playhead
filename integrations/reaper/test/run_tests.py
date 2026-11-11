@@ -241,13 +241,40 @@ def run_index(res, tmp):
         res.note("ReaPack index: needs Node (skipped)")
         return
     out = os.path.join(tmp, "index.xml")
-    p = subprocess.run([node, os.path.join(ROOT, "tools", "reapack-index.js"), "--ref", "0123456789abcdef0123456789abcdef01234567", "--out", out], capture_output=True)
+    # the command lines' checksums as the release would give them (<asset>.sha256), so nothing is fetched
+    fake = {"playhead-Windows-X64.exe": "a" * 64, "playhead-macOS-ARM64": "b" * 64, "playhead-Linux-X64": "c" * 64}
+    exes_json = os.path.join(tmp, "executables.json")
+    with open(exes_json, "w") as f:
+        json.dump(fake, f)
+    script = os.path.join(ROOT, "tools", "reapack-index.js")
+    p = subprocess.run([node, script, "--ref", "0123456789abcdef0123456789abcdef01234567", "--out", out, "--executables", exes_json], capture_output=True)
     if p.returncode != 0:
         res.check("ReaPack index: written", False, p.stderr.decode("utf-8", "replace")[-300:])
         return
     root = ET.parse(out).getroot()
     packs = root.findall("./category/reapack")
-    sources = root.findall(".//source")
+    all_sources = root.findall(".//source")
+    sources = [s for s in all_sources if not s.get("platform")]
+    # the command line: one per platform, from the release of package.json's version, with its checksum, next to the
+    # actions; a release lacking one is not listed (the site keeps the published index)
+    with open(os.path.join(ROOT, "package.json"), encoding="utf-8") as f:
+        pv = json.load(f)["version"]
+    rel = "https://github.com/eigensoundlab/playhead/releases/download/v" + pv + "/"
+    want_exes = {("win64", "playhead.exe", rel + "playhead-Windows-X64.exe", "1220" + "a" * 64),
+                 ("darwin-arm64", "playhead", rel + "playhead-macOS-ARM64", "1220" + "b" * 64),
+                 ("linux64", "playhead", rel + "playhead-Linux-X64", "1220" + "c" * 64)}
+    got_exes = {(s.get("platform"), s.get("file"), s.text, s.get("hash")) for s in all_sources if s.get("platform")}
+    partial = dict(fake)
+    del partial["playhead-macOS-ARM64"]
+    with open(exes_json, "w") as f:
+        json.dump(partial, f)
+    out2 = os.path.join(tmp, "index-partial.xml")
+    p2 = subprocess.run([node, script, "--ref", "0123456789abcdef0123456789abcdef01234567", "--out", out2, "--executables", exes_json], capture_output=True)
+    res.check("ReaPack index: the command line for Windows x64, macOS ARM64 and Linux x64 from the release, with checksums; "
+              "not written while the release lacks one",
+              got_exes == want_exes and all(not s.get("main") and not s.get("type") for s in all_sources if s.get("platform"))
+              and p2.returncode != 0 and not os.path.exists(out2),
+              "; ".join(sorted("%s %s" % (e[0], e[1]) for e in got_exes)))
     want = ["Playhead - Analyse selected items.lua", "Playhead - Add markers for selected items.lua", "Playhead - Write curves as automation.lua",
             "Playhead - Process selected items.lua", "Playhead - Arrange selected layers.lua", "Playhead - Split items at sounds.lua",
             "Playhead - Tempo map from item.lua", "Playhead - Strip window.lua", "Playhead - Settings.lua",

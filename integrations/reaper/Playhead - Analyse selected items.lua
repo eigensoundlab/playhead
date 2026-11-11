@@ -1,5 +1,5 @@
 -- @description Playhead for REAPER: analysis curves, markers, automation, processing tools and a strip view
--- @version 0.3.1
+-- @version 0.4.0
 -- @author Daniel Sandner
 -- @about
 --   # Playhead for REAPER
@@ -31,6 +31,10 @@
 --   [nomain] lib/playhead_reaper.lua
 --   [effect] Playhead Control.jsfx
 -- @changelog
+--   0.4.0 (with Playhead 0.4.0): the Playhead command line now comes with the package on Windows x64, macOS on Apple
+--   silicon and Linux x64 (ReaPack downloads the one for your system from the release and checks its SHA-256), and
+--   is updated with it; the actions look for it next to themselves first. The package's version now follows
+--   Playhead's: a fix to the REAPER actions alone adds a fourth number (0.4.0.1).
 --   0.3.1 (with Playhead 0.4.0): the strip window draws a selected track, or a folder with every track under it: its
 --   items combined from their analyses (playhead combine) without rendering the mix.
 --   0.3.0: Levels (needs Playhead 0.4 or later): "Level items" brings the selected

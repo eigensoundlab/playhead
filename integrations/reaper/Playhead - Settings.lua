@@ -1,5 +1,5 @@
 -- @description Playhead: settings (command line, analysis profile, timeout, cache)
--- @version 0.3.1
+-- @version 0.4.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about
@@ -10,8 +10,8 @@
 -- SPDX-License-Identifier: Apache-2.0
 -- Copyright 2026 Daniel Sandner
 --
--- An empty executable field means: look in <REAPER resource folder>/Scripts/Playhead (playhead, playhead.exe or
--- playhead-cli.cjs), then on the PATH. A path to playhead-cli.js or playhead-cli.cjs is run with Node.
+-- An empty executable field means: look next to the actions (where ReaPack puts the command line), then in
+-- <REAPER resource folder>/Scripts/Playhead (playhead, playhead.exe or playhead-cli.cjs), then on the PATH. A path to playhead-cli.js or playhead-cli.cjs is run with Node.
 -- Paths cannot contain commas here (the dialog separates fields with commas).
 
 local source = debug.getinfo(1, "S").source

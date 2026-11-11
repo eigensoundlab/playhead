@@ -1,5 +1,5 @@
 -- @description Playhead: strip window (the selected item, or the selected track or folder, drawn in a Playhead look, dockable)
--- @version 0.3.1
+-- @version 0.4.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about

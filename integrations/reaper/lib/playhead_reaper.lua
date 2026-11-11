@@ -31,6 +31,11 @@ function R.join(...) return core.path_join(R.os, ...) end
 R.resource = reaper.GetResourcePath()
 R.data_dir = R.join(R.resource, "Data", "Playhead")
 R.cache_dir = R.join(R.data_dir, "cache")
+-- the folder of the actions (this file is in its lib folder): where ReaPack puts the command line with the package
+R.package_dir = (function()
+  local src = (debug.getinfo(1, "S").source or ""):gsub("^@", "")
+  return core.dirname(core.dirname(src))
+end)()
 
 function R.mkdir(dir) if dir and dir ~= "" then reaper.RecursiveCreateDirectory(dir, 0) end end
 function R.exists(p) return p ~= nil and p ~= "" and reaper.file_exists(p) end
@@ -456,8 +461,10 @@ local function exe_names()
   return { "playhead" }
 end
 
---- Finds the command line: the path in the settings, then <resource>/Scripts/Playhead/playhead[.exe] (or
---- playhead-cli.cjs there, run with Node), then the PATH. Returns path, or nil and the places looked at.
+--- Finds the command line: the path in the settings, then playhead[.exe] in the package's folder (ReaPack installs it
+--- there with the actions), then <resource>/Scripts/Playhead/playhead[.exe] (or playhead-cli.cjs there, run with
+--- Node), then the PATH. Returns path, or nil and the places looked at; a third value true marks an executable found
+--- in one of Playhead's own folders (one Playhead may make runnable).
 function R.find_executable(settings)
   settings = settings or R.settings()
   local tried = {}
@@ -465,11 +472,21 @@ function R.find_executable(settings)
     if R.exists(settings.exe) then return settings.exe end
     return nil, { settings.exe .. " (from Playhead - Settings; not found)" }
   end
+  -- next to the actions first (ReaPack puts it there with the package, the installer too), then Scripts/Playhead
   local own = R.join(R.resource, "Scripts", "Playhead")
-  for _, n in ipairs(exe_names()) do
-    local p = R.join(own, n)
-    tried[#tried + 1] = p
-    if R.exists(p) then return p end
+  local function same(a, b)
+    local function n(p) p = tostring(p):gsub("\\", "/"):gsub("/+$", ""); return (R.os == "windows" or R.os == "macos") and p:lower() or p end
+    return n(a) == n(b)
+  end
+  local folders = {}
+  if R.package_dir ~= "" and not same(R.package_dir, own) then folders[1] = R.package_dir end
+  folders[#folders + 1] = own
+  for _, dir in ipairs(folders) do
+    for _, n in ipairs(exe_names()) do
+      local p = R.join(dir, n)
+      tried[#tried + 1] = p
+      if R.exists(p) then return p, nil, true end
+    end
   end
   local cjs = R.join(own, "playhead-cli.cjs")
   tried[#tried + 1] = cjs
@@ -490,7 +507,8 @@ end
 
 local function not_found_message(tried)
   return "The Playhead command line was not found.\n\nLooked for:\n  " .. table.concat(tried or {}, "\n  ") ..
-    "\n\nDownload the executable for your system from the Playhead releases on GitHub and put it in\n  " ..
+    "\n\nInstalled with ReaPack on Windows x64, macOS (Apple silicon) or Linux x64, it comes with the package: " ..
+    "Extensions > ReaPack > Synchronize packages.\n\nOtherwise download the executable for your system from the Playhead releases on GitHub and put it in\n  " ..
     R.join(R.resource, "Scripts", "Playhead") ..
     "\nor choose it (or tools/playhead-cli.js from a Playhead checkout, run with Node) in Playhead - Settings."
 end
@@ -499,17 +517,30 @@ end
 --- extra_path, settings }, or nil and a message for the user.
 function R.cli(settings, force_check)
   settings = settings or R.settings()
-  local exe, tried = R.find_executable(settings)
+  local exe, tried, own = R.find_executable(settings)
   if not exe then return nil, not_found_message(tried) end
   local extra = core.extra_path_dirs(settings.extra_path, R.os)
   local cli = { exe = exe, settings = settings, extra_path = extra }
   function cli.argv(args) return core.cli_argv(exe, settings.node, args) end
-  local key = exe .. "|" .. settings.node
+  -- the size too: ReaPack replaces the executable in place when it updates the package
+  local key = exe .. "|" .. tostring(R.file_size(exe) or 0) .. "|" .. settings.node
   if not force_check and reaper.GetExtState(R.SECTION, "checked_exe") == key then
     cli.version = reaper.GetExtState(R.SECTION, "checked_version")
     if cli.version ~= "" then return cli end
   end
   local res = R.run_blocking(cli.argv({ "version" }), 30, extra)
+  -- a download (ReaPack's included) may come without the permission to run, or (macOS) held back as a download:
+  -- Playhead's own copy is made runnable, as the installer does, and tried once more
+  if not res.ok and not res.timed_out and own and R.os ~= "windows" then
+    local err = tostring(res.stderr)
+    local denied = res.code == 126 or err:find("ermission denied", 1, true)
+    local held = R.os == "macos" and (res.code == 137 or res.code == 9 or err:find("Killed", 1, true))
+    if denied or held then
+      if denied then R.run_blocking({ "/bin/chmod", "+x", exe }, 10) end
+      if R.os == "macos" then R.run_blocking({ "/usr/bin/xattr", "-d", "com.apple.quarantine", exe }, 10) end
+      res = R.run_blocking(cli.argv({ "version" }), 30, extra)
+    end
+  end
   local version = core.trim(res.stdout):match("^(%d+%.%d+[%w%.%-]*)")
   if not res.ok or not version then
     local why

@@ -150,6 +150,14 @@ const finite = buf => { for (let c = 0; c < buf.numberOfChannels; c++) for (cons
     const html = rd("index.html"), foot = (/id="ph-version">([^<]+)</.exec(html) || [])[1], cite = (/\(Version ([^)]+)\)/.exec(html) || [])[1];
     const zen = JSON.parse(rd(".zenodo.json")).version, api = (/const VERSION = "([^"]+)"/.exec(rd("src/playhead.js")) || [])[1];
     check("release: version in package.json, CITATION.cff, .zenodo.json, API, footer, citation", [v, cff, zen, api, foot, cite].join(" / "), [cff, zen, api, foot, cite].every(x => x === v));
+    // Playhead for REAPER follows Playhead's version (a fourth number for a fix to the REAPER actions alone), the same
+    // in every action and its library; ReaPack offers the package only when this version changes
+    const rp = require("path").join(root, "integrations", "reaper");
+    const tags = fs.readdirSync(rp).filter(f => /^Playhead - .*\.lua$/.test(f))
+      .map(f => (/^-- @version (\S+)/m.exec(fs.readFileSync(require("path").join(rp, f), "utf8")) || [])[1]).filter(Boolean);
+    const lua = (/VERSION = "([^"]+)"/.exec(rd("integrations/reaper/lib/playhead_core.lua")) || [])[1] || "";
+    check("release: Playhead for REAPER's version follows Playhead's, in every action", lua + " (" + tags.length + " actions)",
+      tags.length >= 11 && tags.every(t => t === lua) && (lua === v || lua.startsWith(v + ".")));
   }
 
   await require("./i18n-tests.js")(check);

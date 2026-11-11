@@ -40,7 +40,7 @@ return function(T)
       local chunk, e = loadfile(f)
       if not chunk then bad[#bad + 1] = e end
       local text = T.read(f) or ""
-      for _, tag in ipairs({ "@description", "@version 0.3.1", "@author Daniel Sandner", "SPDX%-License%-Identifier: Apache%-2%.0", "Copyright 2026 Daniel Sandner" }) do
+      for _, tag in ipairs({ "@description", "@version 0.4.0", "@author Daniel Sandner", "SPDX%-License%-Identifier: Apache%-2%.0", "Copyright 2026 Daniel Sandner" }) do
         if not text:find(tag) then bad[#bad + 1] = n .. ": no " .. tag end
       end
     end
@@ -84,6 +84,31 @@ return function(T)
     check("command line: found in Scripts/Playhead, checked with version; missing, not executable and failing executables explained",
       found0 ~= own and found1 == own and works and works.version == "9.8.7" and missing:find("not found", 1, true) and not_exec:find("not allowed to run", 1, true)
         and fails:find("ffmpeg", 1, true), tostring(not_exec):sub(1, 90))
+  end
+
+  -- ReaPack puts the command line next to the actions: found there before Scripts/Playhead, made runnable when it
+  -- comes without the permission (as a download may), and checked again when an update replaces it
+  do
+    local R = require("playhead_reaper")
+    local saved_dir = R.package_dir
+    local pkg = T.tmp .. "/reapack/Scripts/Playhead/Analysis"
+    T.run_wait("mkdir -p " .. core.quote_posix(pkg), 5000)
+    R.package_dir = pkg
+    local own, mine = resource .. "/Scripts/Playhead/playhead", pkg .. "/playhead"
+    local h = io.open(own, "w"); h:write("#!/bin/sh\necho 1.1.1\n"); h:close()
+    T.run_wait("chmod +x " .. core.quote_posix(own), 5000)
+    local h2 = io.open(mine, "w"); h2:write("#!/bin/sh\necho 2.2.2\n"); h2:close()
+    local s = { exe = "", node = "node", extra_path = "", timeout = 30, profile = "auto" }
+    local first = R.find_executable(s)
+    local cli = R.cli(s, true)
+    local h3 = io.open(mine, "w"); h3:write("#!/bin/sh\necho 2.2.10\n"); h3:close()
+    local updated = R.cli(s)
+    os.remove(mine); os.remove(own)
+    R.package_dir = saved_dir
+    reaper.SetExtState("Playhead", "checked_exe", "", false)
+    check("command line: ReaPack's copy next to the actions comes first, is made runnable, and is checked again after an update",
+      first == mine and cli and cli.version == "2.2.2" and updated and updated.version == "2.2.10",
+      tostring(first) .. " " .. tostring(cli and cli.version) .. " " .. tostring(updated and updated.version))
   end
 
   local function version()

@@ -23,6 +23,7 @@ ReaScript console's output.
 
 - REAPER 6 or 7 on Windows, macOS or Linux. No SWS or js_ReaScriptAPI.
 - The Playhead command line, one of:
+  - with ReaPack on Windows x64, macOS on Apple silicon or Linux x64: nothing to do, it comes with the package;
   - the executable for your system from the [Playhead releases](https://github.com/eigensoundlab/playhead/releases)
     (`playhead` or `playhead.exe`; no Node needed). Put it in `<REAPER resource folder>/Scripts/Playhead/`, or
     anywhere and choose it in **Playhead - Settings**. On macOS and Linux make it executable (`chmod +x playhead`);
@@ -57,10 +58,17 @@ whether to delete the stored analyses and settings too.
 1. **Extensions > ReaPack > Import repositories...**, paste `https://eigensoundlab.github.io/playhead/reaper/index.xml`.
 2. **Extensions > ReaPack > Browse packages**, find **Playhead for REAPER**, install it, and **Apply**.
 
-The package holds the eleven actions, the library and the effect, pinned to one commit with checksums. ReaPack offers
-each new version as an update. The command line is not part of it: put the executable for your system in
-`<resource>/Scripts/Playhead/`, or choose it in **Playhead - Settings**. ReaPack removes the package by itself
-(right-click it in Browse packages).
+The package holds the eleven actions, the library and the effect, pinned to one commit with checksums, and the
+Playhead command line for your system (Windows x64, macOS on Apple silicon, Linux x64): ReaPack downloads only that
+one, from the Playhead release of the same version, checks its SHA-256 and puts it next to the actions
+(`<resource>/Scripts/Playhead/Analysis/`), where they look first; on macOS and Linux the actions make it executable
+the first time. ReaPack offers each new version as an update, the command line with it. The package's version is
+Playhead's (0.4.0 with Playhead 0.4.0); a fix to the actions alone adds a fourth number (0.4.0.1). Windows on Arm uses
+the x64 command line. On other systems (an Intel Mac, say) put the executable for your system in
+`<resource>/Scripts/Playhead/`, or choose it in **Playhead - Settings**; a path chosen there is used before the
+package's copy, so leave it empty to use ReaPack's. ReaPack removes the package by itself (right-click it in Browse
+packages). If ReaPack reports on Windows that it could not replace `playhead.exe`, an analysis was running: let it
+finish and synchronize again.
 
 **From a Playhead checkout** (to follow development):
 - Load the eleven `Playhead - ....lua` files (not Install and Uninstall) from `integrations/reaper/` with **Load ReaScript...**; they find `lib/`
@@ -230,7 +238,8 @@ project, else of the manifest. Tags are the manifest's, the file's folder (`fold
 offsets (0–2), where group offsets go (take or track), the most boost and cut and the true-peak ceiling; and the rules,
 taken from a `playhead-levels.json` chosen here, or each sound's own manifest's.
 
-**Playhead - Settings.** The executable (empty: look in `<resource>/Scripts/Playhead/`, then on the PATH), Node for
+**Playhead - Settings.** The executable (empty: look next to the actions, where ReaPack puts it, then in
+`<resource>/Scripts/Playhead/`, then on the PATH), Node for
 the `.js` command line, the analysis profile (`auto`: sound effects up to 10 s, music above; `fast`: curves only;
 `sfx`; `music`), the timeout, extra folders for ffmpeg and Node, automatic analysis in the strip window, and emptying
 the cache. Checks the command line after saving and shows its version.
@@ -354,7 +363,8 @@ python integrations\reaper\test\run_tests.py
 There the core tests run, with a real batch job through `cmd.exe` in place of the POSIX shell checks. The action
 scripts' tests simulate REAPER on macOS and Linux, starting the command line through POSIX job scripts, so on Windows
 they are skipped unless you add `--actions` and Git for Windows' `sh` is found. GitHub Actions runs all of them on
-every push. The ReaPack index (`tools/reapack-index.js`) is checked too: every file, its checksum and the version.
+every push. The ReaPack index (`tools/reapack-index.js`) is checked too: every file, its checksum and the version,
+and the command line for each system.
 
 The core is checked against documents made by the command line and against what `src/playhead.js` computes from
 them: `curveAt`, `toMarkers`, look codes, legends and the rectangles, triangles and texts `drawStrip` draws for

@@ -1,5 +1,5 @@
 -- @description Playhead: split items at sounds (events or onsets), named, trimmed, with regions
--- @version 0.3.1
+-- @version 0.4.0
 -- @author Daniel Sandner
 -- @noindex
 -- @about

@@ -7,6 +7,10 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  # after a release's executables are attached, the ReaPack index is built again to list them
+  workflow_run:
+    workflows: ["Command line and library"]
+    types: [completed]
 
 permissions:
   contents: read

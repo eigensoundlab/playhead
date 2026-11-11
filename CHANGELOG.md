@@ -1,5 +1,20 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Playhead for REAPER 0.4.0: the command line comes with ReaPack.** The ReaPack package now brings the Playhead
+  command line for Windows x64, macOS on Apple silicon and Linux x64: ReaPack downloads the one for its system from
+  the release of the same version, checks its SHA-256, puts it next to the actions (where they look first) and updates
+  it with the package. On macOS and Linux the actions make it executable when it comes without the permission. The
+  release workflow attaches each executable on its own with its checksum (`playhead-<OS>-<ARCH>`, `.sha256`), and the
+  site is built again when it finishes; while a release lacks any of them, the site keeps the published ReaPack index,
+  so no version goes out without its command line. The REAPER package's version now follows Playhead's (`npm test`
+  checks it); a fix to the actions alone adds a fourth number. The command line is checked again when its file changes.
+
+### Changed
+- "Command line and library" run by hand with a tag builds that tag's code.
+
 ## 0.4.0 (2026-11-11)
 
 ### Added
